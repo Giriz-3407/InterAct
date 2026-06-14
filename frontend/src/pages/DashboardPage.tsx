@@ -1,22 +1,128 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
 import { TopBar } from '../components/TopBar';
 import { StatCard } from '../components/StatCard';
 import { RoomCard } from '../components/RoomCard';
 import { ActivityItem } from '../components/ActivityItem';
+import { JoinRoomModal } from '../components/JoinRoomModal';
 import { MOCK_ROOMS, MOCK_ACTIVITIES } from '../data/mockData';
+import { apiClient } from '../lib/axios';
 
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'join'>('create');
+  const [apiError, setApiError] = useState('');
+
   // Aggregate stats
   const totalActiveRooms = MOCK_ROOMS.length;
   const totalParticipants = MOCK_ROOMS.reduce((sum, r) => sum + r.participants.length, 0);
 
+  useEffect(() => {
+    // Listen for custom trigger-create-room event from L2 sidebar
+    const handleTriggerCreate = () => {
+      setModalMode('create');
+      setModalOpen(true);
+    };
+
+    window.addEventListener('trigger-create-room', handleTriggerCreate);
+    return () => {
+      window.removeEventListener('trigger-create-room', handleTriggerCreate);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (apiError) {
+      const timer = setTimeout(() => {
+        setApiError('');
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [apiError]);
+
+  const handleModalSubmit = async (displayName: string, roomCode?: string) => {
+    setApiError('');
+    try {
+      if (modalMode === 'create') {
+        const data = await apiClient.post<{ roomCode: string }>('http://localhost:8000/api/rooms', {});
+        if (data && data.roomCode) {
+          navigate(`/room/${data.roomCode}?name=${encodeURIComponent(displayName)}`);
+        }
+      } else {
+        if (!roomCode) return;
+        // Lookup room
+        try {
+          const roomData = await apiClient.get<{ roomCode: string; active: boolean }>(
+            `http://localhost:8000/api/rooms/${roomCode}`
+          );
+          if (roomData && roomData.active) {
+            navigate(`/room/${roomCode}?name=${encodeURIComponent(displayName)}`);
+          } else {
+            setApiError('Room is inactive.');
+            setModalOpen(false);
+          }
+        } catch (err) {
+          setApiError('Room not found. Please verify the code.');
+          setModalOpen(false);
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      setApiError('Server error. Please try again.');
+      setModalOpen(false);
+    }
+  };
+
+  const topBarActions = (
+    <div className="flex gap-2.5">
+      <button
+        onClick={() => {
+          setModalMode('join');
+          setModalOpen(true);
+        }}
+        className="px-3.5 py-1.5 rounded-full text-xs font-semibold font-geist border border-zinc-800 text-zinc-300 hover:bg-zinc-900 transition-colors cursor-pointer"
+      >
+        Join Room
+      </button>
+      <button
+        onClick={() => {
+          setModalMode('create');
+          setModalOpen(true);
+        }}
+        className="px-3.5 py-1.5 rounded-full text-xs font-semibold font-geist bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:opacity-95 shadow-lg shadow-indigo-500/10 transition-all cursor-pointer"
+      >
+        Create Room
+      </button>
+    </div>
+  );
+
   return (
     <AppLayout context="dashboard">
-      <TopBar title="Dashboard" showSearch={true} searchPlaceholder="Search rooms, features..." />
+      <TopBar 
+        title="Dashboard" 
+        showSearch={true} 
+        searchPlaceholder="Search rooms, features..." 
+        actions={topBarActions}
+      />
       
+      {/* Floating Toast Notification */}
+      {apiError && (
+        <div className="fixed top-4 right-4 z-50 w-80 glass-panel border-rose-500/30 bg-rose-500/10 p-3.5 rounded-xl shadow-2xl flex items-start gap-3 animate-fade-in">
+          <span className="material-symbols-outlined text-rose-455 text-sm mt-0.5">error</span>
+          <div className="flex-1 flex flex-col gap-0.5">
+            <span className="text-xs font-bold font-geist text-rose-350">Room Error</span>
+            <span className="text-2xs text-zinc-300 font-inter leading-relaxed">{apiError}</span>
+          </div>
+          <button onClick={() => setApiError('')} className="text-zinc-500 hover:text-zinc-300 shrink-0 cursor-pointer">
+            <span className="material-symbols-outlined text-[16px] block">close</span>
+          </button>
+        </div>
+      )}
+
       {/* Content Canvas */}
-      <main className="flex-1 p-6 flex flex-col xl:flex-row gap-6 overflow-y-auto custom-scrollbar max-w-[1600px] w-full mx-auto">
+      <main className="flex-1 p-6 flex flex-col xl:flex-row gap-6 overflow-y-auto custom-scrollbar max-w-[1600px] w-full mx-auto relative">
+
         <div className="flex-1 flex flex-col gap-6">
           {/* Stats Grid */}
           <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -116,6 +222,14 @@ export const DashboardPage: React.FC = () => {
           </div>
         </aside>
       </main>
+
+      {/* Join/Create Room Modal */}
+      <JoinRoomModal
+        isOpen={modalOpen}
+        mode={modalMode}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleModalSubmit}
+      />
     </AppLayout>
   );
 };

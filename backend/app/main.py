@@ -22,6 +22,11 @@ app.add_middleware(
 )
 
 from app.database.mongodb import connect_to_mongo, close_mongo_connection
+from app.api.rooms import router as rooms_router
+from app.websocket.connection import connection_manager
+from fastapi import WebSocket, WebSocketDisconnect
+
+app.include_router(rooms_router)
 
 @app.on_event("startup")
 async def startup_event():
@@ -32,6 +37,20 @@ async def startup_event():
 async def shutdown_event():
     logger.info("Shutting down OmniSync backend modules...")
     await close_mongo_connection()
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    socket_id = await connection_manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await connection_manager.handle_message(socket_id, data)
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket socketId: {socket_id} disconnected")
+        await connection_manager.disconnect(socket_id)
+    except Exception as e:
+        logger.error(f"Error in websocket loop for client {socket_id}: {e}")
+        await connection_manager.disconnect(socket_id)
 
 @app.get("/health")
 async def health_check():

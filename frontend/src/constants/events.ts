@@ -1,31 +1,30 @@
 // WebSocket and WebRTC signal events
+// These must match the event strings used by the backend connection manager.
 export const WS_EVENTS = {
   CONNECT: 'connect',
   DISCONNECT: 'disconnect',
-  
-  // Room events
-  ROOM_CREATE: 'room:create',
-  ROOM_JOIN: 'room:join',
-  ROOM_LEAVE: 'room:leave',
-  USER_JOINED: 'user:joined',
-  USER_LEFT: 'user:left',
-  
-  // Chat events
-  CHAT_MESSAGE: 'chat:message',
-  
-  // RTC signaling
-  SIGNAL_OFFER: 'signal:offer',
-  SIGNAL_ANSWER: 'signal:answer',
-  SIGNAL_ICE: 'signal:ice',
-  
-  // Interaction synchronization
-  CURSOR_MOVE: 'cursor:move',
-  CURSOR_CLICK: 'cursor:click',
-  
-  // Host transfers
-  HOST_TRANSFER: 'host:transfer',
-  HOST_STOP_SHARE: 'host:stop_share',
-  
-  // System alerts
+
+  // Room lifecycle
+  JOIN_ROOM: 'join_room',
+  LEAVE_ROOM: 'leave_room',
+  ROOM_JOINED: 'room_joined',
+  PARTICIPANT_JOINED: 'participant_joined',
+  PARTICIPANT_LEFT: 'participant_left',
+  PARTICIPANTS_UPDATED: 'participants_updated',
+
+  // Chat
+  CHAT_MESSAGE: 'chat_message',
+
+  // WebRTC signaling (relayed through the server, not processed)
+  WEBRTC_OFFER: 'webrtc_offer',
+  WEBRTC_ANSWER: 'webrtc_answer',
+  ICE_CANDIDATE: 'ice_candidate',
+
+  // Screen share lifecycle
+  HOST_STOP_SHARE: 'host_stop_share',
+
+  // System
   ERROR: 'system:error',
 } as const;
+
+export type WSEvent = typeof WS_EVENTS[keyof typeof WS_EVENTS];

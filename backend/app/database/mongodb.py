@@ -35,7 +35,9 @@ async def connect_to_mongo():
     try:
         client = AsyncIOMotorClient(mongodb_uri)
         database = client[database_name]
-        logger.info(f"Successfully connected to MongoDB Database: {database_name}")
+        # Create indexes
+        await database["messages"].create_index([("roomCode", 1), ("timestamp", 1)])
+        logger.info(f"Successfully connected to MongoDB Database: {database_name} (indexes verified)")
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
         raise e

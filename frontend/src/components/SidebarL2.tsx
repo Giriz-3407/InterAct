@@ -118,7 +118,10 @@ export const SidebarL2: React.FC<SidebarL2Props> = ({ context }) => {
         </NavLink>
       </div>
 
-      <button className="w-full py-2.5 rounded-lg text-sm font-semibold font-geist bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:opacity-95 shadow-lg shadow-indigo-500/10 transition-all flex items-center justify-center gap-2">
+      <button 
+        onClick={() => window.dispatchEvent(new CustomEvent('trigger-create-room'))}
+        className="w-full py-2.5 rounded-lg text-sm font-semibold font-geist bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:opacity-95 shadow-lg shadow-indigo-500/10 transition-all flex items-center justify-center gap-2"
+      >
         <span className="material-symbols-outlined text-[18px]">add</span>
         <span>New Room</span>
       </button>

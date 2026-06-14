@@ -43,10 +43,18 @@ export const RoomPage: React.FC = () => {
   const [showHostControls, setShowHostControls] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isCamOff, setIsCamOff] = useState(true);
+  const [autoDelete, setAutoDelete] = useState(true);
 
   // Check if current user is host
   const currentUserObj = participants.find((p) => p.socketId === currentSocketId);
   const isHost = currentUserObj ? currentUserObj.role === 'host' : false;
+
+  // Automatically close host controls overlay if isHost transitions to false
+  useEffect(() => {
+    if (!isHost) {
+      setShowHostControls(false);
+    }
+  }, [isHost]);
 
   // Viewer IDs for WebRTC (all non-host participants)
   const viewerIds = participants
@@ -80,7 +88,7 @@ export const RoomPage: React.FC = () => {
 
     const fetchHistory = async () => {
       try {
-        const history = await apiClient.get<MessageItem[]>(`http://localhost:8000/api/rooms/${roomId}/messages`);
+        const history = await apiClient.get<MessageItem[]>(`/api/rooms/${roomId}/messages`);
         setMessages(history);
       } catch (err) {
         console.error('Failed to load message history:', err);
@@ -94,8 +102,17 @@ export const RoomPage: React.FC = () => {
   useEffect(() => {
     if (!roomId || !displayName) return;
 
+    const getWsUrl = (): string => {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      let wsUrl = apiUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
+      if (!wsUrl.endsWith('/ws')) {
+        wsUrl = `${wsUrl.replace(/\/$/, '')}/ws`;
+      }
+      return wsUrl;
+    };
+
     // Connect to backend WebSocket gateway
-    wsClient.connect('ws://localhost:8000/ws', () => {
+    wsClient.connect(getWsUrl(), () => {
       // Send join event
       wsClient.send('join_room', {
         roomCode: roomId,
@@ -108,6 +125,9 @@ export const RoomPage: React.FC = () => {
       console.log('Joined room:', data);
       setCurrentSocketId(data.socketId);
       setParticipants(data.participants);
+      if (data.autoDelete !== undefined) {
+        setAutoDelete(data.autoDelete);
+      }
     });
 
     const unsubParticipantJoined = wsClient.on('participant_joined', (data) => {
@@ -140,6 +160,19 @@ export const RoomPage: React.FC = () => {
       ]);
     });
 
+    const unsubSettingsUpdated = wsClient.on('room_settings_updated', (data) => {
+      console.log('Room settings updated:', data);
+      if (data.autoDelete !== undefined) {
+        setAutoDelete(data.autoDelete);
+      }
+    });
+
+    const unsubKicked = wsClient.on('kicked', (data) => {
+      console.log('Kicked from room:', data);
+      alert(data.reason || 'You have been removed from the room.');
+      navigate('/dashboard');
+    });
+
     return () => {
       wsClient.send('leave_room', {});
       wsClient.disconnect();
@@ -148,6 +181,8 @@ export const RoomPage: React.FC = () => {
       unsubParticipantLeft();
       unsubUpdated();
       unsubChatMessage();
+      unsubSettingsUpdated();
+      unsubKicked();
     };
   }, [roomId, displayName]);
 
@@ -256,17 +291,19 @@ export const RoomPage: React.FC = () => {
           <div className="h-4 w-px bg-zinc-800 hidden sm:block" />
 
           {/* Action buttons */}
-          <button
-            onClick={() => setShowHostControls(!showHostControls)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 ${
-              showHostControls
-                ? 'bg-indigo-600 border-indigo-500 text-zinc-950'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">settings_accessibility</span>
-            <span>Host Controls</span>
-          </button>
+          {isHost && (
+            <button
+              onClick={() => setShowHostControls(!showHostControls)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 ${
+                showHostControls
+                  ? 'bg-indigo-600 border-indigo-500 text-zinc-950'
+                  : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">settings_accessibility</span>
+              <span>Host Controls</span>
+            </button>
+          )}
 
           <button
             onClick={() => navigate('/dashboard')}
@@ -512,11 +549,10 @@ export const RoomPage: React.FC = () => {
         </aside>
 
         {/* Slide-in Host Control Overlay Panel */}
-        {showHostControls && (
+        {showHostControls && isHost && (
           <div className="absolute right-0 top-0 h-full shadow-2xl flex z-30 transition-transform duration-300 ease-in-out">
             <HostControlPanel
               onClose={() => setShowHostControls(false)}
-              roomName={`Room: ${roomId}`}
               roomLink={window.location.href}
               participants={participants.map((p) => ({
                 id: p.socketId,
@@ -525,6 +561,16 @@ export const RoomPage: React.FC = () => {
                 status: 'active',
                 avatarColor: p.role === 'host' ? 'bg-indigo-600' : 'bg-zinc-700'
               }))}
+              autoDelete={autoDelete}
+              onToggleAutoDelete={(val) => {
+                wsClient.send('toggle_auto_delete', { autoDelete: val });
+              }}
+              onTransferHost={(targetId) => {
+                wsClient.send('transfer_host', { targetId });
+              }}
+              onRemoveParticipant={(targetId) => {
+                wsClient.send('remove_participant', { targetId });
+              }}
             />
           </div>
         )}

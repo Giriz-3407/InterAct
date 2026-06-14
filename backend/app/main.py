@@ -13,9 +13,23 @@ app = FastAPI(
 )
 
 # CORS middleware configuration
+import json
+
+cors_origins_raw = os.getenv("CORS_ORIGINS", "*")
+if cors_origins_raw == "*":
+    cors_origins = ["*"]
+else:
+    try:
+        cors_origins = json.loads(cors_origins_raw)
+        if not isinstance(cors_origins, list):
+            cors_origins = [str(cors_origins)]
+    except Exception as e:
+        logger.error(f"Failed to parse CORS_ORIGINS as JSON array: {e}. Falling back to '*'")
+        cors_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,6 +46,9 @@ app.include_router(rooms_router)
 async def startup_event():
     logger.info("Initializing OmniSync backend modules...")
     await connect_to_mongo()
+    import asyncio
+    from app.rooms.manager import room_manager
+    asyncio.create_task(room_manager.start_cleanup_loop())
 
 @app.on_event("shutdown")
 async def shutdown_event():

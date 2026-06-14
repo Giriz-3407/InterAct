@@ -45,7 +45,7 @@ export const DashboardPage: React.FC = () => {
     setApiError('');
     try {
       if (modalMode === 'create') {
-        const data = await apiClient.post<{ roomCode: string }>('http://localhost:8000/api/rooms', {});
+        const data = await apiClient.post<{ roomCode: string }>('/api/rooms', {});
         if (data && data.roomCode) {
           navigate(`/room/${data.roomCode}?name=${encodeURIComponent(displayName)}`);
         }
@@ -54,7 +54,7 @@ export const DashboardPage: React.FC = () => {
         // Lookup room
         try {
           const roomData = await apiClient.get<{ roomCode: string; active: boolean }>(
-            `http://localhost:8000/api/rooms/${roomCode}`
+            `/api/rooms/${roomCode}`
           );
           if (roomData && roomData.active) {
             navigate(`/room/${roomCode}?name=${encodeURIComponent(displayName)}`);

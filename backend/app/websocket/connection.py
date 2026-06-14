@@ -133,7 +133,8 @@ class ConnectionManager:
                     "roomCode": room_code,
                     "isHost": is_host,
                     "socketId": socket_id,
-                    "participants": room["participants"]
+                    "participants": room["participants"],
+                    "autoDelete": room.get("autoDelete", True)
                 }
                 await ws.send_text(json.dumps(join_confirmation))
 
@@ -226,6 +227,88 @@ class ConnectionManager:
                     room_code,
                     {"event": "host_stop_share", "hostId": socket_id}
                 )
+
+        elif event == "toggle_auto_delete":
+            room_code = self.socket_room_map.get(socket_id)
+            if not room_code:
+                await self._send_error(socket_id, "Not associated with a room")
+                return
+            
+            room = await room_manager.get_room(room_code)
+            if not room or room.get("hostId") != socket_id:
+                await self._send_error(socket_id, "Unauthorized: Only the host can toggle room settings")
+                return
+            
+            auto_delete = data.get("autoDelete", True)
+            room["autoDelete"] = auto_delete
+            
+            await self.broadcast_to_room(
+                room_code,
+                {
+                    "event": "room_settings_updated",
+                    "autoDelete": auto_delete
+                }
+            )
+            logger.info(f"Host {socket_id} updated autoDelete to {auto_delete} in room {room_code}")
+
+        elif event == "transfer_host":
+            target_id = data.get("targetId")
+            if not target_id:
+                await self._send_error(socket_id, "Missing targetId")
+                return
+            
+            room_code = self.socket_room_map.get(socket_id)
+            if not room_code:
+                await self._send_error(socket_id, "Not associated with a room")
+                return
+            
+            room = await room_manager.transfer_host(room_code, socket_id, target_id)
+            if not room:
+                await self._send_error(socket_id, "Failed to transfer host role")
+                return
+            
+            await self.broadcast_to_room(
+                room_code,
+                {
+                    "event": "participants_updated",
+                    "participants": room["participants"]
+                }
+            )
+            logger.info(f"Host {socket_id} transferred host role to {target_id} in room {room_code}")
+
+        elif event == "remove_participant":
+            target_id = data.get("targetId")
+            if not target_id:
+                await self._send_error(socket_id, "Missing targetId")
+                return
+            
+            room_code = self.socket_room_map.get(socket_id)
+            if not room_code:
+                await self._send_error(socket_id, "Not associated with a room")
+                return
+            
+            room = await room_manager.get_room(room_code)
+            if not room or room.get("hostId") != socket_id:
+                await self._send_error(socket_id, "Unauthorized: Only the host can remove participants")
+                return
+            
+            if target_id == socket_id:
+                await self._send_error(socket_id, "You cannot remove yourself")
+                return
+            
+            target_ws = self.active_connections.get(target_id)
+            if target_ws:
+                try:
+                    await target_ws.send_text(json.dumps({
+                        "event": "kicked",
+                        "reason": "You have been removed by the host."
+                    }))
+                    await target_ws.close(code=1000)
+                    logger.info(f"Host {socket_id} kicked participant {target_id} from room {room_code}")
+                except Exception as e:
+                    logger.error(f"Failed to close websocket for kicked participant {target_id}: {e}")
+            else:
+                await self.disconnect(target_id)
 
         else:
             logger.warning(f"Unhandled WebSocket event '{event}' from socket {socket_id}")

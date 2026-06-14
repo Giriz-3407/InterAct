@@ -103,19 +103,7 @@ export const SidebarL2: React.FC<SidebarL2Props> = ({ context }) => {
           <span>Rooms</span>
         </NavLink>
 
-        <NavLink
-          to="/history"
-          className={({ isActive }) =>
-            `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-geist font-medium transition-colors ${
-              isActive
-                ? 'bg-indigo-600/15 text-[#c0c1ff]'
-                : 'text-zinc-400 hover:bg-zinc-900'
-            }`
-          }
-        >
-          <span className="material-symbols-outlined text-[18px]">history_edu</span>
-          <span>Activity</span>
-        </NavLink>
+
       </div>
 
       <button 

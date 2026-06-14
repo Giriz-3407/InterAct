@@ -128,6 +128,15 @@ export const RoomPage: React.FC = () => {
       if (data.autoDelete !== undefined) {
         setAutoDelete(data.autoDelete);
       }
+      try {
+        const joined = JSON.parse(localStorage.getItem('joinedRooms') || '[]');
+        if (!joined.includes(data.roomCode)) {
+          joined.push(data.roomCode);
+          localStorage.setItem('joinedRooms', JSON.stringify(joined));
+        }
+      } catch (err) {
+        console.error('Failed to save room to history:', err);
+      }
     });
 
     const unsubParticipantJoined = wsClient.on('participant_joined', (data) => {

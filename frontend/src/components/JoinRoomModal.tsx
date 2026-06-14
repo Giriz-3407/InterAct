@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface JoinRoomModalProps {
   isOpen: boolean;
   mode: 'create' | 'join';
   onClose: () => void;
   onSubmit: (displayName: string, roomCode?: string) => void;
+  initialRoomCode?: string;
 }
 
 export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
@@ -12,10 +13,18 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
   mode,
   onClose,
   onSubmit,
+  initialRoomCode = '',
 }) => {
-  const [roomCode, setRoomCode] = useState('');
+  const [roomCode, setRoomCode] = useState(initialRoomCode);
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setRoomCode(initialRoomCode);
+      setError('');
+    }
+  }, [isOpen, initialRoomCode]);
 
   if (!isOpen) return null;
 

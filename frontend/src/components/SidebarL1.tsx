@@ -38,18 +38,7 @@ export const SidebarL1: React.FC = () => {
             <span className="material-symbols-outlined text-[22px]">cast_connected</span>
           </NavLink>
           
-          <NavLink
-            to="/history"
-            className={({ isActive }) =>
-              `w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-                isActive
-                  ? 'bg-indigo-600/20 text-[#c0c1ff]'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
-              }`
-            }
-          >
-            <span className="material-symbols-outlined text-[22px]">history</span>
-          </NavLink>
+
         </nav>
       </div>
 

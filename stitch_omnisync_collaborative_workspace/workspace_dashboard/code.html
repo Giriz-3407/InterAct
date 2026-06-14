@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;900&amp;family=Geist+Mono&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(39, 39, 42, 0.5);
+        }
+        .presence-glow {
+            box-shadow: 0 0 12px rgba(192, 193, 255, 0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 10px;
+        }
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .animate-pulse-subtle {
+            animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-high": "#2a2a2c",
+                      "on-secondary-fixed": "#23005c",
+                      "on-tertiary": "#4f2500",
+                      "on-primary-fixed-variant": "#2f2ebe",
+                      "surface-container": "#201f22",
+                      "error-rose": "#f43f5e",
+                      "primary-fixed": "#e1e0ff",
+                      "surface-container-low": "#1c1b1d",
+                      "tertiary-container": "#d97721",
+                      "on-secondary-fixed-variant": "#5516be",
+                      "surface-bright": "#39393b",
+                      "slate-surface": "#18181b",
+                      "indigo-soft": "rgba(99, 102, 241, 0.1)",
+                      "surface": "#131315",
+                      "surface-container-lowest": "#0e0e10",
+                      "surface-dim": "#131315",
+                      "inverse-on-surface": "#313032",
+                      "tertiary-fixed": "#ffdcc5",
+                      "primary": "#c0c1ff",
+                      "surface-variant": "#353437",
+                      "on-primary": "#1000a9",
+                      "error": "#ffb4ab",
+                      "outline": "#908fa0",
+                      "tertiary": "#ffb783",
+                      "on-primary-fixed": "#07006c",
+                      "success-emerald": "#10b981",
+                      "on-secondary-container": "#c4abff",
+                      "on-primary-container": "#0d0096",
+                      "outline-variant": "#464554",
+                      "on-surface-variant": "#c7c4d7",
+                      "on-tertiary-fixed": "#301400",
+                      "inverse-surface": "#e5e1e4",
+                      "error-container": "#93000a",
+                      "slate-border": "#27272a",
+                      "on-error-container": "#ffdad6",
+                      "inverse-primary": "#494bd6",
+                      "on-tertiary-fixed-variant": "#703700",
+                      "primary-fixed-dim": "#c0c1ff",
+                      "secondary-fixed": "#e9ddff",
+                      "secondary": "#d0bcff",
+                      "tertiary-fixed-dim": "#ffb783",
+                      "surface-tint": "#c0c1ff",
+                      "primary-container": "#8083ff",
+                      "on-surface": "#e5e1e4",
+                      "on-error": "#690005",
+                      "secondary-fixed-dim": "#d0bcff",
+                      "secondary-container": "#571bc1",
+                      "on-secondary": "#3c0091",
+                      "surface-container-highest": "#353437",
+                      "warning-amber": "#f59e0b",
+                      "on-tertiary-container": "#452000",
+                      "on-background": "#e5e1e4",
+                      "background": "#131315"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "base": "4px",
+                      "gutter": "16px",
+                      "margin-desktop": "24px",
+                      "sidebar-l1": "64px",
+                      "margin-mobile": "16px",
+                      "sidebar-l2": "260px",
+                      "topbar-height": "56px"
+              },
+              "fontFamily": {
+                      "mono": ["Geist Mono"],
+                      "body-md": ["Inter"],
+                      "caption": ["Inter"],
+                      "display-lg-mobile": ["Geist"],
+                      "headline-sm": ["Geist"],
+                      "headline-md": ["Geist"],
+                      "display-lg": ["Geist"],
+                      "label-md": ["Geist"],
+                      "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "mono": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                      "display-lg-mobile": ["32px", {"lineHeight": "36px", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "display-lg": ["48px", {"lineHeight": "52px", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary/30">
+<!-- L1 Sidebar (Primary Navigation) -->
+<aside class="fixed h-full w-sidebar-l1 md:w-sidebar-l2 left-0 top-0 border-r border-slate-border bg-surface z-50 flex flex-col h-full py-4 transition-all duration-200 ease-in-out">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-gradient-to-tr from-primary to-secondary-container flex items-center justify-center">
+<span class="text-white font-bold text-headline-sm">A</span>
+</div>
+<div class="hidden md:block">
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface">Acme Corp</h1>
+<p class="font-caption text-caption text-on-surface-variant">Design System</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-3">
+<a class="flex items-center gap-3 px-3 py-2 text-primary font-bold border-l-2 border-primary transition-all duration-200 ease-in-out hover:bg-indigo-soft" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="hidden md:block font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant transition-all duration-200 ease-in-out hover:bg-indigo-soft hover:text-primary" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="hidden md:block font-body-md text-body-md">Rooms</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant transition-all duration-200 ease-in-out hover:bg-indigo-soft hover:text-primary" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="hidden md:block font-body-md text-body-md">Activity</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant transition-all duration-200 ease-in-out hover:bg-indigo-soft hover:text-primary" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="hidden md:block font-body-md text-body-md">Team</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant transition-all duration-200 ease-in-out hover:bg-indigo-soft hover:text-primary" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="hidden md:block font-body-md text-body-md">Settings</span>
+</a>
+</nav>
+<div class="mt-auto px-3 space-y-1">
+<button class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-secondary-container text-on-primary font-bold py-2 rounded-lg mb-4 hidden md:flex">
+<span class="material-symbols-outlined">add</span>
+                New Room
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant transition-all duration-200 ease-in-out hover:bg-indigo-soft hover:text-primary" href="#">
+<span class="material-symbols-outlined">help_center</span>
+<span class="hidden md:block font-body-md text-body-md">Help</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant transition-all duration-200 ease-in-out hover:bg-indigo-soft hover:text-primary" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="hidden md:block font-body-md text-body-md">Profile</span>
+</a>
+</div>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 left-0 md:left-sidebar-l2 z-40 flex items-center justify-between px-margin-desktop bg-surface/80 backdrop-blur-md border-b border-slate-border h-topbar-height transition-colors duration-150">
+<div class="flex items-center gap-4">
+<span class="font-headline-sm text-headline-sm font-black text-on-surface tracking-tight">CollabOS</span>
+<div class="h-4 w-[1px] bg-slate-border"></div>
+<nav class="flex items-center gap-6 font-label-md text-label-md">
+<a class="text-on-surface font-bold" href="#">Workspace</a>
+<a class="text-on-surface-variant hover:text-on-surface" href="#">Folder</a>
+<a class="text-on-surface-variant hover:text-on-surface" href="#">Room</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+<input class="bg-surface-container-low border-slate-border text-on-surface text-body-md rounded-full pl-10 pr-4 py-1.5 w-64 focus:ring-1 focus:ring-primary focus:border-primary" placeholder="Search components..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg">
+<span class="material-symbols-outlined">radio_button_checked</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg">
+<span class="material-symbols-outlined">videocam</span>
+</button>
+<button class="px-4 py-1.5 bg-surface-variant/50 border border-slate-border rounded-lg font-label-md text-label-md text-on-surface hover:bg-surface-variant transition-colors">Invite</button>
+<button class="px-4 py-1.5 bg-gradient-to-r from-primary to-secondary-container rounded-lg font-label-md text-label-md text-on-primary font-bold hover:shadow-lg hover:shadow-primary/20 transition-all">Share</button>
+</div>
+</div>
+</header>
+<!-- Main Content Grid -->
+<main class="pt-topbar-height pl-sidebar-l1 md:pl-sidebar-l2 min-h-screen">
+<div class="max-w-[1600px] mx-auto p-margin-desktop grid grid-cols-12 gap-gutter">
+<!-- Left & Middle: Workspace Canvas (Hero + Live) -->
+<div class="col-span-12 xl:col-span-9 space-y-10">
+<!-- Hero Section: Jump Back In -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-headline-md text-headline-md text-on-surface">Jump Back In</h2>
+<button class="text-primary font-label-md text-label-md hover:underline flex items-center gap-1">
+                            View Recent <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Recent Card 1 -->
+<div class="group relative overflow-hidden rounded-xl glass-panel p-1 hover:shadow-2xl transition-all duration-300">
+<div class="aspect-video rounded-lg overflow-hidden relative">
+<img class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="A high-fidelity architectural digital twin of a modern office space, rendered with soft ambient lighting and deep purple accents. The scene is presented as a professional collaboration canvas with floating UI elements. The mood is sophisticated and focused on high-performance design workflows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbpHQcEE5Fy5s3eR032CyOY6yO3_jqqv333N_8QrgxF_K6tDJjUHVzKxWjLrGRpcLAExKlUd8W6nKWHOKRimyUHwpCjaVsSjsSdvMs2q9XHMNHTY2X1QCmykJAl06qU5nZKyjJTzJYcwSb5d5MS36QreWGmEfINd9b-Fylj0jKhNdNncpaWanxoqGUwn8IkOduwsCAAb_kGgOrGXqO824TPO-CNwCDtuHJ_KRqssbF0RfK3Qf9NwP6ggEw3Su9XEAEzetbU2epOg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute bottom-3 left-3 flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container overflow-hidden">
+<img alt="Alex" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAl5vT7Cd4crk9G_o8gf4zuJdu2GHOEUCIVqSJmDQBPmFgHOlYh7CmqBToWtR0SKUYAVWxyRmze3k-g6Eyw4fjh1ORH3-5tV7F6IJfsj_IQI88rW3YvnovzTxtr6HK8obNzInUVz_9xhjpjkithqDp2v-KeVIg2NmUnHlm55L9wYkh3ys4WLna-YKLiMvmvh9vCqOoRvpzQ9JR2i2YaxNzwgEkgrP7ENTNzVEzG9RSzoK6Ljj4HTuB-iB0YpjhT1QWgUu3tfDonxQ"/>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container overflow-hidden">
+<img alt="Jordan" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClEoPglm90fXJzRjVrzicxFMM9G8y3bM1vk16EFrIhehb-RfAP2NNqSmZ5r1ye4P4d4dSwgQ5nE8mW87_NBgm13RvCE2erFyd-0JiS6U0PIZzDlCjxd-79sV_emIP78umYlN3w9g7mZh9G6Vn2I0ivd1kXDIs9FRkOquQONXwEtV-rdtDePI9Z8JijbFLH70cqH5zqRKxnna96WhAyAi0ob-mzWy3Er0VNYiDpZGhUmhSCucklxWQdfgrdLIRFZ8VpZOs_7XGlZw"/>
+</div>
+</div>
+</div>
+<div class="p-4">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="font-headline-sm text-[16px] text-on-surface font-bold group-hover:text-primary transition-colors">Product Roadmap v2</h3>
+<p class="font-caption text-caption text-on-surface-variant">Edited 2m ago</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
+</div>
+</div>
+</div>
+<!-- Recent Card 2 -->
+<div class="group relative overflow-hidden rounded-xl glass-panel p-1 hover:shadow-2xl transition-all duration-300">
+<div class="aspect-video rounded-lg overflow-hidden relative">
+<img class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="Abstract vibrant flowing gradients of deep blue, violet, and electric cyan representing complex data visualization or creative brainstorming. The lighting is low-key with intense neon glows highlighting procedural node networks. The aesthetic is clean, technical, and high-fidelity for a professional design environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkTuiRYFgYw__hky5kn81cmhTvXXcSJkMu2NlPCWQREzIhObkOT0CqE7hhRyh1eGp8H2oE2lrhOOi7SKpKO8W0FNptVhaYOfokG_urRvZjsFzF15wjnDXIb8fNUdS8cOK1HPmPXYXArrtztKfR8wIKf0lS3dmN6tAQWKVI0PCWqxEV2zzN0R2QrbyB7Z0h9qMWyWyt-v35BEXOLwGLs3Vy2PjLRXycqELY8T1dOMacTngFFeV3IC2IXHTpvckZDJ_xpxsYgzgLng"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute bottom-3 left-3 flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container overflow-hidden">
+<img alt="Riley" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9dFxLWKYDvgQLL-aBjq1YLxfU8_FG5LAauZGtH5IacFVHO_70EemnK9-_h8b4fi_a8UQMUAWlvpTSqrujy2Lb6SVYd8oRlA_kjr_Hk47ZSw2_s4EjkHp7jMvFvwQr85p9M8H8-z7g7nEfdP1ONI4_AyPZPQ_Yu5_xHGB88krG3h7OKM8v1aWp-f6XH0NHYvDIXgLTB12dXZC1A89I1ACdkSeIuy70Wv-06iPwMvYVogCcs8kcmc30VNAJeodTUkQMVeIyaKS23Q"/>
+</div>
+</div>
+</div>
+<div class="p-4">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="font-headline-sm text-[16px] text-on-surface font-bold group-hover:text-primary transition-colors">Landing Page Assets</h3>
+<p class="font-caption text-caption text-on-surface-variant">Edited 4h ago</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
+</div>
+</div>
+</div>
+<!-- Recent Card 3 -->
+<div class="group relative overflow-hidden rounded-xl glass-panel p-1 hover:shadow-2xl transition-all duration-300">
+<div class="aspect-video rounded-lg overflow-hidden relative">
+<img class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" data-alt="A minimalist 3D rendering of soft geometric shapes in a vast digital void. The lighting is sophisticated, utilizing layered ambient shadows and a monochromatic palette with subtle indigo highlights. The atmosphere is calm and engineered, perfectly fitting for a high-performance design collaboration platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcwHTkrphHxE3g-BVCHlOR3NAowz8Hb82KYvhiK09BRW_YCKYA6zclX05-_lA32S3EeksP6UQsxNtSFDWUzcIcbwkI4egzv3HxFfSKX80AkE_SWreWVgiBEhJnZsvMWkaVkIxF1oE-fyri7i9tbbWdbKgnRdN7AOnAt_ZyNJCGFOIdS-XDHd1G_AytPxVi5z7vPbJuM2xrOQpT8nY2c-NkPUBvM51Qux9p6mDY5P8B4onyeoHjT8RtSjX0pt3h0faC_SiAJlELvw"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute bottom-3 left-3 flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container overflow-hidden">
+<img alt="Morgan" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0vKhD8uJT0Ur1kzrdDRNrZoCqKcY3vV5ntYBAs_SiGG7jr_I2UY7x5zW2Z39TAAdhVmO5o6TX-aJyZsagDnYNAI_oTf2YoHpcem8cV35xeaOWpoByJ92uF2WQbSiC-B1_9cLts7WzHIseXbYJJlG1ji2XUUzZ_zzjdvX84Z8nUgHOIVz-yVNf_gU-J3jSVMtIol9b9sh4TpWVL7Kp7WBZokzRGaaTacIwP3AtBaMWq1NI6-zrCSZnvYwsJ9rPjWDNEfcyrZyKYQ"/>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container overflow-hidden">
+<img alt="Taylor" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPhegs093vzAcD2bF7y-61NBFJutdWexhqLKjyRR5CoKq2-NCLXRozFeRk823yU2_yp90s6kqdNZlxzINxZJRtkc1HGnnFADU34drbc4kocBGvspny6g_AtFdEN-uVg37dph-bygFLS4JmPuibdugFBiFY_JT2y0O5If8yTvUIUndZygCSbhi8-zvrBJ2WZKhc-r8TvX2reb6_i_doqPmkX3EsDqmf6OL66swRZbh_UNS1Tu_2ozS8ZPWvUSaw8ocPNZI4V-s9og"/>
+</div>
+</div>
+</div>
+<div class="p-4">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="font-headline-sm text-[16px] text-on-surface font-bold group-hover:text-primary transition-colors">Q4 Sprint Board</h3>
+<p class="font-caption text-caption text-on-surface-variant">Edited yesterday</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Live Now Grid -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<h2 class="font-headline-md text-headline-md text-on-surface">Live Now</h2>
+<span class="flex h-2 w-2 rounded-full bg-error-rose animate-pulse"></span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Live Room 1 -->
+<div class="glass-panel rounded-xl p-6 flex flex-col justify-between hover:border-primary/50 transition-colors cursor-pointer group">
+<div class="flex items-start justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-variant/50 flex items-center justify-center border border-slate-border">
+<span class="material-symbols-outlined text-primary text-[28px]">design_services</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Design Review: Mobile App</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Ongoing for 45 minutes</p>
+</div>
+</div>
+<div class="flex -space-x-3">
+<div class="relative">
+<img alt="Casey" class="w-8 h-8 rounded-full border-2 border-slate-surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB12V9SHjA6qr4f-9eEizA6bsposrnziYF9xMViQGTWNZ9c6qSp2QJal3tne1prHDLm3ihFwiDay587WwdtPTXyL4PVCVZG9WUkeZTyRhlZVDibbqtmou7sujbqV-YWOQEMQ7hdhgAsOD7SAMeGA4RewjIOMMHCsc6ornMHglb4os-YcGJ7xlG0BpBAlJeJCRq15rc8nRIiBfZHcA2bQVjHoAMwt7K_NMKl4cU8WT8IAgd5Fo8kVCz26vv6yfIxU_qwJaKUz2cBhQ"/>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success-emerald border-2 border-slate-surface rounded-full"></span>
+</div>
+<div class="relative">
+<img alt="Sam" class="w-8 h-8 rounded-full border-2 border-slate-surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFw2oEk_BkMFwkae_q7lbOTqu3l0ejO5kmAr-q4bV6CAJKHMJAIhAfIe7NWQ3IhZ_1EEd0zg8n6ADEYaa_RF0B96etEqLXMLi6iUhVcIMMLEuCTYfcoQvfmnBwNeKxrI6XonlpUcrSBujxM93WqpRa_Apcd0ERSSYClDXfiVyd5J2zI7HNYO0RL04gwBzh8EDC-UxiJLx6NLcjRTpkKx76H1RydPdma_cgqdJkE7QieQ3CGH56IfjHHXu-Q9Op8RcKlDMgyXLfBw"/>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success-emerald border-2 border-slate-surface rounded-full"></span>
+</div>
+<div class="relative">
+<img alt="Skyler" class="w-8 h-8 rounded-full border-2 border-slate-surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuByu3VYOY48YzdDxHKn5mDJGgXxBTPCsjGbDsNVWmrAvARtP8T4RVIYXDq-ze7K2I3ndOibsEWpGXS7WdsVUujFTrDhA21nSGGTL0SJQhGjslskdNJGHCGZNKnZeg8pGwEUIEQRUFcRVlDCoBOsVHsrRwJEIkTMIelnhjYwKlJWsy75pU6D2GH7bs37tg0ctdpXKxsM1Q0jvy-KnUGH_MPSdrRVRBWfW-l1KxqdKoEIIJDK2hLzTCifcbxiA26wbxwX2M5cSt0nDw"/>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-warning-amber border-2 border-slate-surface rounded-full"></span>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-slate-surface bg-surface-variant flex items-center justify-center font-caption text-caption">
+                                        +4
+                                    </div>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
+<span class="material-symbols-outlined text-[16px]">mic</span>
+<span>3 Unmuted</span>
+<span class="mx-2">•</span>
+<span class="material-symbols-outlined text-[16px]">screen_share</span>
+<span>Skyler sharing</span>
+</div>
+<button class="px-6 py-2 bg-indigo-soft text-primary font-bold rounded-lg border border-primary/20 hover:bg-primary hover:text-on-primary transition-all group-hover:scale-105 active:scale-95">Join</button>
+</div>
+</div>
+<!-- Live Room 2 -->
+<div class="glass-panel rounded-xl p-6 flex flex-col justify-between hover:border-primary/50 transition-colors cursor-pointer group">
+<div class="flex items-start justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-variant/50 flex items-center justify-center border border-slate-border">
+<span class="material-symbols-outlined text-tertiary text-[28px]">terminal</span>
+</div>
+<div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Weekly Tech Sync</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Ongoing for 12 minutes</p>
+</div>
+</div>
+<div class="flex -space-x-3">
+<div class="relative">
+<img alt="Dev" class="w-8 h-8 rounded-full border-2 border-slate-surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEghcYF-3Hue6Crr-Qyg46CGPJ4FrQQzKkd1D-pFVvpJpScqy6bWjMwil4UNibrHuG0Y-NWS1vqS-d9C4rYunLlghEvFwc_nR4LaydZgaJWc2TbbPDj-n5cIxmHSfPm1NxFC0Y4mRi_ytKy2UnVRF9FrR0XrdKDta2H8C0EeYyZaYUdYdJ9Ddl66Qs6ECR6pkGAIgSXRgNrAmJl221eKOmN6mvslENOM6bGrb37Dpv4yxbG5TmwmFJimFd6iXLuuKU5vVgfivdQQ"/>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success-emerald border-2 border-slate-surface rounded-full"></span>
+</div>
+<div class="relative">
+<img alt="Dev" class="w-8 h-8 rounded-full border-2 border-slate-surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7EOqUsEocAjMWcXfmJEu_PHWde-pmChDAIIL1OxYy458DiH8jtEoFQN5nceb6NHSzUKefPB5C0zgcLko5mwiSxS29xeiE_uhazkqIUK3lnjXvgRJ2EYo874OMVRPAUAAlsZabWmLNFqmyZTl1DDKqiQhSGQvCyHyQ6gxo-hTZAKdiOCKFiTVxPK6P9My1uPtSi-WC85kR83tZHUuXw2xAraEmQPltz65X218fzu9cijMG4v_NwjD64zac1qaS1uKvRd5CXOl7Qw"/>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success-emerald border-2 border-slate-surface rounded-full"></span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 text-on-surface-variant font-caption text-caption">
+<span class="material-symbols-outlined text-[16px]">mic</span>
+<span>2 Unmuted</span>
+</div>
+<button class="px-6 py-2 bg-indigo-soft text-primary font-bold rounded-lg border border-primary/20 hover:bg-primary hover:text-on-primary transition-all group-hover:scale-105 active:scale-95">Join</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Collaboration Insight (Bonus UI Density) -->
+<section class="glass-panel rounded-2xl p-8 overflow-hidden relative border border-slate-border">
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 blur-[100px] rounded-full"></div>
+<div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+<div>
+<p class="font-caption text-caption text-on-surface-variant uppercase tracking-widest mb-1">Weekly Velocity</p>
+<h5 class="font-display-lg text-[32px] text-on-surface">+24%</h5>
+<p class="font-body-md text-body-md text-success-emerald flex items-center gap-1 mt-2">
+<span class="material-symbols-outlined text-[16px]">trending_up</span> higher than last week
+                            </p>
+</div>
+<div class="md:border-x border-slate-border px-8">
+<p class="font-caption text-caption text-on-surface-variant uppercase tracking-widest mb-1">Collaborative Hours</p>
+<h5 class="font-display-lg text-[32px] text-on-surface">142.5</h5>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Across 12 projects</p>
+</div>
+<div class="pl-8">
+<p class="font-caption text-caption text-on-surface-variant uppercase tracking-widest mb-1">Active Contributors</p>
+<h5 class="font-display-lg text-[32px] text-on-surface">38</h5>
+<div class="flex -space-x-1 mt-2">
+<div class="w-6 h-6 rounded-full border border-surface bg-slate-border"></div>
+<div class="w-6 h-6 rounded-full border border-surface bg-slate-border"></div>
+<div class="w-6 h-6 rounded-full border border-surface bg-slate-border"></div>
+<div class="w-6 h-6 rounded-full border border-surface bg-slate-border"></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Sidebar: Activity Feed -->
+<aside class="col-span-12 xl:col-span-3 space-y-6">
+<div class="sticky top-[80px]">
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Activity</h2>
+<button class="p-2 text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+<div class="space-y-4 custom-scrollbar overflow-y-auto max-h-[calc(100vh-180px)] pr-2">
+<!-- Activity Item 1: Mention -->
+<div class="glass-panel p-4 rounded-xl border border-primary/20 bg-indigo-soft/20">
+<div class="flex items-start gap-3">
+<div class="relative flex-shrink-0">
+<img alt="Emma" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQCQp1C-T33WxhjwVJiTMbynchS9HG_Lh2fszGfUpmFcIvz0K2QAksrf8H7J0yppj9Uz4HEjmKM6Qcv_wbK1801EpkPSMW-fOM31hY11JbcgYoKcoqlUrwbktT8s41kOzS1DqmnZO89aFCmjzeMNlMhONrsCKtTVGyklYwhhzM0ig3TLXYRW0qTaadhzSIn7-9ACSKHDkIbjv7z-ogBwmAmF3ZNFvO2WrcHoQjFt92OlX5RGNZ3DsMDdUM7YGt0Tdtf_3EhdusQQ"/>
+<span class="absolute -bottom-1 -right-1 material-symbols-outlined text-[14px] bg-primary text-on-primary rounded-full p-0.5">alternate_email</span>
+</div>
+<div class="flex-1">
+<p class="text-body-md">
+<span class="font-bold text-on-surface">Emma</span> mentioned you in <span class="text-primary font-medium">Design Review</span>
+</p>
+<p class="text-on-surface-variant font-body-md italic mt-1 border-l-2 border-slate-border pl-3">
+                                        "Hey, what do you think about the new gradient on the CTA?"
+                                    </p>
+<p class="font-caption text-caption text-on-surface-variant mt-2">2 min ago</p>
+</div>
+</div>
+</div>
+<!-- Activity Item 2: Recording -->
+<div class="glass-panel p-4 rounded-xl">
+<div class="flex items-start gap-3">
+<div class="relative flex-shrink-0">
+<div class="w-8 h-8 rounded-full bg-error-rose/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-error-rose text-[18px]">radio_button_checked</span>
+</div>
+</div>
+<div class="flex-1">
+<p class="text-body-md text-on-surface">
+                                        New recording available: <span class="font-bold">Weekly Tech Sync</span>
+</p>
+<div class="mt-3 aspect-video rounded-lg bg-surface-container overflow-hidden border border-slate-border group cursor-pointer">
+<div class="w-full h-full flex items-center justify-center relative">
+<span class="material-symbols-outlined text-[32px] text-on-surface-variant group-hover:text-primary transition-colors">play_circle</span>
+</div>
+</div>
+<p class="font-caption text-caption text-on-surface-variant mt-2">1 hour ago</p>
+</div>
+</div>
+</div>
+<!-- Activity Item 3: File Comment -->
+<div class="glass-panel p-4 rounded-xl">
+<div class="flex items-start gap-3">
+<img alt="Liam" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTxwSP-Nt_R4zZItiDIeyQCTgXv7VlgglAhZ_ht6evOJ3OG6eaT8ufKtyAfaL5tZqiVMoDUGQfU1jUq1jwp9tiGBNj2fcTS1CWkgxIdnWM7Mf8JmFMAMZwJGDMJg2zbnQ9Qf3CzBQgA6BpTBQ6f8BcaM9HwmUKmJosi09Flter77M1QljsXhjZW9nJnyfDtCG2e2dxYnsrCfQ40P94HhZ-wKDLAiPcTJxexpbk_AssJZkSalAzqN-9ES1Dr5ovv2wa5YvZT0gPbw"/>
+<div class="flex-1">
+<p class="text-body-md text-on-surface">
+<span class="font-bold">Liam</span> commented on <span class="font-bold">StyleGuide.fig</span>
+</p>
+<p class="font-caption text-caption text-on-surface-variant mt-2">3 hours ago</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">chat_bubble</span>
+</div>
+</div>
+<!-- Activity Item 4: New Room -->
+<div class="glass-panel p-4 rounded-xl opacity-70">
+<div class="flex items-start gap-3">
+<div class="w-8 h-8 rounded-full bg-success-emerald/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-success-emerald text-[18px]">add_circle</span>
+</div>
+<div class="flex-1">
+<p class="text-body-md text-on-surface">
+<span class="font-bold">Sarah</span> created a new room <span class="text-primary font-medium">Marketing Q1</span>
+</p>
+<p class="font-caption text-caption text-on-surface-variant mt-1">Yesterday</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- Floating RTC Controls (Pill NavBar) -->
+<nav class="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-3 bg-surface-container/60 backdrop-blur-xl floating-pill rounded-full mb-6 mx-auto border border-slate-border/50 shadow-2xl scale-105 active:scale-95 transition-transform">
+<button class="flex flex-col items-center justify-center text-on-surface p-3 hover:bg-surface-bright/80 rounded-full transition-colors group">
+<span class="material-symbols-outlined">mic</span>
+<span class="font-caption text-caption mt-1">Mic</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface p-3 hover:bg-surface-bright/80 rounded-full transition-colors group">
+<span class="material-symbols-outlined">videocam</span>
+<span class="font-caption text-caption mt-1">Camera</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface p-3 hover:bg-surface-bright/80 rounded-full transition-colors group">
+<span class="material-symbols-outlined">screen_share</span>
+<span class="font-caption text-caption mt-1">Share</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface p-3 hover:bg-surface-bright/80 rounded-full transition-colors group">
+<span class="material-symbols-outlined">edit</span>
+<span class="font-caption text-caption mt-1">Annotate</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface p-3 hover:bg-surface-bright/80 rounded-full transition-colors group relative">
+<span class="material-symbols-outlined">chat</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
+<span class="font-caption text-caption mt-1">Chat</span>
+</button>
+<div class="h-8 w-[1px] bg-slate-border mx-2"></div>
+<button class="flex flex-col items-center justify-center bg-error-container text-on-error-container p-3 rounded-full hover:bg-error-rose hover:text-white transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">call_end</span>
+<span class="font-caption text-caption mt-1">Leave</span>
+</button>
+</nav>
+<script>
+        // Micro-interactions for hover effects on cards
+        document.querySelectorAll('.glass-panel').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+
+        // Toggle L2 sidebar visibility (Simulation)
+        const sidebar = document.querySelector('aside');
+        const main = document.querySelector('main');
+    </script>
+</body></html>

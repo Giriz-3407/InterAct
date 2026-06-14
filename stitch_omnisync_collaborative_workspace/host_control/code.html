@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kinetic Sync - Host Control Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Geist:wght@400;600;700;800;900&amp;family=Geist+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(39, 39, 42, 1);
+        }
+        .glow-border-indigo:focus-within {
+            box-shadow: 0 0 0 1px #c0c1ff, 0 0 12px rgba(192, 193, 255, 0.3);
+        }
+        .presence-glow {
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+        .rtc-gradient {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#131315",
+                        "on-error-container": "#ffdad6",
+                        "indigo-soft": "rgba(99, 102, 241, 0.1)",
+                        "tertiary-fixed-dim": "#ffb783",
+                        "surface-container-lowest": "#0e0e10",
+                        "surface-bright": "#39393b",
+                        "on-tertiary": "#4f2500",
+                        "outline-variant": "#464554",
+                        "on-secondary-fixed": "#23005c",
+                        "on-primary-fixed": "#07006c",
+                        "primary-fixed-dim": "#c0c1ff",
+                        "error-container": "#93000a",
+                        "surface-container-highest": "#353437",
+                        "surface-tint": "#c0c1ff",
+                        "on-secondary": "#3c0091",
+                        "error-rose": "#f43f5e",
+                        "on-primary-fixed-variant": "#2f2ebe",
+                        "tertiary-fixed": "#ffdcc5",
+                        "on-surface-variant": "#c7c4d7",
+                        "inverse-primary": "#494bd6",
+                        "on-surface": "#e5e1e4",
+                        "surface": "#131315",
+                        "on-background": "#e5e1e4",
+                        "surface-container": "#201f22",
+                        "inverse-on-surface": "#313032",
+                        "background": "#131315",
+                        "on-tertiary-fixed-variant": "#703700",
+                        "surface-container-low": "#1c1b1d",
+                        "on-primary": "#1000a9",
+                        "tertiary": "#ffb783",
+                        "on-secondary-container": "#c4abff",
+                        "tertiary-container": "#d97721",
+                        "secondary": "#d0bcff",
+                        "primary": "#c0c1ff",
+                        "success-emerald": "#10b981",
+                        "slate-border": "#27272a",
+                        "primary-container": "#8083ff",
+                        "warning-amber": "#f59e0b",
+                        "on-primary-container": "#0d0096",
+                        "secondary-container": "#571bc1",
+                        "on-tertiary-container": "#452000",
+                        "error": "#ffb4ab",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "surface-variant": "#353437",
+                        "primary-fixed": "#e1e0ff",
+                        "on-tertiary-fixed": "#301400",
+                        "outline": "#908fa0",
+                        "slate-surface": "#18181b",
+                        "inverse-surface": "#e5e1e4",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "on-error": "#690005",
+                        "surface-container-high": "#2a2a2c",
+                        "secondary-fixed": "#e9ddff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-l2": "260px",
+                        "margin-mobile": "16px",
+                        "sidebar-l1": "64px",
+                        "gutter": "16px",
+                        "base": "4px",
+                        "margin-desktop": "24px",
+                        "topbar-height": "56px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "caption": ["Inter"],
+                        "display-lg-mobile": ["Geist"],
+                        "mono": ["Geist Mono"],
+                        "label-md": ["Geist"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "52px", "letterSpacing": "-0.04em", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "caption": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "display-lg-mobile": ["32px", { "lineHeight": "36px", "letterSpacing": "-0.04em", "fontWeight": "700" }],
+                        "mono": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface-container-lowest text-on-surface font-body-md overflow-hidden h-screen selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Bar Component -->
+<header class="fixed top-0 w-full h-topbar-height flex justify-between items-center px-margin-desktop z-50 bg-surface-dim/90 backdrop-blur-md border-b border-slate-border shadow-sm">
+<div class="flex items-center gap-4">
+<div class="font-headline-md text-headline-md font-black text-primary tracking-tighter">Kinetic Sync</div>
+<div class="h-4 w-[1px] bg-slate-border mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 px-2 py-1 bg-error-container/20 rounded-lg">
+<div class="w-2 h-2 rounded-full bg-error-rose animate-pulse"></div>
+<span class="font-label-md text-label-md text-error-rose uppercase tracking-widest font-bold">REC</span>
+</div>
+<div class="font-label-md text-label-md text-on-surface-variant">Live Session: <span class="text-on-surface font-semibold">Q3 Product Architecture Sync</span></div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-surface-container-high px-3 py-1.5 rounded-full border border-slate-border">
+<span class="material-symbols-outlined text-success-emerald text-[18px]">sensors</span>
+<span class="font-label-md text-label-md text-on-surface-variant">42.5 Mbps</span>
+</div>
+<div class="flex items-center -space-x-2">
+<img alt="Avatar" class="w-8 h-8 rounded-full border-2 border-surface-dim" data-alt="Close-up portrait of a professional male software engineer avatar with short dark hair and modern glasses, set against a solid dark gray background. The style is clean, vector-based, and minimal, reflecting high-fidelity tech design aesthetics with soft lighting and professional tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA21SS08pmV_oQijdW_cozokRrrGR7Om-6_BdS7p0parhM1yXepk9Ai2uzDhnmkmGxLYwc9K7dmlKoWJ3_mqWDhCTPBNZieJnj8TyQx9iC-22_CulK3aOl20GISrI3LDBTmqLgZ22HuKxnmAEiCEBgeb9K5mWcWk3qFdDeqIHVcE6jurOogPhmE9HBjoTv2ntD3LUlMc-sYpqKGI_8Y-EfdDfI8N4hzE2f5hCAW6_l43lmIV8n9pIbtJeiO8cks1RNnAYv1zuV86Q"/>
+<img alt="Avatar" class="w-8 h-8 rounded-full border-2 border-surface-dim" data-alt="Close-up portrait of a professional female tech lead avatar with long wavy auburn hair, set against a solid dark gray background. The visual style is high-fidelity minimalist vector art with precise lines and soft ambient lighting for a modern digital workplace look." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPOJ598JL88Af8VNpvhMUFCaAJ8OPkNYIgf_hpa6nafxQVuirDGJWcr7LrYsfMqUY-p588EAPDQ8JEVE2ZmWuW3p69GZPYF0xfept8Nc2AgTGZV3bRn1UpgxOgbMPm_svARerorM472FCYUKq8jIknin8dHdI3s5bKzW6pYGE-CA_GrPP72NjML_0XSuC99lOT-8nah59DQNekDOpdV4f7J-VcZKRDkNM3kJElIBlOH5d8mqNVwaX7CjFETdjWBLhS1MULQ5Rm4g"/>
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container font-label-md flex items-center justify-center border-2 border-surface-dim">+12</div>
+</div>
+<button class="bg-error-rose hover:bg-error-container text-white px-4 py-2 rounded-lg font-label-md text-label-md font-bold transition-all active:scale-95">End Session</button>
+</div>
+</header>
+<!-- Side Navigation Rail (L1) -->
+<aside class="fixed left-0 top-0 h-screen w-sidebar-l1 flex flex-col items-center py-4 space-y-6 bg-surface-container-lowest z-40 border-r border-slate-border">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-on-primary" data-icon="grid_view">grid_view</span>
+</div>
+<nav class="flex flex-col gap-6">
+<button class="w-10 h-10 flex items-center justify-center bg-primary-container text-on-primary-container rounded-xl transition-all scale-110">
+<span class="material-symbols-outlined" data-icon="dashboard" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-bright rounded-xl transition-all">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-bright rounded-xl transition-all">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-bright rounded-xl transition-all">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+</button>
+</nav>
+<div class="mt-auto flex flex-col gap-4">
+<button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-bright rounded-xl transition-all">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<img alt="Host Profile" class="w-10 h-10 rounded-xl border border-slate-border" data-alt="Minimalist digital avatar of a senior technical host with grey-flecked black hair, wearing a sleek black turtleneck. The portrait is set against a dark, low-key background with subtle blue rim lighting, matching a high-end dark mode professional user interface aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCuQpdoi8xfejEafAGHtKDd7v5A8OoFJdF3OjbMGMHqQFqB728Ghrbhixr9Ra-0EMpSLn5wNCa8DAKjs5_WvttAViTmIoZlUhYftrVu9TQ6VnccV9x9Api6LBwSa5zHtUtmWK553ahVpwJB1xlJ5ZZGvc5E2j7TBvezm56Rnu9qLAjlHXlmYJYJSLPikc0ZVbfOD3CVnH-FffjXrzDsUB_Qm8sMqLv2lxBXoXmkjwcS8vW9IjwOkE9Ipncy7kD_VMQvTh9TIP3jxw"/>
+</div>
+</aside>
+<!-- Main Workspace Area -->
+<main class="ml-sidebar-l1 pt-topbar-height h-full flex overflow-hidden">
+<!-- Shared Screen Content (70%) -->
+<section class="flex-grow p-gutter relative overflow-hidden bg-surface-container-lowest">
+<div class="relative w-full h-full rounded-2xl overflow-hidden border border-slate-border shadow-2xl group">
+<div class="absolute inset-0 bg-surface-dim flex items-center justify-center">
+<!-- Placeholder for Screen Content -->
+<div class="w-full h-full relative">
+
+<div class="absolute inset-0 flex flex-col items-center justify-center p-24 text-center z-10">
+<div class="w-full max-w-4xl aspect-video glass-panel rounded-xl flex flex-col p-6 shadow-2xl border-primary/20">
+<div class="flex items-center gap-2 mb-8">
+<div class="w-3 h-3 rounded-full bg-error-rose"></div>
+<div class="w-3 h-3 rounded-full bg-warning-amber"></div>
+<div class="w-3 h-3 rounded-full bg-success-emerald"></div>
+<div class="ml-4 px-3 py-1 bg-surface-container rounded font-mono text-xs text-on-surface-variant">VS Code — kinetic-sync-core</div>
+</div>
+<div class="flex-grow font-mono text-left text-primary/80 space-y-2 opacity-80">
+<p><span class="text-secondary">async function</span> <span class="text-primary">initCollaboration</span>(config) {</p>
+<p class="pl-4"> <span class="text-on-surface-variant">const</span> session = <span class="text-secondary">await</span> Engine.<span class="text-warning-amber">connect</span>(config.key);</p>
+<p class="pl-4">  session.<span class="text-warning-amber">on</span>(<span class="text-success-emerald">'sync'</span>, (data) =&gt; {</p>
+<p class="pl-8"> <span class="text-primary-container">updateRealtimeLayer</span>(data.layers);</p>
+<p class="pl-4">  });</p>
+<p>}</p>
+</div>
+</div>
+</div>
+<!-- Cursors Simulation -->
+<div class="absolute top-1/3 left-1/4 pointer-events-none z-20 transition-all duration-1000" id="cursor-1">
+<div class="flex items-center gap-2 bg-[#f43f5e] text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg">
+<span class="material-symbols-outlined text-[12px]">near_me</span>
+<span>Sarah (Lead)</span>
+</div>
+</div>
+<div class="absolute bottom-1/4 right-1/3 pointer-events-none z-20 transition-all duration-1000" id="cursor-2">
+<div class="flex items-center gap-2 bg-[#10b981] text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg">
+<span class="material-symbols-outlined text-[12px]">near_me</span>
+<span>Marco</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Bottom Toolbar -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-surface-dim/80 backdrop-blur-xl border border-slate-border rounded-full p-1.5 shadow-2xl z-30">
+<button class="p-3 rounded-full hover:bg-surface-bright text-on-surface transition-all active:scale-95 group/btn">
+<span class="material-symbols-outlined" data-icon="mic">mic</span>
+</button>
+<button class="p-3 rounded-full hover:bg-surface-bright text-on-surface transition-all active:scale-95 group/btn">
+<span class="material-symbols-outlined" data-icon="videocam">videocam</span>
+</button>
+<div class="h-6 w-[1px] bg-slate-border mx-1"></div>
+<button class="flex items-center gap-2 rtc-gradient text-white px-5 py-3 rounded-full font-label-md text-label-md font-bold shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="screen_share">screen_share</span>
+<span>Sharing Screen</span>
+</button>
+<button class="p-3 rounded-full hover:bg-surface-bright text-on-surface transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="edit_note">edit_note</span>
+</button>
+<button class="p-3 rounded-full hover:bg-surface-bright text-on-surface transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="podcasts">podcasts</span>
+</button>
+<div class="h-6 w-[1px] bg-slate-border mx-1"></div>
+<button class="p-3 rounded-full hover:bg-error-container/20 text-error-rose transition-all active:scale-95">
+<span class="material-symbols-outlined" data-icon="call_end">call_end</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Right Control Hub (30% / Sidebar L2 Equivalent) -->
+<aside class="w-sidebar-l2 flex flex-col h-full bg-slate-surface/80 backdrop-blur-xl border-l border-slate-border overflow-hidden">
+<!-- Tabs / Segmented Control -->
+<div class="flex border-b border-slate-border">
+<button class="flex-1 py-4 text-primary font-bold border-b-2 border-primary bg-indigo-soft/20 flex flex-col items-center gap-1">
+<span class="material-symbols-outlined text-[20px]" data-icon="group" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="text-[10px] uppercase tracking-tighter">Controls</span>
+</button>
+<button class="flex-1 py-4 text-on-surface-variant hover:text-on-surface transition-colors flex flex-col items-center gap-1">
+<span class="material-symbols-outlined text-[20px]" data-icon="query_stats">query_stats</span>
+<span class="text-[10px] uppercase tracking-tighter">Insight</span>
+</button>
+<button class="flex-1 py-4 text-on-surface-variant hover:text-on-surface transition-colors flex flex-col items-center gap-1">
+<span class="material-symbols-outlined text-[20px]" data-icon="chat_bubble">chat_bubble</span>
+<span class="text-[10px] uppercase tracking-tighter">Chat</span>
+</button>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-grow overflow-y-auto p-4 space-y-6">
+<!-- Participant Management -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-headline-sm text-headline-sm font-bold">Participants (14)</h3>
+<button class="text-primary text-[12px] font-bold hover:underline">Mute All</button>
+</div>
+<div class="space-y-3">
+<!-- Host Card -->
+<div class="p-3 rounded-xl bg-surface-container-high border border-primary/20 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="Host" class="w-10 h-10 rounded-full" data-alt="Close-up of a digital professional profile avatar for a session host, styled in minimalist vector art with soft, high-fidelity lighting. The subject has short grey hair and a calm expression, wearing a navy blue professional blazer, set against a dark charcoal background that fits a high-end productivity dashboard aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuVYCpFmgcMYA1XaXIqF6ivthQ_wTpHxcHp4RAlPy7u4RwBD1n4X5KMkQdwLhKTlMxlLXZA1Vpa9SKuJ3Gmbt7qpEHzaj4ZBoJdaOLiLkpu-xEk4S89OnVBzxO77XtgR28N6arC67gs8U2hV7Ot8VdjaauAHvJDs2kVnNohIKxz1p3kBPlrGkX5MTl_heEN2lq-_zdYhf6CMUeybHCXZI7StZlZTfHNuJV1Lc7sISgFEKmI6pfbl-Dk8008zAGUyinx-DU8CLmUQ"/>
+<div class="absolute bottom-0 right-0 w-3 h-3 bg-success-emerald rounded-full border-2 border-surface-container-high presence-glow"></div>
+</div>
+<div>
+<p class="font-label-md text-label-md font-bold text-on-surface">You (Host)</p>
+<p class="text-[11px] text-on-surface-variant">Speaking...</p>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[18px]">mic</span>
+</div>
+</div>
+<!-- User Card 1 -->
+<div class="p-3 rounded-xl hover:bg-surface-container transition-colors border border-transparent hover:border-slate-border flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User" class="w-10 h-10 rounded-full" data-alt="Digital professional profile avatar of a woman with long dark hair and professional attire, rendered in a crisp, minimalist vector style. The avatar is presented on a clean dark gray backdrop with soft global illumination, representing a participant in a high-tech collaborative workspace environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsxsm8UZ1qIxfp8lm8yTilZPHmW8D2wCV19GN0CKQ0z5gLCdahEY_3ra_UUBG6-T-2BjPtZ68fmXseIluqtnJ9BTcg5IPzqQGvhNAcUqvguhHtz0R-gi8Zj7MSm0thkrKT2P28pW_w5m4zOMB2Dbp7HGBBtCRTh3mA6Mw5fPAPdA1eglKITaoXPP81eipKRj4gagD94tuVw1ApfwrWcvYDASTjSp2DtSmwVCa1FsiEZ986iAloEMGZAwvY3DQp37bN0H_o1G2uMg"/>
+<div class="absolute bottom-0 right-0 w-3 h-3 bg-success-emerald rounded-full border-2 border-surface-container presence-glow"></div>
+</div>
+<div>
+<p class="font-label-md text-label-md font-bold text-on-surface">Sarah Johnson</p>
+<p class="text-[11px] text-on-surface-variant">Active 2m ago</p>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 hover:bg-surface-bright rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]">mic_off</span></button>
+<button class="p-1.5 hover:bg-surface-bright rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]">shield_person</span></button>
+<button class="p-1.5 hover:bg-error-container/20 rounded text-error-rose"><span class="material-symbols-outlined text-[18px]">person_remove</span></button>
+</div>
+</div>
+<!-- User Card 2 -->
+<div class="p-3 rounded-xl hover:bg-surface-container transition-colors border border-transparent hover:border-slate-border flex items-center justify-between group">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User" class="w-10 h-10 rounded-full" data-alt="Vector avatar portrait of a man with short blonde hair and a friendly, focused professional look. The style is modern, high-fidelity digital art with subtle gradients and soft shadows, placed against a neutral dark background suitable for a professional software control panel application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQK4ehXAcXhXDXi3Kwmbzix79qi5rlOA71imZgrj1kpmBmqbtVXM-hwZWYPOF7Kbq11tzhx2haiyTv4XzZnr1vaydVE2wMq6-qrV788JAHmxtEO9bMEofIKIiPxduc340pn7fsv0azJ63OHI94Ok4YlbjhhoIzeY7mRO9NuqblnCN9xfKRzU1v6rLMX7WAy381dO7ORg1yrpkp3hy80kp41KM4vUyyeBJNDmBE9-qEyprS-mkUAaCU1NZ_7PO1FcpAKE1gDpVPuA"/>
+<div class="absolute bottom-0 right-0 w-3 h-3 bg-warning-amber rounded-full border-2 border-surface-container"></div>
+</div>
+<div>
+<p class="font-label-md text-label-md font-bold text-on-surface">Marco Rossi</p>
+<p class="text-[11px] text-on-surface-variant">Idle • Connection weak</p>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 hover:bg-surface-bright rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]">mic_off</span></button>
+<button class="p-1.5 hover:bg-surface-bright rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]">shield_person</span></button>
+<button class="p-1.5 hover:bg-error-container/20 rounded text-error-rose"><span class="material-symbols-outlined text-[18px]">person_remove</span></button>
+</div>
+</div>
+</div>
+</section>
+<div class="h-[1px] bg-slate-border"></div>
+<!-- Session Analytics -->
+<section>
+<h3 class="font-headline-sm text-headline-sm font-bold mb-4">Live Session Analytics</h3>
+<div class="space-y-4">
+<div class="p-4 rounded-xl bg-surface-container-low border border-slate-border">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[12px] text-on-surface-variant font-bold uppercase tracking-wider">Engagement</span>
+<span class="text-success-emerald font-bold">88%</span>
+</div>
+<div class="h-2 w-full bg-slate-surface rounded-full overflow-hidden">
+<div class="h-full bg-primary rtc-gradient w-[88%] rounded-full"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div class="p-3 rounded-xl bg-surface-container-low border border-slate-border">
+<p class="text-[10px] text-on-surface-variant uppercase mb-1">Talk Time</p>
+<div class="flex items-baseline gap-1">
+<span class="text-xl font-bold">12:45</span>
+<span class="text-[10px] text-on-surface-variant">avg</span>
+</div>
+</div>
+<div class="p-3 rounded-xl bg-surface-container-low border border-slate-border">
+<p class="text-[10px] text-on-surface-variant uppercase mb-1">Active Tools</p>
+<div class="flex items-baseline gap-1">
+<span class="text-xl font-bold">8</span>
+<span class="text-[10px] text-on-surface-variant">layers</span>
+</div>
+</div>
+</div>
+<!-- Mini Trend Graph (CSS only) -->
+<div class="h-24 w-full bg-surface-container-low border border-slate-border rounded-xl flex items-end p-2 gap-1">
+<div class="flex-1 bg-primary/20 rounded-t-sm" style="height: 40%"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm" style="height: 55%"></div>
+<div class="flex-1 bg-primary/30 rounded-t-sm" style="height: 45%"></div>
+<div class="flex-1 bg-primary/40 rounded-t-sm" style="height: 70%"></div>
+<div class="flex-1 bg-primary/60 rounded-t-sm" style="height: 85%"></div>
+<div class="flex-1 bg-primary/50 rounded-t-sm" style="height: 60%"></div>
+<div class="flex-1 bg-primary rtc-gradient rounded-t-sm" style="height: 95%"></div>
+</div>
+</div>
+</section>
+<div class="h-[1px] bg-slate-border"></div>
+<!-- AI Assistant / Transcription -->
+<section>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<h3 class="font-headline-sm text-headline-sm font-bold">AI Co-Pilot</h3>
+</div>
+<div class="space-y-4">
+<div class="p-4 rounded-xl bg-indigo-soft/10 border border-primary/10">
+<p class="text-xs text-primary font-bold uppercase tracking-widest mb-2">Live Insights</p>
+<p class="text-body-md text-on-surface-variant italic">"The team is currently discussing the synchronization delay in the core module. Consensus seems to be forming around an event-driven approach."</p>
+</div>
+<div class="space-y-3">
+<p class="text-[11px] font-bold text-on-surface-variant uppercase">Action Items Detected</p>
+<div class="flex items-start gap-3 p-2 group hover:bg-surface-bright rounded-lg cursor-pointer transition-colors">
+<div class="mt-1 w-4 h-4 rounded border border-primary flex items-center justify-center"></div>
+<div class="flex-grow">
+<p class="text-body-md text-on-surface">Update latency thresholds for EMEA region</p>
+<p class="text-[10px] text-on-surface-variant">Assigned to: Sarah J.</p>
+</div>
+</div>
+<div class="flex items-start gap-3 p-2 group hover:bg-surface-bright rounded-lg cursor-pointer transition-colors">
+<div class="mt-1 w-4 h-4 rounded border border-primary flex items-center justify-center"></div>
+<div class="flex-grow">
+<p class="text-body-md text-on-surface">Review security logs for node sync</p>
+<p class="text-[10px] text-on-surface-variant">Unassigned</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer Action -->
+<div class="p-4 border-t border-slate-border bg-surface-container-lowest">
+<button class="w-full py-3 rounded-xl bg-surface-container-high border border-slate-border font-bold text-on-surface hover:bg-surface-bright transition-all active:scale-95 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">save</span>
+<span>Download Summary</span>
+</button>
+</div>
+</aside>
+</main>
+<!-- Global Interactions Script -->
+<script>
+        // Simple cursor floating effect
+        const cursor1 = document.getElementById('cursor-1');
+        const cursor2 = document.getElementById('cursor-2');
+        
+        let angle = 0;
+        function animateCursors() {
+            angle += 0.01;
+            const x1 = Math.sin(angle) * 30 + 25;
+            const y1 = Math.cos(angle * 1.5) * 30 + 33;
+            const x2 = Math.cos(angle * 0.8) * 40 + 66;
+            const y2 = Math.sin(angle * 1.2) * 20 + 75;
+            
+            cursor1.style.left = `${x1}%`;
+            cursor1.style.top = `${y1}%`;
+            cursor2.style.left = `${x2}%`;
+            cursor2.style.top = `${y2}%`;
+            
+            requestAnimationFrame(animateCursors);
+        }
+        animateCursors();
+
+        // Mic toggle simulation
+        document.querySelectorAll('button[group/btn]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const icon = this.querySelector('.material-symbols-outlined');
+                if (icon.innerText.includes('_off')) {
+                    icon.innerText = icon.innerText.replace('_off', '');
+                    this.classList.remove('bg-error-container/20', 'text-error-rose');
+                    this.classList.add('text-on-surface');
+                } else {
+                    icon.innerText = icon.innerText + '_off';
+                    this.classList.add('bg-error-container/20', 'text-error-rose');
+                    this.classList.remove('text-on-surface');
+                }
+            });
+        });
+    </script>
+</body></html>

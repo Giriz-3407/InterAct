@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&family=Inter:wght@100..900&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Colors - Material Design 3 Dark Inspired */
+  --bg: #09090b;
+  --surface: #131315;
+  --surface-dim: #131315;
+  --surface-bright: #39393b;
+  --surface-lowest: #0e0e10;
+  --surface-low: #1c1b1d;
+  --surface-container: #201f22;
+  --surface-high: #2a2a2c;
+  --surface-highest: #353437;
+  
+  --on-surface: #e5e1e4;
+  --on-surface-variant: #c7c4d7;
+  
+  --primary: #c0c1ff;
+  --on-primary: #1000a9;
+  --primary-container: #8083ff;
+  --on-primary-container: #0d0096;
+  
+  --secondary: #d0bcff;
+  --secondary-container: #571bc1;
+  --on-secondary-container: #c4abff;
+  
+  --tertiary: #ffb783;
+  --tertiary-container: #d97721;
+  
+  /* Semantic */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #f43f5e;
+  
+  /* Slate & Grid layout borders */
+  --slate-surface: #18181b;
+  --slate-border: #27272a;
+  --indigo-soft: rgba(99, 102, 241, 0.1);
+  
+  /* Spacing */
+  --sidebar-l1: 64px;
+  --sidebar-l2: 260px;
+  --topbar-height: 56px;
+
+  /* Font Families */
+  --font-geist: 'Geist', sans-serif;
+  --font-inter: 'Inter', sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--on-surface);
+  font-family: var(--font-inter);
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Panel Utilities */
+.glass-panel {
+  background: rgba(24, 24, 27, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--slate-border);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--surface-highest);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-container);
+}
+
+/* Animations */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.hero-gradient {
+  background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+}

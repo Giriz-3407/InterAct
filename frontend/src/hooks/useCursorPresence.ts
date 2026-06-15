@@ -341,6 +341,7 @@ export function useCursorPresence({
 
   useEffect(() => {
     if (!isScreenVisible) return;
+    if (isHost) return; // Host inputs and shortcuts are handled globally by Desktop Agent
 
     const onKeyDown = (e: KeyboardEvent) => {
       // Track ALT and SHIFT for annotation modes
@@ -504,6 +505,7 @@ export function useCursorPresence({
 
   useEffect(() => {
     if (!isScreenVisible || !viewportEl) return;
+    if (isHost) return; // Host inputs are handled globally by Desktop Agent
 
     const onMouseMove = (e: MouseEvent) => {
       const now = Date.now();
@@ -581,6 +583,7 @@ export function useCursorPresence({
 
   useEffect(() => {
     if (!isScreenVisible || !viewportEl) return;
+    if (isHost) return; // Host inputs are handled globally by Desktop Agent
 
     const onMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
@@ -647,6 +650,7 @@ export function useCursorPresence({
       console.log('[Runtime] host received cursor_move', data);
       const { participantId, displayName, x, y } = data as RemoteCursor;
       if (!participantId || x == null || y == null) return;
+      if (participantId === localParticipantId) return; // Filter out host's own echo
 
       // Forward to desktop agent — host only, silently skipped if not connected
       if (isHostRef.current && laserPointerEnabledRef.current) {
@@ -672,6 +676,7 @@ export function useCursorPresence({
       const { participantId, displayName, x, y } =
         data as { participantId: string; displayName?: string; x: number; y: number };
       if (!participantId || x == null || y == null) return;
+      if (participantId === localParticipantId) return; // Filter out host's own echo
 
       if (isHostRef.current && laserPointerEnabledRef.current) {
         const name = getParticipantName(participantId, displayName);
@@ -682,7 +687,7 @@ export function useCursorPresence({
           dx,
           dy,
           color,
-        );
+         );
       }
     });
 
@@ -691,6 +696,7 @@ export function useCursorPresence({
       console.log('[Runtime] host received cursor_hide', data);
       const { participantId } = data as { participantId: string };
       if (!participantId) return;
+      if (participantId === localParticipantId) return;
 
       // Remove from desktop overlay
       if (isHostRef.current && laserPointerEnabledRef.current) {
@@ -712,6 +718,7 @@ export function useCursorPresence({
         endY: number;
       };
       if (!participantId || !annotationId || !type) return;
+      if (participantId === localParticipantId) return;
       console.log('[Annotation] host received', annotationId);
 
       if (isHostRef.current && laserPointerEnabledRef.current) {
@@ -737,6 +744,7 @@ export function useCursorPresence({
     const unsubAnnotationClear = wsClient.on('annotation_clear', (data) => {
       const { participantId } = data as { participantId: string };
       if (!participantId) return;
+      if (participantId === localParticipantId) return;
 
       if (isHostRef.current && laserPointerEnabledRef.current) {
         desktopAgent.sendAnnotationClear(participantId);

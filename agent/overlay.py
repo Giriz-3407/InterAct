@@ -16,7 +16,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Optional
 
-from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QRectF
+from PySide6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF, QObject, Signal
 from PySide6.QtGui import (
     QColor,
     QPainter,
@@ -26,6 +26,7 @@ from PySide6.QtGui import (
     QFont,
     QFontMetrics,
     QPen,
+    QCursor,
 )
 from PySide6.QtWidgets import QWidget, QApplication
 
@@ -39,8 +40,10 @@ class CursorEntry:
     """Represents one remote participant's laser pointer state."""
 
     participant_id: str
-    x: int
-    y: int
+    targetX: float
+    targetY: float
+    renderX: float
+    renderY: float
     color: str = "#ff2222"
     name: str = "Unknown"
 
@@ -56,6 +59,113 @@ class RippleEntry:
     radius: float = 0.0
     opacity: float = 1.0
     tick: int = 0
+
+
+@dataclass
+class AnnotationEntry:
+    """Represents a screen annotation created by a participant."""
+
+    participant_id: str
+    annotation_id: str
+    type: str  # "rect" or "arrow"
+    startX: float
+    startY: float
+    endX: float
+    endY: float
+    color: str
+    name: str
+
+
+# ---------------------------------------------------------------------------
+# Global Input Capture (Phase 10B Spike)
+# ---------------------------------------------------------------------------
+
+class KeyboardHookBridge(QObject):
+    annotation_mode_toggled = Signal()
+    spotlight_double_tapped = Signal()
+
+
+class GlobalInputTracker:
+    def __init__(self, bridge: KeyboardHookBridge):
+        from pynput import keyboard
+        import time
+
+        self.bridge = bridge
+        self.last_ctrl_time = 0.0
+        self.last_alt_time = 0.0
+        self.ctrl_held = False
+        self.alt_held = False
+        
+        self.listener = keyboard.Listener(
+            on_press=self._on_press,
+            on_release=self._on_release
+        )
+        self.listener.daemon = True
+        self.listener.start()
+
+    def _on_press(self, key):
+        from pynput import keyboard
+        import time
+
+        if key == keyboard.Key.ctrl_l:
+            if not self.ctrl_held:
+                self.ctrl_held = True
+                now = time.time()
+                diff = now - self.last_ctrl_time
+                if 0.05 < diff < 0.35:
+                    self.bridge.annotation_mode_toggled.emit()
+                    self.last_ctrl_time = 0.0
+                else:
+                    self.last_ctrl_time = now
+        elif key == keyboard.Key.alt_l:
+            if not self.alt_held:
+                self.alt_held = True
+                now = time.time()
+                diff = now - self.last_alt_time
+                if 0.05 < diff < 0.35:
+                    self.bridge.spotlight_double_tapped.emit()
+                    self.last_alt_time = 0.0
+                else:
+                    self.last_alt_time = now
+
+    def _on_release(self, key):
+        from pynput import keyboard
+
+        if key == keyboard.Key.ctrl_l:
+            self.ctrl_held = False
+        elif key == keyboard.Key.alt_l:
+            self.alt_held = False
+
+
+class MouseHookBridge(QObject):
+    mouse_down = Signal(float, float)
+    mouse_dragged = Signal(float, float)
+    mouse_up = Signal(float, float)
+
+
+class GlobalMouseTracker:
+    def __init__(self, bridge: MouseHookBridge):
+        from pynput import mouse
+
+        self.bridge = bridge
+        self.listener = mouse.Listener(
+            on_click=self._on_click,
+            on_move=self._on_move
+        )
+        self.listener.daemon = True
+        self.listener.start()
+
+    def _on_click(self, x, y, button, pressed):
+        from pynput import mouse
+
+        if button == mouse.Button.left:
+            if pressed:
+                self.bridge.mouse_down.emit(float(x), float(y))
+            else:
+                self.bridge.mouse_up.emit(float(x), float(y))
+
+    def _on_move(self, x, y):
+        self.bridge.mouse_dragged.emit(float(x), float(y))
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +188,10 @@ class LaserPointerOverlay(QWidget):
       - Triggers _on_timer_tick() -> updates animation states and calls update()
     """
 
+    # Smoothing configuration
+    _SMOOTHING_FACTOR = 0.25
+    _SNAP_THRESHOLD = 0.5
+
     # Visual constants for cursor
     _GLOW_RADIUS = 28          # outer soft glow radius (px)
     _BORDER_RADIUS = 17        # white border circle radius (px)
@@ -97,12 +211,20 @@ class LaserPointerOverlay(QWidget):
 
     _TIMER_INTERVAL_MS = 16    # ~60 FPS
 
+    _SPOTLIGHT_RADIUS = 180.0
+    _SPOTLIGHT_DIM_ALPHA = 160
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
 
-        # ── Cursor & Ripple collections ──────────────────────────────────
+        # ── Startup Diagnostics ──────────────────────────────────────────
+        print("[Smoothing] enabled", flush=True)
+
+        # ── Cursor, Ripple & Annotation collections ──────────────────────
         self._cursors: dict[str, CursorEntry] = {}
         self._ripples: list[RippleEntry] = []
+        self._annotations: dict[str, dict[str, AnnotationEntry]] = {}
+        self._spotlight_participant_id: Optional[str] = None
 
         # ── Window flags & attributes ────────────────────────────────────
         self.setWindowFlags(
@@ -125,6 +247,93 @@ class LaserPointerOverlay(QWidget):
         self._timer.timeout.connect(self._on_timer_tick)
         self._timer.start()
 
+        # ── Spike Diagnostics & State ─────────────────────────────────────
+        print("[GlobalInput] spike enabled", flush=True)
+        self._spike_annotation_mode_active = False
+        self._drawing_annotation = False
+        self._spike_spotlight_active = False
+
+        # Keyboard hook setup
+        self._hook_bridge = KeyboardHookBridge()
+        self._hook_bridge.annotation_mode_toggled.connect(self._on_spike_annotation_mode_toggled)
+        self._hook_bridge.spotlight_double_tapped.connect(self._on_spike_spotlight_double_tapped)
+        self._global_tracker = GlobalInputTracker(self._hook_bridge)
+
+        # Mouse hook setup
+        self._mouse_bridge = MouseHookBridge()
+        self._mouse_bridge.mouse_down.connect(self._on_global_mouse_down)
+        self._mouse_bridge.mouse_dragged.connect(self._on_global_mouse_move)
+        self._mouse_bridge.mouse_up.connect(self._on_global_mouse_up)
+        self._global_mouse_tracker = GlobalMouseTracker(self._mouse_bridge)
+
+    def _on_spike_annotation_mode_toggled(self) -> None:
+        self._spike_annotation_mode_active = not self._spike_annotation_mode_active
+        if self._spike_annotation_mode_active:
+            print("[GlobalInput] annotation mode on", flush=True)
+        else:
+            print("[GlobalInput] annotation mode off", flush=True)
+            self._drawing_annotation = False
+
+    def _on_spike_spotlight_double_tapped(self) -> None:
+        self._spike_spotlight_active = not self._spike_spotlight_active
+        if self._spike_spotlight_active:
+            print("[GlobalInput] spotlight on", flush=True)
+            self._spotlight_participant_id = "**host_spike**"
+        else:
+            print("[GlobalInput] spotlight off", flush=True)
+            if self._spotlight_participant_id == "**host_spike**":
+                self._spotlight_participant_id = None
+
+    def _on_global_mouse_down(self, x: float, y: float) -> None:
+        import time
+        if self._spike_annotation_mode_active:
+            self._drawing_annotation = True
+            self._annotation_start_x = x
+            self._annotation_start_y = y
+            self._current_annotation_id = f"host-annot-{int(time.time()*1000)}"
+            self.set_annotation(
+                "**host_spike**",
+                self._current_annotation_id,
+                "rect",
+                x,
+                y,
+                x,
+                y,
+                "#ff2222",
+                "Presenter"
+            )
+
+    def _on_global_mouse_move(self, x: float, y: float) -> None:
+        if self._spike_annotation_mode_active and self._drawing_annotation:
+            self.set_annotation(
+                "**host_spike**",
+                self._current_annotation_id,
+                "rect",
+                self._annotation_start_x,
+                self._annotation_start_y,
+                x,
+                y,
+                "#ff2222",
+                "Presenter"
+            )
+
+    def _on_global_mouse_up(self, x: float, y: float) -> None:
+        if self._spike_annotation_mode_active and self._drawing_annotation:
+            self.set_annotation(
+                "**host_spike**",
+                self._current_annotation_id,
+                "rect",
+                self._annotation_start_x,
+                self._annotation_start_y,
+                x,
+                y,
+                "#ff2222",
+                "Presenter"
+            )
+            self._drawing_annotation = False
+            self._spike_annotation_mode_active = False
+            print("[GlobalInput] annotation mode off", flush=True)
+
     # ------------------------------------------------------------------
     # Multi-monitor support
     # ------------------------------------------------------------------
@@ -135,7 +344,7 @@ class LaserPointerOverlay(QWidget):
         resize this widget to cover the full virtual desktop.
 
         Uses QGuiApplication.screens() so it works with any number of
-        monitors in any arrangement (left/right/above/below, mixed DPI).
+        monitors in any arrangement (left/right/above/below, mixed DPR).
         """
         screens = QGuiApplication.screens()
         if not screens:
@@ -165,15 +374,17 @@ class LaserPointerOverlay(QWidget):
         """
         existing = self._cursors.get(participant_id)
         if existing is not None:
-            existing.x = x
-            existing.y = y
+            existing.targetX = float(x)
+            existing.targetY = float(y)
             existing.color = color
             existing.name = name
         else:
             self._cursors[participant_id] = CursorEntry(
                 participant_id=participant_id,
-                x=x,
-                y=y,
+                targetX=float(x),
+                targetY=float(y),
+                renderX=float(x),
+                renderY=float(y),
                 color=color,
                 name=name,
             )
@@ -183,6 +394,69 @@ class LaserPointerOverlay(QWidget):
         Remove a participant's cursor from the overlay.
         """
         self._cursors.pop(participant_id, None)
+        if self._spotlight_participant_id == participant_id:
+            self._spotlight_participant_id = None
+
+    def set_annotation(
+        self,
+        participant_id: str,
+        annotation_id: str,
+        atype: str,
+        sx: float,
+        sy: float,
+        ex: float,
+        ey: float,
+        color: str = "#ff2222",
+        name: str = "Unknown",
+    ) -> None:
+        """
+        Create or update a participant's screen annotation.
+        """
+        if participant_id not in self._annotations:
+            self._annotations[participant_id] = {}
+
+        # 50 annotations per participant limit check
+        if annotation_id not in self._annotations[participant_id]:
+            if len(self._annotations[participant_id]) >= 50:
+                oldest_id = next(iter(self._annotations[participant_id]))
+                self._annotations[participant_id].pop(oldest_id)
+
+        self._annotations[participant_id][annotation_id] = AnnotationEntry(
+            participant_id=participant_id,
+            annotation_id=annotation_id,
+            type=atype,
+            startX=sx,
+            startY=sy,
+            endX=ex,
+            endY=ey,
+            color=color,
+            name=name,
+        )
+        print(f"[Annotation] overlay updated {annotation_id}", flush=True)
+
+    def clear_annotations(self, participant_id: str) -> None:
+        """
+        Remove all annotations created by a participant.
+        """
+        self._annotations.pop(participant_id, None)
+
+    def set_spotlight(self, participant_id: str, active: bool) -> None:
+        """
+        Set or clear the active spotlight owner.
+        At most one spotlight can exist.
+        """
+        if active:
+            self._spotlight_participant_id = participant_id
+        elif self._spotlight_participant_id == participant_id:
+            self._spotlight_participant_id = None
+        self.update()
+
+    def clear_spotlight_on_disconnect(self) -> None:
+        """
+        Clear spotlight ownership when the browser client disconnects.
+        """
+        self._spotlight_participant_id = None
+        self.update()
 
     def add_click_ripple(
         self,
@@ -215,6 +489,20 @@ class LaserPointerOverlay(QWidget):
         Fires at ~60 FPS. Updates all active animation frames (e.g. click ripples)
         and calls update() to schedule a paint event.
         """
+        # --- Phase 10B Spike Global Mouse Tracking for Spotlight ---
+        if self._spike_spotlight_active:
+            pos = QCursor.pos()
+            self.set_cursor_position(
+                "**host_spike**",
+                pos.x(),
+                pos.y(),
+                "#ff2222",
+                "Presenter"
+            )
+            self._spotlight_participant_id = "**host_spike**"
+        else:
+            self.remove_cursor("**host_spike**")
+
         self._update_animations()
         self.update()
 
@@ -236,32 +524,141 @@ class LaserPointerOverlay(QWidget):
 
         self._ripples = active_ripples
 
+        # Smooth remote participant cursors
+        for cursor in self._cursors.values():
+            # Exponential smoothing formula
+            cursor.renderX += (cursor.targetX - cursor.renderX) * self._SMOOTHING_FACTOR
+            cursor.renderY += (cursor.targetY - cursor.renderY) * self._SMOOTHING_FACTOR
+
+            # Snap-to-target threshold
+            if abs(cursor.targetX - cursor.renderX) < self._SNAP_THRESHOLD:
+                cursor.renderX = cursor.targetX
+            if abs(cursor.targetY - cursor.renderY) < self._SNAP_THRESHOLD:
+                cursor.renderY = cursor.targetY
+
     # ------------------------------------------------------------------
     # Rendering
     # ------------------------------------------------------------------
 
     def paintEvent(self, event) -> None:  # noqa: N802 — Qt convention
         """
-        Render all active click ripples and cursors.
+        Render spotlight overlay, active annotations, click ripples, and cursors.
         """
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         offset = self.geometry().topLeft()
 
-        # 1. Draw ripples first (underneath the cursor)
+        # 1. Draw spotlight (under everything else)
+        self._draw_spotlight(painter, offset)
+
+        # 2. Draw annotations first (under ripples and cursors)
+        for participant_annots in self._annotations.values():
+            for annot in participant_annots.values():
+                self._draw_annotation(painter, annot, offset)
+
+        # 3. Draw ripples (underneath the cursor)
         for ripple in self._ripples:
             local_x = ripple.x - offset.x()
             local_y = ripple.y - offset.y()
             self._draw_ripple(painter, local_x, local_y, ripple)
 
-        # 2. Draw cursors on top
+        # 4. Draw cursors on top
         for cursor in self._cursors.values():
-            local_x = cursor.x - offset.x()
-            local_y = cursor.y - offset.y()
+            if cursor.participant_id == "**host_spike**":
+                continue
+            local_x = cursor.renderX - offset.x()
+            local_y = cursor.renderY - offset.y()
             self._draw_cursor(painter, local_x, local_y, cursor)
 
         painter.end()
+
+    def _draw_spotlight(self, painter: QPainter, offset: QPoint) -> None:
+        """
+        If a spotlight is active, dim the screen and clear a transparent cutout
+        centered around the owner's smoothed coordinates.
+        """
+        pid = self._spotlight_participant_id
+        if not pid or pid not in self._cursors:
+            return
+
+        cursor = self._cursors[pid]
+        local_x = cursor.renderX - offset.x()
+        local_y = cursor.renderY - offset.y()
+
+        painter.save()
+
+        # 1. Draw dimming background
+        painter.fillRect(self.rect(), QColor(0, 0, 0, self._SPOTLIGHT_DIM_ALPHA))
+
+        # 2. Clear circular area
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
+        painter.setBrush(Qt.BrushStyle.SolidPattern)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(QPointF(local_x, local_y), self._SPOTLIGHT_RADIUS, self._SPOTLIGHT_RADIUS)
+
+        painter.restore()
+
+    def _draw_annotation(
+        self, painter: QPainter, annot: AnnotationEntry, offset: QPoint
+    ) -> None:
+        """Draw a single rectangle or arrow annotation in participant color."""
+        local_sx = annot.startX - offset.x()
+        local_sy = annot.startY - offset.y()
+        local_ex = annot.endX - offset.x()
+        local_ey = annot.endY - offset.y()
+
+        color = QColor(annot.color)
+        pen = QPen(color, 3.0)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+
+        if annot.type == "rect":
+            x1 = min(local_sx, local_ex)
+            y1 = min(local_sy, local_ey)
+            x2 = max(local_sx, local_ex)
+            y2 = max(local_sy, local_ey)
+            rect = QRectF(x1, y1, x2 - x1, y2 - y1)
+            painter.drawRect(rect)
+        elif annot.type == "arrow":
+            self._draw_arrow(painter, local_sx, local_sy, local_ex, local_ey, color)
+
+    def _draw_arrow(
+        self, painter: QPainter, sx: float, sy: float, ex: float, ey: float, color: QColor
+    ) -> None:
+        """Draw an arrow shaft and head pointing to (ex, ey) in color."""
+        pen = QPen(color, 3.0)
+        painter.setPen(pen)
+        painter.drawLine(QPointF(sx, sy), QPointF(ex, ey))
+
+        dx = ex - sx
+        dy = ey - sy
+        length = math.hypot(dx, dy)
+        if length < 5.0:
+            return
+
+        ux = dx / length
+        uy = dy / length
+
+        arrow_len = 15.0
+        angle = math.pi / 6.0  # 30 degrees
+
+        p1_x = ex - arrow_len * (ux * math.cos(angle) - uy * math.sin(angle))
+        p1_y = ey - arrow_len * (ux * math.sin(angle) + uy * math.cos(angle))
+
+        p2_x = ex - arrow_len * (ux * math.cos(-angle) - uy * math.sin(-angle))
+        p2_y = ey - arrow_len * (ux * math.sin(-angle) + uy * math.cos(-angle))
+
+        path = QPainterPath()
+        path.moveTo(ex, ey)
+        path.lineTo(p1_x, p1_y)
+        path.lineTo(p2_x, p2_y)
+        path.closeSubpath()
+
+        painter.setBrush(color)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawPath(path)
+        painter.setBrush(Qt.BrushStyle.NoBrush)  # restore
 
     def _draw_ripple(
         self, painter: QPainter, x: float, y: float, ripple: RippleEntry
@@ -292,7 +689,7 @@ class LaserPointerOverlay(QWidget):
         )
 
     def _draw_cursor(
-        self, painter: QPainter, x: int, y: int, cursor: CursorEntry
+        self, painter: QPainter, x: float, y: float, cursor: CursorEntry
     ) -> None:
         """Draw one laser pointer cursor at widget-local coordinates (x, y)."""
         base_color = QColor(cursor.color)
@@ -363,8 +760,8 @@ class LaserPointerOverlay(QWidget):
     def _draw_label(
         self,
         painter: QPainter,
-        x: int,
-        y: int,
+        x: float,
+        y: float,
         name: str,
         accent: QColor,
     ) -> None:

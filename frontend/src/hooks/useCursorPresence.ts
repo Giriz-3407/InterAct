@@ -38,12 +38,15 @@ interface UseCursorPresenceOptions {
    * Viewers must pass false — they must never contact the agent.
    */
   isHost: boolean;
+  localParticipantId?: string;
 }
 
 interface UseCursorPresenceReturn {
   /** Attach this callback ref to the viewport container div */
   viewportRef: (node: HTMLDivElement | null) => void;
   videoBounds: RectBounds;
+  laserModeActive: boolean;
+  spotlightActive: boolean;
 }
 
 /** Minimum ms between cursor_move sends (~20 fps) */
@@ -87,6 +90,7 @@ export function useCursorPresence({
   captureDisplaySurface,
   participants,
   isHost,
+  localParticipantId,
 }: UseCursorPresenceOptions): UseCursorPresenceReturn {
   // [CursorPresence] mount log
   useEffect(() => {
@@ -207,6 +211,24 @@ export function useCursorPresence({
   // Timestamp of last send
   const lastSentAt = useRef(0);
 
+  // Presenter Mode state
+  const laserModeEnabled = useRef(false);
+  const [laserModeActive, setLaserModeActive] = useState(false);
+  const lastCtrlPressTime = useRef(0);
+
+  // Spotlight state
+  const spotlightEnabled = useRef(false);
+  const [spotlightActive, setSpotlightActive] = useState(false);
+  const lastAltPressTime = useRef(0);
+
+  // Annotation state
+  const altHeld = useRef(false);
+  const shiftHeld = useRef(false);
+  const isDraggingAnnotation = useRef(false);
+  const annotationStartPoint = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const currentAnnotationId = useRef<string | null>(null);
+  const currentAnnotationType = useRef<'rect' | 'arrow'>('rect');
+
 
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -321,43 +343,160 @@ export function useCursorPresence({
     if (!isScreenVisible) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'ControlLeft' && !ctrlHeld.current) {
-        ctrlHeld.current = true;
-        console.log('[Runtime] CTRL down');
+      // Track ALT and SHIFT for annotation modes
+      if (e.code === 'AltLeft' && !e.repeat) {
+        e.preventDefault(); // Prevent menu focus
+        altHeld.current = true;
+        console.log('[Annotation] ALT down');
+
+        if (isHostRef.current) {
+          const now = Date.now();
+          const diff = now - lastAltPressTime.current;
+
+          if (diff > 50 && diff < 350) {
+            spotlightEnabled.current = !spotlightEnabled.current;
+            setSpotlightActive(spotlightEnabled.current);
+            console.log('[Spotlight] Toggled:', spotlightEnabled.current);
+
+            // Reset time to prevent triple-taps
+            lastAltPressTime.current = 0;
+
+            // Send spotlight state to local agent
+            desktopAgent.sendSpotlightUpdate(localParticipantId || '', spotlightEnabled.current);
+
+            // If spotlight toggled OFF, and laser pointer is also OFF, hide cursor from agent
+            if (!spotlightEnabled.current && !ctrlHeld.current && !laserModeEnabled.current) {
+              desktopAgent.sendCursorRemove(localParticipantId || '');
+            }
+          } else {
+            lastAltPressTime.current = now;
+          }
+        }
+      }
+      if (e.code === 'ShiftLeft') {
+        shiftHeld.current = true;
+        console.log('[Annotation] SHIFT down');
+      }
+      if (e.code === 'Escape') {
+        console.log('[Runtime] ESC pressed — clearing annotations');
+        wsClient.send('annotation_clear', {});
+        if (isHostRef.current) {
+          desktopAgent.sendAnnotationClear(localParticipantId || '');
+        }
+      }
+
+      // Ignore repeat events, Right Control, and synthetic repeated events
+      if (e.code === 'ControlLeft' && !e.repeat) {
+        const now = Date.now();
+        const diff = now - lastCtrlPressTime.current;
+
+        // Double-tap threshold: between 50ms and 350ms
+        if (diff > 50 && diff < 350) {
+          // Toggle Laser Mode
+          laserModeEnabled.current = !laserModeEnabled.current;
+          setLaserModeActive(laserModeEnabled.current);
+          console.log('[Runtime] Laser Mode toggled:', laserModeEnabled.current);
+
+          // Reset stored time to prevent triple-tap double-toggle (cooldown)
+          lastCtrlPressTime.current = 0;
+
+          if (!laserModeEnabled.current) {
+            // Turned OFF: send cursor_hide immediately
+            sendHide();
+            if (isHostRef.current) {
+              desktopAgent.sendCursorRemove(localParticipantId || '');
+              if (spotlightEnabled.current) {
+                spotlightEnabled.current = false;
+                setSpotlightActive(false);
+                desktopAgent.sendSpotlightUpdate(localParticipantId || '', false);
+              }
+            }
+          }
+        } else {
+          lastCtrlPressTime.current = now;
+        }
+
+        // Only track hold if persistent laser mode is OFF
+        if (!laserModeEnabled.current) {
+          ctrlHeld.current = true;
+          console.log('[Runtime] CTRL down');
+        }
       }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'ControlLeft' && ctrlHeld.current) {
-        ctrlHeld.current = false;
-        sendHide();
+      if (e.code === 'AltLeft') {
+        altHeld.current = false;
+      }
+      if (e.code === 'ShiftLeft') {
+        shiftHeld.current = false;
+      }
+      if (e.code === 'ControlLeft') {
+        // Only release/hide on keyup if persistent laser mode is OFF
+        if (!laserModeEnabled.current && ctrlHeld.current) {
+          ctrlHeld.current = false;
+          sendHide();
+          if (isHostRef.current) {
+            desktopAgent.sendCursorRemove(localParticipantId || '');
+            if (spotlightEnabled.current) {
+              spotlightEnabled.current = false;
+              setSpotlightActive(false);
+              desktopAgent.sendSpotlightUpdate(localParticipantId || '', false);
+            }
+          }
+        }
       }
     };
 
-    // Safety: if window loses focus while CTRL is held, treat as release
+    // Safety: if window loses focus, treat as release and turn Laser Mode & Spotlight OFF
     const onBlur = () => {
-      if (ctrlHeld.current) {
+      if (ctrlHeld.current || laserModeEnabled.current || spotlightEnabled.current) {
         ctrlHeld.current = false;
+        laserModeEnabled.current = false;
+        setLaserModeActive(false);
+        spotlightEnabled.current = false;
+        setSpotlightActive(false);
         sendHide();
+        if (isHostRef.current) {
+          desktopAgent.sendSpotlightUpdate(localParticipantId || '', false);
+          desktopAgent.sendCursorRemove(localParticipantId || '');
+        }
+      }
+    };
+
+    const onMouseUp = () => {
+      if (isDraggingAnnotation.current) {
+        isDraggingAnnotation.current = false;
+        currentAnnotationId.current = null;
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
+    window.addEventListener('mouseup', onMouseUp);
 
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
+      window.removeEventListener('mouseup', onMouseUp);
 
       // Ensure hide is sent on cleanup (e.g. navigating away)
-      if (ctrlHeld.current) {
+      if (ctrlHeld.current || laserModeEnabled.current || spotlightEnabled.current) {
         ctrlHeld.current = false;
+        laserModeEnabled.current = false;
+        setLaserModeActive(false);
+        spotlightEnabled.current = false;
+        setSpotlightActive(false);
         sendHide();
+        if (isHostRef.current) {
+          desktopAgent.sendSpotlightUpdate(localParticipantId || '', false);
+          desktopAgent.sendCursorRemove(localParticipantId || '');
+        }
       }
     };
-  }, [isScreenVisible, sendHide]);
+  }, [isScreenVisible, sendHide, localParticipantId]);
 
   // ---------------------------------------------------------------------------
   // Mouse move listener on the viewport element — throttled
@@ -367,28 +506,126 @@ export function useCursorPresence({
     if (!isScreenVisible || !viewportEl) return;
 
     const onMouseMove = (e: MouseEvent) => {
-      if (!ctrlHeld.current) return;
-
       const now = Date.now();
+
+      if (isDraggingAnnotation.current && currentAnnotationId.current) {
+        if (now - lastSentAt.current < 33) return; // 30 FPS throttle
+        lastSentAt.current = now;
+
+        const point = getNormalizedPoint(e);
+        if (!point) return;
+
+        const startPoint = annotationStartPoint.current;
+        const annotId = currentAnnotationId.current;
+        const annotType = currentAnnotationType.current;
+
+        wsClient.send('annotation_update', {
+          annotationId: annotId,
+          type: annotType,
+          startX: startPoint.x,
+          startY: startPoint.y,
+          endX: point.x,
+          endY: point.y,
+        });
+        console.log('[Annotation] update sent', annotId);
+
+        if (isHostRef.current) {
+          const startDesk = toDesktopCoords(startPoint.x, startPoint.y);
+          const endDesk = toDesktopCoords(point.x, point.y);
+          desktopAgent.sendAnnotationUpdate(
+            localParticipantId || '',
+            annotId,
+            annotType,
+            startDesk.x,
+            startDesk.y,
+            endDesk.x,
+            endDesk.y,
+          );
+        }
+        return;
+      }
+
+      const isLaserActive = ctrlHeld.current || laserModeEnabled.current;
+      const isSpotlightActive = spotlightEnabled.current;
+
+      if (!isLaserActive && !isSpotlightActive) return;
+
       if (now - lastSentAt.current < THROTTLE_MS) return;
       lastSentAt.current = now;
 
       const point = getNormalizedPoint(e);
       if (!point) return;
 
-      console.log('[Runtime] sending cursor_move', point.x.toFixed(3), point.y.toFixed(3));
-      sendMove(point.x, point.y);
+      if (isLaserActive) {
+        console.log('[Runtime] sending cursor_move', point.x.toFixed(3), point.y.toFixed(3));
+        sendMove(point.x, point.y);
+      }
+
+      if (isHostRef.current && (isLaserActive || isSpotlightActive)) {
+        const name = getParticipantName(localParticipantId || '');
+        const color = getParticipantColor(localParticipantId || '', name);
+        const { x: dx, y: dy } = toDesktopCoords(point.x, point.y);
+        desktopAgent.sendCursorMove(
+          localParticipantId || '',
+          dx,
+          dy,
+          color,
+          name,
+        );
+      }
     };
 
     viewportEl.addEventListener('mousemove', onMouseMove);
     return () => viewportEl.removeEventListener('mousemove', onMouseMove);
-  }, [isScreenVisible, viewportEl, getNormalizedPoint, sendMove]);
+  }, [isScreenVisible, viewportEl, getNormalizedPoint, sendMove, localParticipantId]);
 
   useEffect(() => {
     if (!isScreenVisible || !viewportEl) return;
 
     const onMouseDown = (e: MouseEvent) => {
-      if (!ctrlHeld.current || e.button !== 0) return;
+      if (e.button !== 0) return;
+
+      const isAlt = altHeld.current;
+      const isShift = shiftHeld.current;
+
+      if (isAlt || isShift) {
+        lastAltPressTime.current = 0;
+        const point = getNormalizedPoint(e);
+        if (!point) return;
+
+        isDraggingAnnotation.current = true;
+        annotationStartPoint.current = point;
+        const annotationId = `annot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        currentAnnotationId.current = annotationId;
+        currentAnnotationType.current = isAlt ? 'rect' : 'arrow';
+        console.log('[Annotation] drag start');
+
+        // Send initial update
+        wsClient.send('annotation_update', {
+          annotationId,
+          type: isAlt ? 'rect' : 'arrow',
+          startX: point.x,
+          startY: point.y,
+          endX: point.x,
+          endY: point.y,
+        });
+
+        if (isHostRef.current) {
+          const startDesk = toDesktopCoords(point.x, point.y);
+          desktopAgent.sendAnnotationUpdate(
+            localParticipantId || '',
+            annotationId,
+            isAlt ? 'rect' : 'arrow',
+            startDesk.x,
+            startDesk.y,
+            startDesk.x,
+            startDesk.y,
+          );
+        }
+        return;
+      }
+
+      if ((!ctrlHeld.current && !laserModeEnabled.current)) return;
 
       const point = getNormalizedPoint(e);
       if (!point) return;
@@ -398,7 +635,7 @@ export function useCursorPresence({
 
     viewportEl.addEventListener('mousedown', onMouseDown);
     return () => viewportEl.removeEventListener('mousedown', onMouseDown);
-  }, [isScreenVisible, viewportEl, getNormalizedPoint, sendClick]);
+  }, [isScreenVisible, viewportEl, getNormalizedPoint, sendClick, localParticipantId]);
 
   // ---------------------------------------------------------------------------
   // Inbound WebSocket subscriptions
@@ -462,12 +699,57 @@ export function useCursorPresence({
       }
     });
 
+    // ── annotation_update ───────────────────────────────────────────────────
+    const unsubAnnotationUpdate = wsClient.on('annotation_update', (data) => {
+      const { participantId, displayName, annotationId, type, startX, startY, endX, endY } = data as {
+        participantId: string;
+        displayName?: string;
+        annotationId: string;
+        type: 'rect' | 'arrow';
+        startX: number;
+        startY: number;
+        endX: number;
+        endY: number;
+      };
+      if (!participantId || !annotationId || !type) return;
+      console.log('[Annotation] host received', annotationId);
+
+      if (isHostRef.current && laserPointerEnabledRef.current) {
+        const name = getParticipantName(participantId, displayName);
+        const color = getParticipantColor(participantId, name);
+        const startDesk = toDesktopCoords(startX, startY);
+        const endDesk = toDesktopCoords(endX, endY);
+        desktopAgent.sendAnnotationUpdate(
+          participantId,
+          annotationId,
+          type,
+          startDesk.x,
+          startDesk.y,
+          endDesk.x,
+          endDesk.y,
+          color,
+          name,
+        );
+      }
+    });
+
+    // ── annotation_clear ────────────────────────────────────────────────────
+    const unsubAnnotationClear = wsClient.on('annotation_clear', (data) => {
+      const { participantId } = data as { participantId: string };
+      if (!participantId) return;
+
+      if (isHostRef.current && laserPointerEnabledRef.current) {
+        desktopAgent.sendAnnotationClear(participantId);
+      }
+    });
+
     const unsubParticipantLeft = wsClient.on('participant_left', (data) => {
       const { participantId } = data as { participantId: string };
       if (!participantId) return;
 
       if (isHostRef.current && laserPointerEnabledRef.current) {
         desktopAgent.sendCursorRemove(participantId);
+        desktopAgent.sendAnnotationClear(participantId); // Remove participant's annotations!
       }
       activeCursorIdsRef.current.delete(participantId);
       participantColorsRef.current.delete(participantId);
@@ -478,11 +760,13 @@ export function useCursorPresence({
       unsubMove();
       unsubClick();
       unsubHide();
+      unsubAnnotationUpdate();
+      unsubAnnotationClear();
       unsubParticipantLeft();
     };
   }, [getParticipantColor, getParticipantName]);
 
   console.log('[Runtime-Audit] videoBounds:', videoBounds, 'videoDimensions:', videoDimensions, 'containerSize:', containerSize);
 
-  return { viewportRef, videoBounds };
+  return { viewportRef, videoBounds, laserModeActive, spotlightActive };
 }

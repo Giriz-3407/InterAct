@@ -9,6 +9,8 @@ import { wsClient } from '../lib/websocket';
 import { apiClient } from '../lib/axios';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useCursorPresence } from '../hooks/useCursorPresence';
+import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
+
 
 interface Participant {
   socketId: string;
@@ -83,15 +85,16 @@ export const RoomPage: React.FC = () => {
   const isRequesting = sharingState === 'requesting';
   const showLaserPointerNotice = isHost && isSharing && captureDisplaySurface !== 'monitor';
 
-  // Live cursor presence — active only while a remote stream is being viewed
-  const isScreenVisible = isViewing && !!remoteStream;
-  const { viewportRef } = useCursorPresence({
+  // Live cursor presence — active while viewing a remote stream or sharing as host
+  const isScreenVisible = (isViewing && !!remoteStream) || (isHost && isSharing);
+  const { viewportRef, laserModeActive, spotlightActive } = useCursorPresence({
     isScreenVisible,
     localStream,
     remoteStream,
     captureDisplaySurface,
     participants,
     isHost,
+    localParticipantId: currentSocketId,
   });
 
   // Ref for remote video element
@@ -302,6 +305,7 @@ export const RoomPage: React.FC = () => {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             live-server-01
           </span>
+          {isHost && <AgentStatusIndicator />}
         </div>
 
         <div className="flex items-center gap-3">
@@ -376,6 +380,22 @@ export const RoomPage: React.FC = () => {
 
           {/* Viewport container */}
           <div ref={viewportRef} className="flex-1 flex items-center justify-center rounded-2xl border border-zinc-800/80 bg-[#0d1117]/60 overflow-hidden relative">
+
+            {/* Active Indicators Row */}
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 flex gap-2 pointer-events-none">
+              {laserModeActive && (
+                <div className="bg-zinc-950/85 text-zinc-100 px-3 py-1.5 rounded-full text-xs font-semibold border border-zinc-800 shadow-md flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>🟢 Laser Active</span>
+                </div>
+              )}
+              {spotlightActive && (
+                <div className="bg-zinc-950/85 text-zinc-100 px-3 py-1.5 rounded-full text-xs font-semibold border border-zinc-800 shadow-md flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                  <span>🔦 Spotlight Active</span>
+                </div>
+              )}
+            </div>
 
 
 

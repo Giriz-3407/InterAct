@@ -1,23 +1,41 @@
 /**
- * desktopAgent.ts — InterAct Phase 4
+ * desktopAgent.ts — InterAct Phase 4 / RC1
  *
  * Browser-side WebSocket client that forwards cursor events received from
- * the InterAct backend to the local desktop agent overlay running on
- * ws://localhost:8765.
+ * the InterAct backend to the local desktop agent overlay.
  *
- * Design:
- *  - Singleton module-level instance shared across the app
- *  - Silent failure: if the agent is not running, all sends are no-ops
- *  - Auto-reconnect: retries every RECONNECT_DELAY_MS until disconnect() is called
- *  - Host-only contract: callers must only call connect() when isHost === true
- *
- * Phase 5 replacement points are marked with [P5].
+ * Requirements Met:
+ *  - Configurable port: resolved via import.meta.env.VITE_AGENT_PORT (fallback 8765)
+ *  - Exponential backoff: base 500ms, multiplier 2x, max 30s, jitter ±10%
+ *  - Agent handshake: immediately parses 'agent_info' event on connection open
+ *  - Protocol version validation: validates client BROWSER_PROTOCOL_VERSION against server protocol_version
+ *  - Connection health: exposes status callbacks and getters with states ('connecting', 'connected', 'disconnected', 'incompatible')
+ *  - Console log levels: structured console warnings and errors for diagnostics
  */
 
-const AGENT_WS_URL = 'ws://localhost:8765';
-const RECONNECT_DELAY_MS = 3_000;
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'incompatible';
+
+export interface AgentInfo {
+  version: string;
+  protocolVersion: number;
+  capabilities: string[];
+  platform: string;
+  agentPort: number;
+}
+
+// BROWSER_PROTOCOL_VERSION must match PROTOCOL_VERSION in agent_version.py
+export const BROWSER_PROTOCOL_VERSION = 1;
 
 type VoidCallback = () => void;
+type StatusCallback = (status: ConnectionStatus) => void;
+
+// ---------------------------------------------------------------------------
+// Configurable Host-only agent URL resolution
+// ---------------------------------------------------------------------------
+function getAgentWsUrl(): string {
+  const port = (import.meta.env?.VITE_AGENT_PORT) || '8765';
+  return `ws://127.0.0.1:${port}`;
+}
 
 // ---------------------------------------------------------------------------
 // Deterministic participant colour so that participant cursors are drawn with
@@ -43,20 +61,7 @@ export function colorForParticipant(id: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 4 coordinate mapper
-//
-// Converts normalised cursor coordinates (0–1, relative to shared screen
-// content) into absolute desktop pixel coordinates expected by the agent.
-//
-// Assumption: window.screen.width/height (logical CSS pixels) approximate
-// the host's primary monitor logical pixel space, which matches the logical
-// pixel space reported by Qt's QScreen.geometry() at the same DPR.
-//
-// [P5] Replace with WebRTC track dimensions:
-//   const settings = localStream.getVideoTracks()[0].getSettings();
-//   x = Math.round(normX * settings.width!);
-//   y = Math.round(normY * settings.height!);
-// This will give exact mapping regardless of window/tab capture regions.
+// Coordinate mapper
 // ---------------------------------------------------------------------------
 export function toDesktopCoords(
   normX: number,
@@ -74,7 +79,23 @@ export function toDesktopCoords(
 class DesktopAgentClient {
   private socket: WebSocket | null = null;
   private shouldConnect = false;
+  private status: ConnectionStatus = 'disconnected';
+  private agentInfo: AgentInfo | null = null;
+
+  // Reconnect Backoff properties
+  private baseDelayMs = 500;
+  private currentDelayMs = 500;
+  private maxDelayMs = 30000;
+  private multiplier = 2;
+  private jitterPercent = 0.1; // ±10%
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Handshake timeout to ensure we don't hang in 'connecting' if handshake never comes
+  private handshakeTimer: ReturnType<typeof setTimeout> | null = null;
+  private handshakeTimeoutMs = 5000;
+
+  // Callbacks
+  private readonly statusCbs = new Set<StatusCallback>();
   private readonly connectedCbs = new Set<VoidCallback>();
   private readonly disconnectedCbs = new Set<VoidCallback>();
 
@@ -83,42 +104,65 @@ class DesktopAgentClient {
   /**
    * Open a connection to the local desktop agent.
    * No-op if already connecting or connected.
-   * Must only be called when the local user is the host.
    */
   connect(): void {
     if (this.shouldConnect) return;
     this.shouldConnect = true;
+    this.currentDelayMs = this.baseDelayMs; // Reset backoff when user explicitly connects
     this._openSocket();
   }
 
   /**
    * Close the connection and cancel any pending reconnect.
-   * Safe to call when not connected.
    */
   disconnect(): void {
     this.shouldConnect = false;
     this._clearReconnectTimer();
+    this._clearHandshakeTimer();
+    
     if (this.socket) {
       this.socket.onclose = null; // suppress reconnect trigger
+      this.socket.onerror = null;
+      this.socket.onmessage = null;
       this.socket.close();
       this.socket = null;
-      console.log('[DesktopAgent] disconnected');
-      this.disconnectedCbs.forEach((cb) => cb());
     }
+    
+    this.agentInfo = null;
+    this._setStatus('disconnected');
+    this.disconnectedCbs.forEach((cb) => cb());
   }
 
-  /** Returns true only when the WebSocket is in OPEN state. */
+  /** Returns current connection status. */
+  getStatus(): ConnectionStatus {
+    return this.status;
+  }
+
+  /** Returns agent info payload if connected. */
+  getAgentInfo(): AgentInfo | null {
+    return this.agentInfo;
+  }
+
+  /** Returns true only when status is 'connected' */
   isConnected(): boolean {
-    return this.socket?.readyState === WebSocket.OPEN;
+    return this.status === 'connected';
   }
 
-  /** Subscribe to connection open events. Returns an unsubscribe function. */
+  /** Subscribe to connection status changes. Returns unsubscribe function. */
+  onStatusChange(cb: StatusCallback): VoidCallback {
+    this.statusCbs.add(cb);
+    // Notify immediately with current status
+    cb(this.status);
+    return () => this.statusCbs.delete(cb);
+  }
+
+  /** Subscribe to connection open (handshake completed successfully) events. */
   onConnected(cb: VoidCallback): VoidCallback {
     this.connectedCbs.add(cb);
     return () => this.connectedCbs.delete(cb);
   }
 
-  /** Subscribe to disconnection events. Returns an unsubscribe function. */
+  /** Subscribe to disconnection events. */
   onDisconnected(cb: VoidCallback): VoidCallback {
     this.disconnectedCbs.add(cb);
     return () => this.disconnectedCbs.delete(cb);
@@ -126,10 +170,6 @@ class DesktopAgentClient {
 
   // ── Cursor event forwarders ───────────────────────────────────────────────
 
-  /**
-   * Forward a cursor move to the desktop overlay.
-   * x, y must be in desktop pixel coordinates (use toDesktopCoords first).
-   */
   sendCursorMove(
     participantId: string,
     x: number,
@@ -138,14 +178,9 @@ class DesktopAgentClient {
     name: string,
   ): void {
     this._send({ event: 'cursor_move', participantId, x, y, color, name });
-    // Use console.debug to satisfy "no excessive spam" — visible in Verbose filter
     console.debug('[DesktopAgent] cursor_move forwarded', participantId, x, y);
   }
 
-  /**
-   * Forward a click ripple to the desktop overlay.
-   * x, y must be in desktop pixel coordinates.
-   */
   sendCursorClick(
     participantId: string,
     x: number,
@@ -156,72 +191,200 @@ class DesktopAgentClient {
     console.log('[DesktopAgent] cursor_click forwarded', participantId, x, y);
   }
 
-  /**
-   * Remove a participant cursor from the desktop overlay.
-   */
   sendCursorRemove(participantId: string): void {
     this._send({ event: 'cursor_remove', participantId });
     console.log('[DesktopAgent] cursor_remove forwarded', participantId);
   }
 
+  sendAnnotationUpdate(
+    participantId: string,
+    annotationId: string,
+    type: 'rect' | 'arrow',
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    color?: string,
+    name?: string,
+  ): void {
+    this._send({
+      event: 'annotation_update',
+      participantId,
+      annotationId,
+      type,
+      startX,
+      startY,
+      endX,
+      endY,
+      color,
+      name,
+    });
+    console.debug('[DesktopAgent] annotation_update forwarded', participantId, annotationId);
+  }
+
+  sendAnnotationClear(participantId: string): void {
+    this._send({ event: 'annotation_clear', participantId });
+    console.log('[DesktopAgent] annotation_clear forwarded', participantId);
+  }
+
+  sendSpotlightUpdate(participantId: string, active: boolean): void {
+    this._send({ event: 'spotlight_update', participantId, active });
+    console.log('[DesktopAgent] spotlight_update forwarded', participantId, active);
+  }
+
   // ── Internal ──────────────────────────────────────────────────────────────
 
+  private _setStatus(newStatus: ConnectionStatus): void {
+    if (this.status !== newStatus) {
+      console.log(`[DesktopAgent] Status change: ${this.status} -> ${newStatus}`);
+      this.status = newStatus;
+      this.statusCbs.forEach((cb) => cb(newStatus));
+    }
+  }
+
   private _send(payload: object): void {
-    if (!this.isConnected()) return; // silent no-op — agent not running
-    this.socket!.send(JSON.stringify(payload));
+    if (!this.isConnected()) return; // silent no-op if agent not fully connected
+    try {
+      this.socket?.send(JSON.stringify(payload));
+    } catch (err) {
+      console.error('[DesktopAgent] Failed to send message:', err);
+    }
   }
 
   private _openSocket(): void {
     if (!this.shouldConnect) return;
 
+    this._setStatus('connecting');
+    const wsUrl = getAgentWsUrl();
+    console.log(`[DesktopAgent] Connecting to ${wsUrl}...`);
+
     try {
-      const ws = new WebSocket(AGENT_WS_URL);
+      const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        console.log('[DesktopAgent] connected');
-        this._clearReconnectTimer();
-        this.connectedCbs.forEach((cb) => cb());
+        console.log('[DesktopAgent] WebSocket open. Waiting for agent_info handshake...');
+        
+        // Start handshake timeout timer
+        this._clearHandshakeTimer();
+        this.handshakeTimer = setTimeout(() => {
+          console.warn('[DesktopAgent] Handshake timed out. Reconnecting...');
+          ws.close();
+        }, this.handshakeTimeoutMs);
       };
 
       ws.onclose = () => {
         this.socket = null;
+        this.agentInfo = null;
+        this._clearHandshakeTimer();
+
         if (this.shouldConnect) {
-          console.warn(
-            `[DesktopAgent] disconnected — retrying in ${RECONNECT_DELAY_MS}ms`,
-          );
+          this._setStatus('disconnected');
           this.disconnectedCbs.forEach((cb) => cb());
           this._scheduleReconnect();
+        } else if (this.status !== 'incompatible') {
+          this._setStatus('disconnected');
         }
       };
 
       ws.onerror = () => {
-        // onerror is always followed by onclose — no further action needed here.
-        // Errors are intentionally swallowed: if the agent is not running the
-        // browser must continue working normally with no user-visible errors.
+        // onerror is followed by onclose, no reconnect scheduling here.
       };
 
-      ws.onmessage = () => {
-        // Agent sends no messages to the browser in Phase 4.
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg && msg.event === 'agent_info') {
+            this._clearHandshakeTimer();
+            this._handleHandshake(msg);
+          }
+        } catch (err) {
+          console.warn('[DesktopAgent] Failed to parse message from agent:', err);
+        }
       };
 
       this.socket = ws;
-    } catch {
-      // WebSocket constructor can throw in sandboxed / restricted environments.
+    } catch (err) {
+      console.error('[DesktopAgent] Socket construction failed:', err);
       if (this.shouldConnect) {
+        this._setStatus('disconnected');
         this._scheduleReconnect();
       }
     }
   }
 
+  private _handleHandshake(payload: any): void {
+    const serverProtocol = Number(payload.protocol_version);
+    
+    if (isNaN(serverProtocol) || serverProtocol !== BROWSER_PROTOCOL_VERSION) {
+      console.error(
+        `[DesktopAgent] Protocol version mismatch! ` +
+        `Browser expects: ${BROWSER_PROTOCOL_VERSION}, Agent sent: ${payload.protocol_version}`
+      );
+      
+      this.agentInfo = null;
+      this._setStatus('incompatible');
+      
+      // Stop reconnecting as requested by Option A
+      this.shouldConnect = false;
+      this._clearReconnectTimer();
+      
+      if (this.socket) {
+        this.socket.onclose = null;
+        this.socket.onerror = null;
+        this.socket.close();
+        this.socket = null;
+      }
+      return;
+    }
+
+    // Handshake successful
+    this.agentInfo = {
+      version: payload.version,
+      protocolVersion: serverProtocol,
+      capabilities: payload.capabilities || [],
+      platform: payload.platform || 'unknown',
+      agentPort: Number(payload.agent_port) || 8765,
+    };
+
+    console.info(
+      `[DesktopAgent] Handshake successful! Agent version: ${this.agentInfo.version}, Platform: ${this.agentInfo.platform}`
+    );
+
+    this.currentDelayMs = this.baseDelayMs; // Reset backoff delay on successful connection
+    this._setStatus('connected');
+    this.connectedCbs.forEach((cb) => cb());
+  }
+
   private _scheduleReconnect(): void {
     this._clearReconnectTimer();
-    this.reconnectTimer = setTimeout(() => this._openSocket(), RECONNECT_DELAY_MS);
+
+    // Jitter calculation: ±10%
+    const jitterFactor = 1 + (Math.random() * (this.jitterPercent * 2) - this.jitterPercent);
+    const delayWithJitter = Math.round(this.currentDelayMs * jitterFactor);
+
+    console.warn(
+      `[DesktopAgent] Reconnect scheduled in ${delayWithJitter}ms (base delay: ${this.currentDelayMs}ms)`
+    );
+
+    this.reconnectTimer = setTimeout(() => {
+      this._openSocket();
+    }, delayWithJitter);
+
+    // Double the delay for the next attempt up to the max limit
+    this.currentDelayMs = Math.min(this.maxDelayMs, this.currentDelayMs * this.multiplier);
   }
 
   private _clearReconnectTimer(): void {
     if (this.reconnectTimer !== null) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
+    }
+  }
+
+  private _clearHandshakeTimer(): void {
+    if (this.handshakeTimer !== null) {
+      clearTimeout(this.handshakeTimer);
+      this.handshakeTimer = null;
     }
   }
 }

@@ -401,6 +401,22 @@ class ConnectionManager:
                 await asyncio.gather(*tasks)
                 print(f"[Backend] {event} relayed to {len(tasks)} client(s) ✓")
 
+        elif event in ("annotation_update", "annotation_clear", "spotlight_update"):
+            room_code = self.socket_room_map.get(socket_id)
+            display_name = self.socket_name_map.get(socket_id)
+            if room_code and display_name:
+                relay = {"event": event, "participantId": socket_id, "displayName": display_name}
+                for k, v in data.items():
+                    if k not in ("event", "participantId", "displayName"):
+                        relay[k] = v
+                code = room_code.upper()
+                recipients = [sid for sid, rc in self.socket_room_map.items() if rc == code and sid != socket_id]
+                payload = json.dumps(relay)
+                tasks = [self._safe_send(self.active_connections[sid], payload, sid) for sid in recipients if sid in self.active_connections]
+                print(f"[Annotation] backend relay: {event}", flush=True)
+                if tasks:
+                    await asyncio.gather(*tasks)
+
         else:
             logger.warning(f"Unhandled WebSocket event '{event}' from socket {socket_id}")
 

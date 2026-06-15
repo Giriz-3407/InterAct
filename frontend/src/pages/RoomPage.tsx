@@ -1,3 +1,4 @@
+console.log("CURSOR_BUILD_MARKER_20260615 \u2014 SOURCE: C:\\Users\\Girish\\Desktop\\InterAct\\frontend");
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar.FC';
@@ -7,6 +8,8 @@ import { HostControlPanel } from '../components/HostControlPanel';
 import { wsClient } from '../lib/websocket';
 import { apiClient } from '../lib/axios';
 import { useWebRTC } from '../hooks/useWebRTC';
+import { useCursorPresence } from '../hooks/useCursorPresence';
+import { CursorOverlay } from '../components/CursorOverlay';
 
 interface Participant {
   socketId: string;
@@ -71,6 +74,14 @@ export const RoomPage: React.FC = () => {
   const isSharing = sharingState === 'sharing';
   const isViewing = sharingState === 'viewing';
   const isRequesting = sharingState === 'requesting';
+
+  // Live cursor presence — active only while a remote stream is being viewed
+  const isScreenVisible = isViewing && !!remoteStream;
+  const { viewportRef, remoteCursors, videoBounds } = useCursorPresence({
+    isScreenVisible,
+    localStream: null,
+    remoteStream,
+  });
 
   // Ref for remote video element
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -346,7 +357,22 @@ export const RoomPage: React.FC = () => {
           )}
 
           {/* Viewport container */}
-          <div className="flex-1 flex items-center justify-center rounded-2xl border border-zinc-800/80 bg-[#0d1117]/60 overflow-hidden relative">
+          <div ref={viewportRef} className="flex-1 flex items-center justify-center rounded-2xl border border-zinc-800/80 bg-[#0d1117]/60 overflow-hidden relative">
+
+            {/* Live cursor overlay — rendered above the video, pointer-events none */}
+            <div
+              style={{
+                position: 'absolute',
+                left: `${videoBounds.left}px`,
+                top: `${videoBounds.top}px`,
+                width: `${videoBounds.width}px`,
+                height: `${videoBounds.height}px`,
+                pointerEvents: 'none',
+                zIndex: 20,
+              }}
+            >
+              <CursorOverlay cursors={remoteCursors} />
+            </div>
 
             {/* Remote stream video — visible to viewer when receiving */}
             {isViewing && remoteStream && (

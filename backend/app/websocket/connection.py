@@ -310,8 +310,70 @@ class ConnectionManager:
             else:
                 await self.disconnect(target_id)
 
+
+        elif event in ("cursor_move", "cursor_click"):
+            # --- Live cursor presence relay ---
+            # Fire-and-forget: relay cursor position/click to all other room participants.
+            # No database write. No server-side state.
+            room_code = self.socket_room_map.get(socket_id)
+            display_name = self.socket_name_map.get(socket_id)
+
+            # DIAGNOSTIC — print() used so output appears regardless of log level (INFO)
+            print(f"[Backend] {event} received — sender={socket_id[:8]} room={room_code!r} name={display_name!r}")
+
+            if not room_code or not display_name:
+                print(f"[Backend] DROP: {socket_id[:8]} not in socket_room_map — event discarded")
+                return
+
+            x = data.get("x")
+            y = data.get("y")
+            if x is None or y is None:
+                print(f"[Backend] DROP: malformed {event} — missing x or y")
+                return
+
+            relay: dict = {
+                "event": event,
+                "participantId": socket_id,
+                "displayName": display_name,
+                "x": x,
+                "y": y,
+            }
+
+            # Forward optional dimension fields for future tooling
+            sw = data.get("screenWidth")
+            sh = data.get("screenHeight")
+            if sw is not None:
+                relay["screenWidth"] = sw
+            if sh is not None:
+                relay["screenHeight"] = sh
+
+            # Send to every socket in this room EXCEPT the sender
+            code = room_code.upper()
+            recipients = [
+                sid for sid, rc in self.socket_room_map.items()
+                if rc == code and sid != socket_id
+            ]
+
+            print(f"[Backend] {event} relay — room={code} recipients={len(recipients)} {[s[:8] for s in recipients]}")
+
+            if not recipients:
+                print(f"[Backend] WARNING: 0 recipients — room_map={{{', '.join(f'{k[:8]}:{v}' for k, v in self.socket_room_map.items())}}}")
+
+            payload = json.dumps(relay)
+            tasks = []
+            for sid in recipients:
+                ws = self.active_connections.get(sid)
+                if ws:
+                    tasks.append(self._safe_send(ws, payload, sid))
+                else:
+                    print(f"[Backend] WARNING: {sid[:8]} in room_map but absent from active_connections")
+            if tasks:
+                await asyncio.gather(*tasks)
+                print(f"[Backend] {event} relayed to {len(tasks)} client(s) ✓")
+
         else:
             logger.warning(f"Unhandled WebSocket event '{event}' from socket {socket_id}")
+
 
     async def _send_error(self, socket_id: str, message: str):
         ws = self.active_connections.get(socket_id)

@@ -81,6 +81,7 @@ export const RoomPage: React.FC = () => {
     isScreenVisible,
     localStream: null,
     remoteStream,
+    isHost,
   });
 
   // Ref for remote video element

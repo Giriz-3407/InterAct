@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { wsClient } from '../lib/websocket';
+import { desktopAgent, colorForParticipant, toDesktopCoords } from '../lib/desktopAgent';
 
 export interface RemoteCursor {
   participantId: string;
@@ -22,6 +23,13 @@ interface UseCursorPresenceOptions {
   isScreenVisible: boolean;
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
+  /**
+   * When true this browser is the host. The hook will:
+   *  1. Connect to the local desktop agent on ws://localhost:8765
+   *  2. Forward cursor_move / cursor_click / cursor_hide to the agent
+   * Viewers must pass false — they must never contact the agent.
+   */
+  isHost: boolean;
 }
 
 interface UseCursorPresenceReturn {
@@ -70,6 +78,7 @@ export function useCursorPresence({
   isScreenVisible,
   localStream,
   remoteStream,
+  isHost,
 }: UseCursorPresenceOptions): UseCursorPresenceReturn {
   // [CursorPresence] mount log
   useEffect(() => {
@@ -80,6 +89,20 @@ export function useCursorPresence({
   useEffect(() => {
     console.log('[Runtime] isScreenVisible changed ->', isScreenVisible);
   }, [isScreenVisible]);
+
+  // Mutable ref so inbound WS callbacks (set up once with [] deps) always
+  // read the latest isHost value without needing to re-subscribe.
+  const isHostRef = useRef(isHost);
+  isHostRef.current = isHost;
+
+  // ── Desktop agent connection — host only ──────────────────────────────────
+  // Connect when this browser becomes the host; disconnect on role change or unmount.
+  // Viewers never reach this branch (isHost stays false for them).
+  useEffect(() => {
+    if (!isHost) return;
+    desktopAgent.connect();
+    return () => desktopAgent.disconnect();
+  }, [isHost]);
 
   // Use stateful viewport element to trigger effects properly when the ref is attached
   const [viewportEl, setViewportEl] = useState<HTMLDivElement | null>(null);
@@ -264,33 +287,75 @@ export function useCursorPresence({
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
+    // ── cursor_move ─────────────────────────────────────────────────────────
     const unsubMove = wsClient.on('cursor_move', (data) => {
       console.log('[Runtime] host received cursor_move', data);
       const { participantId, displayName, x, y } = data as RemoteCursor;
       if (!participantId || x == null || y == null) return;
 
+      // 1. Update the browser overlay (unchanged behaviour)
       setRemoteCursors((prev) => {
         const next = new Map(prev);
         next.set(participantId, { participantId, displayName, x, y });
         return next;
       });
+
+      // 2. Forward to desktop agent — host only, silently skipped if not connected
+      if (isHostRef.current) {
+        const { x: dx, y: dy } = toDesktopCoords(x, y);
+        desktopAgent.sendCursorMove(
+          participantId,
+          dx,
+          dy,
+          colorForParticipant(participantId),
+          displayName || participantId,
+        );
+      }
     });
 
+    // ── cursor_click ─────────────────────────────────────────────────────────
+    // Backend already relays cursor_click (connection.py line 314).
+    // Browser overlay does not render clicks; this subscription exists solely
+    // to forward them to the desktop agent as ripple events.
+    const unsubClick = wsClient.on('cursor_click', (data) => {
+      const { participantId, x, y } =
+        data as { participantId: string; x: number; y: number };
+      if (!participantId || x == null || y == null) return;
+
+      if (isHostRef.current) {
+        const { x: dx, y: dy } = toDesktopCoords(x, y);
+        desktopAgent.sendCursorClick(
+          participantId,
+          dx,
+          dy,
+          colorForParticipant(participantId),
+        );
+      }
+    });
+
+    // ── cursor_hide ──────────────────────────────────────────────────────────
     const unsubHide = wsClient.on('cursor_hide', (data) => {
       console.log('[Runtime] host received cursor_hide', data);
       const { participantId } = data as { participantId: string };
       if (!participantId) return;
 
+      // 1. Remove from browser overlay
       setRemoteCursors((prev) => {
         if (!prev.has(participantId)) return prev;
         const next = new Map(prev);
         next.delete(participantId);
         return next;
       });
+
+      // 2. Remove from desktop overlay
+      if (isHostRef.current) {
+        desktopAgent.sendCursorRemove(participantId);
+      }
     });
 
     return () => {
       unsubMove();
+      unsubClick();
       unsubHide();
     };
   }, []);

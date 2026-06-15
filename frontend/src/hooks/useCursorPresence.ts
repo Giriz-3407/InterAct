@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { wsClient } from '../lib/websocket';
-import { desktopAgent, colorForParticipant, toDesktopCoords } from '../lib/desktopAgent';
+import { CURSOR_COLORS, colorForParticipant, desktopAgent, toDesktopCoords } from '../lib/desktopAgent';
+import type { CaptureDisplaySurface } from './useWebRTC';
 
 export interface RemoteCursor {
   participantId: string;
@@ -18,11 +19,18 @@ export interface RectBounds {
   height: number;
 }
 
+export interface CursorParticipant {
+  socketId: string;
+  displayName: string;
+}
+
 interface UseCursorPresenceOptions {
   /** Whether there is a live screen share currently visible in the viewport */
   isScreenVisible: boolean;
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
+  captureDisplaySurface: CaptureDisplaySurface | null;
+  participants: CursorParticipant[];
   /**
    * When true this browser is the host. The hook will:
    *  1. Connect to the local desktop agent on ws://localhost:8765
@@ -35,8 +43,6 @@ interface UseCursorPresenceOptions {
 interface UseCursorPresenceReturn {
   /** Attach this callback ref to the viewport container div */
   viewportRef: (node: HTMLDivElement | null) => void;
-  /** Map of participantId → RemoteCursor for all visible remote peers */
-  remoteCursors: Map<string, RemoteCursor>;
   videoBounds: RectBounds;
 }
 
@@ -78,6 +84,8 @@ export function useCursorPresence({
   isScreenVisible,
   localStream,
   remoteStream,
+  captureDisplaySurface,
+  participants,
   isHost,
 }: UseCursorPresenceOptions): UseCursorPresenceReturn {
   // [CursorPresence] mount log
@@ -94,6 +102,65 @@ export function useCursorPresence({
   // read the latest isHost value without needing to re-subscribe.
   const isHostRef = useRef(isHost);
   isHostRef.current = isHost;
+  const laserPointerEnabledRef = useRef(captureDisplaySurface === 'monitor');
+  laserPointerEnabledRef.current = captureDisplaySurface === 'monitor';
+  const participantsRef = useRef<CursorParticipant[]>(participants);
+  participantsRef.current = participants;
+
+  const participantNamesRef = useRef(new Map<string, string>());
+  const participantColorsRef = useRef(new Map<string, string>());
+  const rememberedNameColorsRef = useRef(new Map<string, string>());
+  const activeCursorIdsRef = useRef(new Set<string>());
+  const wasLaserPointerEnabledRef = useRef(captureDisplaySurface === 'monitor');
+
+  const getParticipantName = useCallback((participantId: string, fallback?: string): string => {
+    const participant = participantsRef.current.find((p) => p.socketId === participantId);
+    return participant?.displayName || participantNamesRef.current.get(participantId) || fallback || participantId;
+  }, []);
+
+  const getParticipantColor = useCallback((participantId: string, displayName?: string): string => {
+    const existing = participantColorsRef.current.get(participantId);
+    if (existing) return existing;
+
+    const name = displayName || getParticipantName(participantId);
+    const nameKey = name.trim().toLocaleLowerCase();
+    const activeColorIds = new Set(
+      participantsRef.current
+        .map((p) => p.socketId)
+        .filter((id) => id !== participantId)
+    );
+    const activeColors = new Set(
+      [...participantColorsRef.current.entries()]
+        .filter(([id]) => activeColorIds.has(id))
+        .map(([, color]) => color)
+    );
+    const rememberedColor = rememberedNameColorsRef.current.get(nameKey);
+
+    let color = rememberedColor && !activeColors.has(rememberedColor)
+      ? rememberedColor
+      : CURSOR_COLORS.find((candidate) => !activeColors.has(candidate));
+
+    if (!color) {
+      color = colorForParticipant(participantId);
+    }
+
+    participantColorsRef.current.set(participantId, color);
+    rememberedNameColorsRef.current.set(nameKey, color);
+    return color;
+  }, [getParticipantName]);
+
+  useEffect(() => {
+    const laserPointerEnabled = captureDisplaySurface === 'monitor';
+
+    if (wasLaserPointerEnabledRef.current && !laserPointerEnabled && isHostRef.current) {
+      for (const participantId of activeCursorIdsRef.current) {
+        desktopAgent.sendCursorRemove(participantId);
+      }
+      activeCursorIdsRef.current.clear();
+    }
+
+    wasLaserPointerEnabledRef.current = laserPointerEnabled;
+  }, [captureDisplaySurface]);
 
   // ── Desktop agent connection — host only ──────────────────────────────────
   // Connect when this browser becomes the host; disconnect on role change or unmount.
@@ -103,6 +170,31 @@ export function useCursorPresence({
     desktopAgent.connect();
     return () => desktopAgent.disconnect();
   }, [isHost]);
+
+  useEffect(() => {
+    const activeParticipantIds = new Set(participants.map((p) => p.socketId));
+
+    participants.forEach((participant) => {
+      participantNamesRef.current.set(participant.socketId, participant.displayName);
+      getParticipantColor(participant.socketId, participant.displayName);
+    });
+
+    for (const participantId of [...activeCursorIdsRef.current]) {
+      if (!activeParticipantIds.has(participantId)) {
+        if (isHostRef.current && laserPointerEnabledRef.current) {
+          desktopAgent.sendCursorRemove(participantId);
+        }
+        activeCursorIdsRef.current.delete(participantId);
+      }
+    }
+
+    for (const participantId of [...participantColorsRef.current.keys()]) {
+      if (!activeParticipantIds.has(participantId)) {
+        participantColorsRef.current.delete(participantId);
+        participantNamesRef.current.delete(participantId);
+      }
+    }
+  }, [participants, getParticipantColor]);
 
   // Use stateful viewport element to trigger effects properly when the ref is attached
   const [viewportEl, setViewportEl] = useState<HTMLDivElement | null>(null);
@@ -115,9 +207,7 @@ export function useCursorPresence({
   // Timestamp of last send
   const lastSentAt = useRef(0);
 
-  const [remoteCursors, setRemoteCursors] = useState<Map<string, RemoteCursor>>(
-    new Map()
-  );
+
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
@@ -200,9 +290,28 @@ export function useCursorPresence({
     wsClient.send('cursor_move', { x: normX, y: normY });
   }, []);
 
+  const sendClick = useCallback((normX: number, normY: number) => {
+    wsClient.send('cursor_click', { x: normX, y: normY });
+  }, []);
+
   const sendHide = useCallback(() => {
     wsClient.send('cursor_hide', {});
   }, []);
+
+  const getNormalizedPoint = useCallback((e: MouseEvent): { x: number; y: number } | null => {
+    if (!viewportEl) return null;
+    if (videoBounds.width <= 0 || videoBounds.height <= 0) return null;
+
+    const rect = viewportEl.getBoundingClientRect();
+    const mouseXRel = e.clientX - rect.left;
+    const mouseYRel = e.clientY - rect.top;
+
+    const normX = (mouseXRel - videoBounds.left) / videoBounds.width;
+    const normY = (mouseYRel - videoBounds.top) / videoBounds.height;
+
+    if (normX < 0 || normX > 1 || normY < 0 || normY > 1) return null;
+    return { x: normX, y: normY };
+  }, [viewportEl, videoBounds.left, videoBounds.top, videoBounds.width, videoBounds.height]);
 
   // ---------------------------------------------------------------------------
   // Keyboard listeners — track LEFT CTRL state
@@ -264,23 +373,32 @@ export function useCursorPresence({
       if (now - lastSentAt.current < THROTTLE_MS) return;
       lastSentAt.current = now;
 
-      const rect = viewportEl.getBoundingClientRect();
-      const mouseXRel = e.clientX - rect.left;
-      const mouseYRel = e.clientY - rect.top;
+      const point = getNormalizedPoint(e);
+      if (!point) return;
 
-      const normX = (mouseXRel - videoBounds.left) / videoBounds.width;
-      const normY = (mouseYRel - videoBounds.top) / videoBounds.height;
-
-      // Clamp to [0, 1] — ignore moves outside the actual video bounds
-      if (normX < 0 || normX > 1 || normY < 0 || normY > 1) return;
-
-      console.log('[Runtime] sending cursor_move', normX.toFixed(3), normY.toFixed(3));
-      sendMove(normX, normY);
+      console.log('[Runtime] sending cursor_move', point.x.toFixed(3), point.y.toFixed(3));
+      sendMove(point.x, point.y);
     };
 
     viewportEl.addEventListener('mousemove', onMouseMove);
     return () => viewportEl.removeEventListener('mousemove', onMouseMove);
-  }, [isScreenVisible, viewportEl, sendMove, videoBounds.left, videoBounds.top, videoBounds.width, videoBounds.height]);
+  }, [isScreenVisible, viewportEl, getNormalizedPoint, sendMove]);
+
+  useEffect(() => {
+    if (!isScreenVisible || !viewportEl) return;
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (!ctrlHeld.current || e.button !== 0) return;
+
+      const point = getNormalizedPoint(e);
+      if (!point) return;
+
+      sendClick(point.x, point.y);
+    };
+
+    viewportEl.addEventListener('mousedown', onMouseDown);
+    return () => viewportEl.removeEventListener('mousedown', onMouseDown);
+  }, [isScreenVisible, viewportEl, getNormalizedPoint, sendClick]);
 
   // ---------------------------------------------------------------------------
   // Inbound WebSocket subscriptions
@@ -293,42 +411,40 @@ export function useCursorPresence({
       const { participantId, displayName, x, y } = data as RemoteCursor;
       if (!participantId || x == null || y == null) return;
 
-      // 1. Update the browser overlay (unchanged behaviour)
-      setRemoteCursors((prev) => {
-        const next = new Map(prev);
-        next.set(participantId, { participantId, displayName, x, y });
-        return next;
-      });
-
-      // 2. Forward to desktop agent — host only, silently skipped if not connected
-      if (isHostRef.current) {
+      // Forward to desktop agent — host only, silently skipped if not connected
+      if (isHostRef.current && laserPointerEnabledRef.current) {
+        const name = getParticipantName(participantId, displayName);
+        const color = getParticipantColor(participantId, name);
+        participantNamesRef.current.set(participantId, name);
+        activeCursorIdsRef.current.add(participantId);
         const { x: dx, y: dy } = toDesktopCoords(x, y);
         desktopAgent.sendCursorMove(
           participantId,
           dx,
           dy,
-          colorForParticipant(participantId),
-          displayName || participantId,
+          color,
+          name,
         );
       }
     });
 
     // ── cursor_click ─────────────────────────────────────────────────────────
     // Backend already relays cursor_click (connection.py line 314).
-    // Browser overlay does not render clicks; this subscription exists solely
-    // to forward them to the desktop agent as ripple events.
+    // This subscription exists solely to forward them to the desktop agent as ripple events.
     const unsubClick = wsClient.on('cursor_click', (data) => {
-      const { participantId, x, y } =
-        data as { participantId: string; x: number; y: number };
+      const { participantId, displayName, x, y } =
+        data as { participantId: string; displayName?: string; x: number; y: number };
       if (!participantId || x == null || y == null) return;
 
-      if (isHostRef.current) {
+      if (isHostRef.current && laserPointerEnabledRef.current) {
+        const name = getParticipantName(participantId, displayName);
+        const color = getParticipantColor(participantId, name);
         const { x: dx, y: dy } = toDesktopCoords(x, y);
         desktopAgent.sendCursorClick(
           participantId,
           dx,
           dy,
-          colorForParticipant(participantId),
+          color,
         );
       }
     });
@@ -339,38 +455,34 @@ export function useCursorPresence({
       const { participantId } = data as { participantId: string };
       if (!participantId) return;
 
-      // 1. Remove from browser overlay
-      setRemoteCursors((prev) => {
-        if (!prev.has(participantId)) return prev;
-        const next = new Map(prev);
-        next.delete(participantId);
-        return next;
-      });
+      // Remove from desktop overlay
+      if (isHostRef.current && laserPointerEnabledRef.current) {
+        desktopAgent.sendCursorRemove(participantId);
+        activeCursorIdsRef.current.delete(participantId);
+      }
+    });
 
-      // 2. Remove from desktop overlay
-      if (isHostRef.current) {
+    const unsubParticipantLeft = wsClient.on('participant_left', (data) => {
+      const { participantId } = data as { participantId: string };
+      if (!participantId) return;
+
+      if (isHostRef.current && laserPointerEnabledRef.current) {
         desktopAgent.sendCursorRemove(participantId);
       }
+      activeCursorIdsRef.current.delete(participantId);
+      participantColorsRef.current.delete(participantId);
+      participantNamesRef.current.delete(participantId);
     });
 
     return () => {
       unsubMove();
       unsubClick();
       unsubHide();
+      unsubParticipantLeft();
     };
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // When screen share becomes invisible, clear all remote cursors
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    if (!isScreenVisible) {
-      setRemoteCursors(new Map());
-    }
-  }, [isScreenVisible]);
+  }, [getParticipantColor, getParticipantName]);
 
   console.log('[Runtime-Audit] videoBounds:', videoBounds, 'videoDimensions:', videoDimensions, 'containerSize:', containerSize);
 
-  return { viewportRef, remoteCursors, videoBounds };
+  return { viewportRef, videoBounds };
 }

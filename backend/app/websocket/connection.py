@@ -311,6 +311,36 @@ class ConnectionManager:
                 await self.disconnect(target_id)
 
 
+        elif event == "cursor_hide":
+            # --- Live cursor presence removal relay ---
+            # Relay pointer hide/remove to all other room participants.
+            room_code = self.socket_room_map.get(socket_id)
+            display_name = self.socket_name_map.get(socket_id)
+
+            if not room_code or not display_name:
+                return
+
+            relay: dict = {
+                "event": event,
+                "participantId": socket_id,
+                "displayName": display_name,
+            }
+
+            code = room_code.upper()
+            recipients = [
+                sid for sid, rc in self.socket_room_map.items()
+                if rc == code and sid != socket_id
+            ]
+
+            payload = json.dumps(relay)
+            tasks = []
+            for sid in recipients:
+                ws = self.active_connections.get(sid)
+                if ws:
+                    tasks.append(self._safe_send(ws, payload, sid))
+            if tasks:
+                await asyncio.gather(*tasks)
+
         elif event in ("cursor_move", "cursor_click"):
             # --- Live cursor presence relay ---
             # Fire-and-forget: relay cursor position/click to all other room participants.

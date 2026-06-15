@@ -6,6 +6,7 @@ const STUN_CONFIG: RTCConfiguration = {
 };
 
 export type SharingState = 'idle' | 'requesting' | 'sharing' | 'viewing' | 'error';
+export type CaptureDisplaySurface = 'monitor' | 'window' | 'browser' | string;
 
 interface UseWebRTCOptions {
   isHost: boolean;
@@ -18,6 +19,7 @@ interface UseWebRTCReturn {
   sharingState: SharingState;
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
+  captureDisplaySurface: CaptureDisplaySurface | null;
   startSharing: () => Promise<void>;
   stopSharing: () => void;
   errorMessage: string | null;
@@ -27,6 +29,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
   const [sharingState, setSharingState] = useState<SharingState>('idle');
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [captureDisplaySurface, setCaptureDisplaySurface] = useState<CaptureDisplaySurface | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // FIX #1: Map of peerId -> RTCPeerConnection instead of a single pcRef.
@@ -45,6 +48,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
     }
     setLocalStream(null);
     setRemoteStream(null);
+    setCaptureDisplaySurface(null);
   }, []);
 
   // ─── Create one RTCPeerConnection keyed by peerId ─────────────────────────
@@ -125,6 +129,19 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
 
     localStreamRef.current = stream;
     setLocalStream(stream);
+    const displaySurface = (
+      stream.getVideoTracks()[0]?.getSettings().displaySurface ?? 'unknown'
+    ) as CaptureDisplaySurface;
+    setCaptureDisplaySurface(displaySurface);
+    if (displaySurface === 'monitor') {
+      console.log('[LaserPointer] enabled (monitor capture)');
+    } else if (displaySurface === 'window') {
+      console.log('[LaserPointer] disabled (window capture)');
+    } else if (displaySurface === 'browser') {
+      console.log('[LaserPointer] disabled (browser capture)');
+    } else {
+      console.log('[LaserPointer] disabled (unknown capture)');
+    }
     setSharingState('sharing');
 
     // React when the user clicks "Stop sharing" in the browser native bar
@@ -237,5 +254,13 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
   // Cleanup on unmount
   useEffect(() => () => cleanup(), [cleanup]);
 
-  return { sharingState, localStream, remoteStream, startSharing, stopSharing, errorMessage };
+  return {
+    sharingState,
+    localStream,
+    remoteStream,
+    captureDisplaySurface,
+    startSharing,
+    stopSharing,
+    errorMessage,
+  };
 }

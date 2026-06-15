@@ -85,9 +85,11 @@ class LaserPointerOverlay(QWidget):
     _HIGHLIGHT_RADIUS = 4      # bright specular highlight radius (px)
 
     _LABEL_FONT_SIZE = 11      # px — participant name label
-    _LABEL_OFFSET_Y = -36      # px above cursor centre
+    _LABEL_OFFSET_X = 20       # px to the right of cursor centre
+    _LABEL_OFFSET_Y = -28      # px above cursor centre
     _LABEL_PADDING_X = 8
     _LABEL_PADDING_Y = 4
+    _LABEL_MAX_WIDTH = 160
 
     # Click ripple constants
     _RIPPLE_MAX_TICKS = 35     # ~0.58 seconds duration at 60 FPS
@@ -372,30 +374,48 @@ class LaserPointerOverlay(QWidget):
         painter.setFont(font)
 
         fm = QFontMetrics(font)
-        text_rect = fm.boundingRect(name)
+        display_name = fm.elidedText(
+            name,
+            Qt.TextElideMode.ElideRight,
+            self._LABEL_MAX_WIDTH,
+        )
+        text_rect = fm.boundingRect(display_name)
         text_w = text_rect.width()
         text_h = fm.height()
 
         pill_w = text_w + self._LABEL_PADDING_X * 2
         pill_h = text_h + self._LABEL_PADDING_Y * 2
-        pill_x = x - pill_w / 2
+        pill_x = x + self._LABEL_OFFSET_X
         pill_y = y + self._LABEL_OFFSET_Y - pill_h
+        margin = 8
+        pill_x = max(margin, min(pill_x, self.width() - pill_w - margin))
+        pill_y = max(margin, min(pill_y, self.height() - pill_h - margin))
 
         # Pill background — uses accent colour at 85% opacity
-        bg_color = QColor(accent)
-        bg_color.setAlpha(217)
+        bg_color = QColor(18, 18, 22, 225)
         painter.setBrush(bg_color)
-        painter.setPen(Qt.PenStyle.NoPen)
+        border_color = QColor(accent)
+        border_color.setAlpha(230)
+        painter.setPen(QPen(border_color, 1.2))
         painter.drawRoundedRect(
             QRectF(pill_x, pill_y, pill_w, pill_h),
             pill_h / 2,
             pill_h / 2,
         )
+        stripe_color = QColor(accent)
+        stripe_color.setAlpha(245)
+        painter.setBrush(stripe_color)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawRoundedRect(
+            QRectF(pill_x + 4, pill_y + 4, 4, pill_h - 8),
+            2,
+            2,
+        )
 
         # Label text — white
         painter.setPen(QColor(255, 255, 255, 255))
         painter.drawText(
-            QRectF(pill_x, pill_y, pill_w, pill_h),
+            QRectF(pill_x + 4, pill_y, pill_w, pill_h),
             Qt.AlignmentFlag.AlignCenter,
-            name,
+            display_name,
         )

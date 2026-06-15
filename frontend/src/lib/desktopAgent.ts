@@ -20,10 +20,10 @@ const RECONNECT_DELAY_MS = 3_000;
 type VoidCallback = () => void;
 
 // ---------------------------------------------------------------------------
-// Deterministic participant colour — mirrors CursorOverlay.tsx colorForId so
-// the desktop overlay and browser overlay render matching colours per participant.
+// Deterministic participant colour so that participant cursors are drawn with
+// consistent and stable colors.
 // ---------------------------------------------------------------------------
-const _CURSOR_COLORS = [
+export const CURSOR_COLORS = [
   '#22d3ee', // cyan-400
   '#fb923c', // orange-400
   '#f472b6', // pink-400
@@ -39,7 +39,7 @@ export function colorForParticipant(id: string): string {
   for (let i = 0; i < id.length; i++) {
     hash = ((hash * 31) + id.charCodeAt(i)) >>> 0;
   }
-  return _CURSOR_COLORS[hash % _CURSOR_COLORS.length];
+  return CURSOR_COLORS[hash % CURSOR_COLORS.length];
 }
 
 // ---------------------------------------------------------------------------

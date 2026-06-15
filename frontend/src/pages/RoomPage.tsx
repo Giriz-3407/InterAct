@@ -9,7 +9,6 @@ import { wsClient } from '../lib/websocket';
 import { apiClient } from '../lib/axios';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useCursorPresence } from '../hooks/useCursorPresence';
-import { CursorOverlay } from '../components/CursorOverlay';
 
 interface Participant {
   socketId: string;
@@ -65,7 +64,15 @@ export const RoomPage: React.FC = () => {
     .map((p) => p.socketId);
 
   // WebRTC hook
-  const { sharingState, remoteStream, startSharing, stopSharing, errorMessage } = useWebRTC({
+  const {
+    sharingState,
+    localStream,
+    remoteStream,
+    captureDisplaySurface,
+    startSharing,
+    stopSharing,
+    errorMessage,
+  } = useWebRTC({
     isHost,
     currentSocketId,
     viewerIds,
@@ -74,13 +81,16 @@ export const RoomPage: React.FC = () => {
   const isSharing = sharingState === 'sharing';
   const isViewing = sharingState === 'viewing';
   const isRequesting = sharingState === 'requesting';
+  const showLaserPointerNotice = isHost && isSharing && captureDisplaySurface !== 'monitor';
 
   // Live cursor presence — active only while a remote stream is being viewed
   const isScreenVisible = isViewing && !!remoteStream;
-  const { viewportRef, remoteCursors, videoBounds } = useCursorPresence({
+  const { viewportRef } = useCursorPresence({
     isScreenVisible,
-    localStream: null,
+    localStream,
     remoteStream,
+    captureDisplaySurface,
+    participants,
     isHost,
   });
 
@@ -357,23 +367,17 @@ export const RoomPage: React.FC = () => {
             </div>
           )}
 
+          {showLaserPointerNotice && (
+            <div className="mb-3 px-3 py-2 rounded-lg bg-zinc-900/80 border border-zinc-800 text-xs text-zinc-300 font-inter flex items-center gap-2 shrink-0">
+              <span className="material-symbols-outlined text-[16px] text-amber-400">info</span>
+              Laser pointer is available only when sharing an entire screen.
+            </div>
+          )}
+
           {/* Viewport container */}
           <div ref={viewportRef} className="flex-1 flex items-center justify-center rounded-2xl border border-zinc-800/80 bg-[#0d1117]/60 overflow-hidden relative">
 
-            {/* Live cursor overlay — rendered above the video, pointer-events none */}
-            <div
-              style={{
-                position: 'absolute',
-                left: `${videoBounds.left}px`,
-                top: `${videoBounds.top}px`,
-                width: `${videoBounds.width}px`,
-                height: `${videoBounds.height}px`,
-                pointerEvents: 'none',
-                zIndex: 20,
-              }}
-            >
-              <CursorOverlay cursors={remoteCursors} />
-            </div>
+
 
             {/* Remote stream video — visible to viewer when receiving */}
             {isViewing && remoteStream && (

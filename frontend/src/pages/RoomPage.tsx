@@ -44,21 +44,24 @@ export const RoomPage: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const [showHostControls, setShowHostControls] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const [isCamOff, setIsCamOff] = useState(true);
   const [autoDelete, setAutoDelete] = useState(true);
+
+  // Layout & Sidebar collapse/tab states
+  const [isLeftPanelExpanded, setIsLeftPanelExpanded] = useState(true);
+  const [isRightSidebarExpanded, setIsRightSidebarExpanded] = useState(true);
+  const [activeRightTab, setActiveRightTab] = useState<'chat' | 'ai' | 'host'>('chat');
 
   // Check if current user is host
   const currentUserObj = participants.find((p) => p.socketId === currentSocketId);
   const isHost = currentUserObj ? currentUserObj.role === 'host' : false;
 
-  // Automatically close host controls overlay if isHost transitions to false
+  // Fallback active tab to chat if user is no longer host
   useEffect(() => {
-    if (!isHost) {
-      setShowHostControls(false);
+    if (!isHost && activeRightTab === 'host') {
+      setActiveRightTab('chat');
     }
-  }, [isHost]);
+  }, [isHost, activeRightTab]);
 
   // Viewer IDs for WebRTC (all non-host participants)
   const viewerIds = participants
@@ -249,6 +252,19 @@ export const RoomPage: React.FC = () => {
     }
   }, [isSharing, startSharing, stopSharing]);
 
+  const handleHostControlsClick = useCallback(() => {
+    if (!isRightSidebarExpanded) {
+      setIsRightSidebarExpanded(true);
+      setActiveRightTab('host');
+    } else {
+      if (activeRightTab === 'host') {
+        setIsRightSidebarExpanded(false);
+      } else {
+        setActiveRightTab('host');
+      }
+    }
+  }, [isRightSidebarExpanded, activeRightTab]);
+
   // Name Entry Prompt Dialog overlay
   if (showNamePrompt) {
     return (
@@ -289,22 +305,9 @@ export const RoomPage: React.FC = () => {
       {/* Top Navigation Bar */}
       <header className="h-14 border-b border-slate-border bg-zinc-950/80 backdrop-blur-md flex items-center justify-between px-6 z-25 shrink-0">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="p-1 rounded hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200"
-          >
-            <span className="material-symbols-outlined text-[20px] block">arrow_back</span>
-          </button>
-
-          <div className="h-4 w-px bg-zinc-800" />
-
           <h1 className="text-sm font-bold font-geist text-white tracking-tight leading-none">
             Room: {roomId}
           </h1>
-          <span className="text-3xs font-mono bg-zinc-900 border border-zinc-800 text-zinc-500 px-2 py-0.5 rounded flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            live-server-01
-          </span>
           {isHost && <AgentStatusIndicator />}
         </div>
 
@@ -323,16 +326,16 @@ export const RoomPage: React.FC = () => {
             </span>
           )}
 
-          <div className="h-4 w-px bg-zinc-800 hidden sm:block" />
+          <div className="h-4 w-px bg-zinc-850 hidden sm:block" />
 
           {/* Action buttons */}
           {isHost && (
             <button
-              onClick={() => setShowHostControls(!showHostControls)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 ${
-                showHostControls
-                  ? 'bg-indigo-600 border-indigo-500 text-zinc-950'
-                  : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
+              onClick={handleHostControlsClick}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 cursor-pointer ${
+                isRightSidebarExpanded && activeRightTab === 'host'
+                  ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
+                  : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">settings_accessibility</span>
@@ -359,27 +362,29 @@ export const RoomPage: React.FC = () => {
           roomCode={roomId || ''}
           participants={participants}
           currentUserId={currentSocketId}
+          isExpanded={isLeftPanelExpanded}
+          onToggleExpand={() => setIsLeftPanelExpanded(!isLeftPanelExpanded)}
         />
 
         {/* Center Screen Sharing Canvas Area */}
-        <main className="flex-1 bg-zinc-950/20 p-6 flex flex-col justify-between overflow-hidden relative">
+        <main className="flex-1 bg-zinc-950/20 p-3 flex flex-col justify-between overflow-hidden relative gap-3">
           {/* Error message banner */}
           {errorMessage && (
-            <div className="mb-3 px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 font-inter flex items-center gap-2 shrink-0">
+            <div className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 font-inter flex items-center gap-2 shrink-0">
               <span className="material-symbols-outlined text-[16px]">error</span>
               {errorMessage}
             </div>
           )}
 
           {showLaserPointerNotice && (
-            <div className="mb-3 px-3 py-2 rounded-lg bg-zinc-900/80 border border-zinc-800 text-xs text-zinc-300 font-inter flex items-center gap-2 shrink-0">
+            <div className="px-3 py-1.5 rounded-lg bg-zinc-900/80 border border-zinc-800 text-xs text-zinc-300 font-inter flex items-center gap-2 shrink-0">
               <span className="material-symbols-outlined text-[16px] text-amber-400">info</span>
               Laser pointer is available only when sharing an entire screen.
             </div>
           )}
 
           {/* Viewport container */}
-          <div ref={viewportRef} className="flex-1 flex items-center justify-center rounded-2xl border border-zinc-800/80 bg-[#0d1117]/60 overflow-hidden relative">
+          <div ref={viewportRef} className="flex-1 flex items-center justify-center rounded-2xl border border-zinc-850/60 bg-[#0d1117]/60 overflow-hidden relative w-full h-full">
 
             {/* Active Indicators Row */}
             <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 flex gap-2 pointer-events-none">
@@ -396,8 +401,6 @@ export const RoomPage: React.FC = () => {
                 </div>
               )}
             </div>
-
-
 
             {/* Remote stream video — visible to viewer when receiving */}
             {isViewing && remoteStream && (
@@ -456,7 +459,7 @@ export const RoomPage: React.FC = () => {
             {/* Presenter floating pill when sharing */}
             {isSharing && (
               <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 backdrop-blur">
-                <Avatar name={displayName} size="sm" color="bg-indigo-600" />
+                <Avatar name={displayName} size="xs" color="bg-indigo-600" />
                 <div className="flex flex-col">
                   <span className="text-3xs text-zinc-300 font-inter font-semibold">{displayName} is sharing</span>
                   <span className="text-4xs text-zinc-500 font-mono">LIVE • Screen</span>
@@ -475,31 +478,19 @@ export const RoomPage: React.FC = () => {
           </div>
 
           {/* Floating RTC controls bar */}
-          <div className="mt-4 flex justify-center z-10 shrink-0">
-            <div className="glass-panel px-4 py-2 rounded-2xl flex items-center gap-3 shadow-2xl">
+          <div className="flex justify-center z-10 shrink-0">
+            <div className="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-2xl">
               <button
                 onClick={() => setIsMuted(!isMuted)}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors border ${
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
                   isMuted
                     ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                    : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800'
+                    : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
                 }`}
+                title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
               >
-                <span className="material-symbols-outlined text-[20px]">
+                <span className="material-symbols-outlined text-[18px]">
                   {isMuted ? 'mic_off' : 'mic'}
-                </span>
-              </button>
-
-              <button
-                onClick={() => setIsCamOff(!isCamOff)}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors border ${
-                  isCamOff
-                    ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                    : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[20px]">
-                  {isCamOff ? 'videocam_off' : 'videocam'}
                 </span>
               </button>
 
@@ -508,7 +499,7 @@ export const RoomPage: React.FC = () => {
                 <button
                   onClick={handleShareToggle}
                   disabled={isRequesting}
-                  className={`px-4 h-10 rounded-xl flex items-center justify-center transition-colors border gap-2 text-xs font-bold font-geist ${
+                  className={`px-3.5 h-8 rounded-lg flex items-center justify-center transition-all border gap-1.5 text-xs font-bold font-geist cursor-pointer ${
                     isSharing
                       ? 'bg-rose-600 hover:bg-rose-500 text-white border-transparent'
                       : isRequesting
@@ -516,125 +507,260 @@ export const RoomPage: React.FC = () => {
                       : 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-transparent hover:opacity-90'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[20px]">
+                  <span className="material-symbols-outlined text-[18px]">
                     {isSharing ? 'stop_screen_share' : 'screen_share'}
                   </span>
-                  <span>{isSharing ? 'Stop' : isRequesting ? 'Requesting…' : 'Share'}</span>
+                  <span>{isSharing ? 'Stop Sharing' : isRequesting ? 'Requesting…' : 'Share Screen'}</span>
                 </button>
               )}
 
-              <div className="w-px h-6 bg-zinc-800" />
+              <div className="w-px h-5 bg-zinc-800/80" />
 
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-10 h-10 rounded-xl bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center"
+                className="w-8 h-8 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center cursor-pointer transition-colors"
+                title="Leave Room"
               >
-                <span className="material-symbols-outlined text-[20px]">call_end</span>
+                <span className="material-symbols-outlined text-[18px]">call_end</span>
               </button>
             </div>
           </div>
         </main>
 
         {/* Right Chat and AI Panel */}
-        <aside className="w-96 border-l border-slate-border bg-zinc-950/40 flex flex-col shrink-0">
-          <div className="flex-1 flex flex-col border-b border-slate-border overflow-hidden">
-            {/* AI Assistant summary view */}
-            <div className="p-4 border-b border-slate-border bg-zinc-950/20">
-              <div className="flex items-center gap-1.5 text-xs font-bold font-geist text-[#c0c1ff] uppercase tracking-wider mb-2">
-                <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
-                <span>AI Insights</span>
+        <aside className={`border-l border-slate-border bg-zinc-950/40 flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${
+          isRightSidebarExpanded ? 'w-80' : 'w-12'
+        }`}>
+          {isRightSidebarExpanded ? (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Tab Header Bar */}
+              <div className="h-11 border-b border-slate-border bg-zinc-950/60 flex items-center justify-between px-2 shrink-0">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setActiveRightTab('chat')}
+                    className={`px-2.5 py-1 text-xs font-semibold font-geist flex items-center gap-1.5 transition-colors cursor-pointer rounded-lg ${
+                      activeRightTab === 'chat'
+                        ? 'bg-zinc-900 text-[#c0c1ff]'
+                        : 'text-zinc-550 hover:text-zinc-300 hover:bg-zinc-900/50'
+                    }`}
+                    title="Chat"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">forum</span>
+                    <span className="hidden sm:inline">Chat</span>
+                    <span className="text-[10px] px-1 bg-zinc-950 rounded text-zinc-500 font-mono">
+                      {messages.length}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setActiveRightTab('ai')}
+                    className={`px-2.5 py-1 text-xs font-semibold font-geist flex items-center gap-1.5 transition-colors cursor-pointer rounded-lg ${
+                      activeRightTab === 'ai'
+                        ? 'bg-zinc-900 text-[#c0c1ff]'
+                        : 'text-zinc-550 hover:text-zinc-300 hover:bg-zinc-900/50'
+                    }`}
+                    title="AI Insights"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">auto_awesome</span>
+                    <span className="hidden sm:inline">Insights</span>
+                  </button>
+
+                  {isHost && (
+                    <button
+                      onClick={() => setActiveRightTab('host')}
+                      className={`px-2.5 py-1 text-xs font-semibold font-geist flex items-center gap-1.5 transition-colors cursor-pointer rounded-lg ${
+                        activeRightTab === 'host'
+                          ? 'bg-indigo-950/40 text-indigo-400 border border-indigo-900/30'
+                          : 'text-zinc-555 hover:text-zinc-300 hover:bg-zinc-900/50 border border-transparent'
+                      }`}
+                      title="Host Controls"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">settings_accessibility</span>
+                      <span className="hidden sm:inline">Host</span>
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setIsRightSidebarExpanded(false)}
+                  className="p-1 rounded hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                  title="Collapse sidebar"
+                >
+                  <span className="material-symbols-outlined text-[18px] block">chevron_right</span>
+                </button>
               </div>
-              <div className="p-3 rounded-lg bg-indigo-600/5 border border-indigo-500/10">
-                <p className="text-[11px] text-zinc-400 leading-relaxed font-inter italic">
-                  "Ensure middleware validation handles nested structs." (assigned to Alex)
-                </p>
-              </div>
-            </div>
 
-            {/* Chat message logs */}
-            <div className="p-4 border-b border-slate-border flex items-center justify-between bg-zinc-950/20">
-              <span className="text-xs font-bold font-geist text-white uppercase tracking-wider">Room Chat</span>
-              <span className="text-xs font-mono bg-zinc-850 px-1.5 py-0.5 rounded text-[#c0c1ff]">
-                {messages.length}
-              </span>
-            </div>
+              {/* Tab Contents */}
+              <div className="flex-1 flex flex-col overflow-hidden relative">
+                {activeRightTab === 'chat' && (
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    {/* Chat message logs */}
+                    <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5 custom-scrollbar">
+                      {messages.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-600 gap-2 mt-10">
+                          <span className="material-symbols-outlined text-[24px]">chat_bubble_outline</span>
+                          <p className="text-2xs font-inter leading-relaxed">No messages yet. Send a message to start the room conversation.</p>
+                        </div>
+                      ) : (
+                        messages.map((m, idx) => {
+                          const isMe = m.sender === displayName;
+                          const formatTime = (isoString: string) => {
+                            try {
+                              const d = new Date(isoString);
+                              return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            } catch {
+                              return isoString;
+                            }
+                          };
 
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar">
-              {messages.map((m, idx) => {
-                const isMe = m.sender === displayName;
-                const formatTime = (isoString: string) => {
-                  try {
-                    const d = new Date(isoString);
-                    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                  } catch {
-                    return isoString;
-                  }
-                };
+                          return (
+                            <div key={idx} className="flex gap-2 items-start">
+                              <Avatar name={m.sender} size="xs" color={isMe ? 'bg-indigo-600' : 'bg-zinc-700'} />
+                              <div className="flex-1 flex flex-col min-w-0">
+                                <div className="flex items-baseline justify-between gap-2">
+                                  <span className="text-[11px] font-geist font-semibold text-zinc-350 truncate">{m.sender}</span>
+                                  <span className="text-[9px] font-mono text-zinc-650 shrink-0">{formatTime(m.timestamp)}</span>
+                                </div>
+                                <p className="text-xs text-zinc-450 font-inter bg-zinc-900/35 border border-zinc-900/60 p-2 rounded-xl rounded-tl-none mt-0.5 break-words leading-relaxed">
+                                  {m.message}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                      <div ref={chatEndRef} />
+                    </div>
 
-                return (
-                  <div key={idx} className="flex gap-2.5 items-start">
-                    <Avatar name={m.sender} size="sm" color={isMe ? 'bg-indigo-600' : 'bg-zinc-700'} />
-                    <div className="flex-1 flex flex-col gap-0.5">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-xs font-geist font-semibold text-zinc-300">{m.sender}</span>
-                        <span className="text-[10px] font-mono text-zinc-500">{formatTime(m.timestamp)}</span>
+                    {/* Chat Message Input */}
+                    <form onSubmit={handleSendMessage} className="p-2.5 border-t border-slate-border flex gap-1.5 shrink-0 bg-zinc-950/20">
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder="Message everyone..."
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-850 text-xs text-zinc-300 placeholder-zinc-550 focus:outline-none focus:border-indigo-500/50 focus:ring-0 font-inter"
+                      />
+                      <button
+                        type="submit"
+                        className="p-1.5 px-2.5 bg-indigo-600 hover:bg-indigo-500 text-zinc-950 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[14px] block font-bold">send</span>
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {activeRightTab === 'ai' && (
+                  <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3 custom-scrollbar">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold font-geist text-[#c0c1ff] uppercase tracking-wider">
+                      <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                      <span>AI Insights Summary</span>
+                    </div>
+                    {/* Compact Card */}
+                    <div className="p-3 rounded-xl bg-indigo-600/5 border border-indigo-500/10 shadow-md">
+                      <div className="flex items-start gap-2.5">
+                        <span className="material-symbols-outlined text-[16px] text-indigo-400 mt-0.5">assignment</span>
+                        <div className="flex-1 flex flex-col gap-1">
+                          <p className="text-[11px] text-zinc-300 leading-relaxed font-inter italic">
+                            "Ensure middleware validation handles nested structs."
+                          </p>
+                          <span className="text-[9px] font-mono text-indigo-400 self-end font-semibold">Assigned to: Alex</span>
+                        </div>
                       </div>
-                      <p className="text-xs text-zinc-400 font-inter bg-zinc-900/40 border border-zinc-900/60 p-2.5 rounded-xl rounded-tl-none">
-                        {m.message}
-                      </p>
                     </div>
                   </div>
-                );
-              })}
-              <div ref={chatEndRef} />
+                )}
+
+                {activeRightTab === 'host' && isHost && (
+                  <div className="flex-1 overflow-hidden">
+                    <HostControlPanel
+                      roomLink={window.location.href}
+                      participants={participants.map((p) => ({
+                        id: p.socketId,
+                        name: p.displayName,
+                        role: p.role,
+                        status: 'active',
+                        avatarColor: p.role === 'host' ? 'bg-indigo-600' : 'bg-zinc-700'
+                      }))}
+                      autoDelete={autoDelete}
+                      onToggleAutoDelete={(val) => {
+                        wsClient.send('toggle_auto_delete', { autoDelete: val });
+                      }}
+                      onTransferHost={(targetId) => {
+                        wsClient.send('transfer_host', { targetId });
+                      }}
+                      onRemoveParticipant={(targetId) => {
+                        wsClient.send('remove_participant', { targetId });
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
+          ) : (
+            /* Collapsed Rail (w-12) */
+            <div className="flex-1 flex flex-col items-center py-3 justify-between bg-zinc-950/60">
+              <div className="flex flex-col items-center gap-4 w-full">
+                <button
+                  onClick={() => setIsRightSidebarExpanded(true)}
+                  className="p-1.5 rounded hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                  title="Expand sidebar"
+                >
+                  <span className="material-symbols-outlined text-[18px] block">chevron_left</span>
+                </button>
 
-            {/* Chat Message Input */}
-            <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-border flex gap-2 shrink-0">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Message everyone..."
-                className="flex-1 px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-850 text-xs text-zinc-300 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50 focus:ring-0 font-inter"
-              />
-              <button
-                type="submit"
-                className="p-2 bg-indigo-600 hover:bg-indigo-500 text-zinc-950 rounded-lg flex items-center justify-center cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px] block">send</span>
-              </button>
-            </form>
-          </div>
+                <div className="w-8 h-px bg-zinc-900" />
+
+                <button
+                  onClick={() => {
+                    setIsRightSidebarExpanded(true);
+                    setActiveRightTab('chat');
+                  }}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center relative cursor-pointer ${
+                    activeRightTab === 'chat' ? 'bg-zinc-900 text-[#c0c1ff]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50'
+                  }`}
+                  title="Chat"
+                >
+                  <span className="material-symbols-outlined text-[18px]">forum</span>
+                  <span className="absolute -top-1 -right-1 px-1 bg-indigo-600 text-zinc-950 text-[8px] font-bold font-mono rounded-full scale-90">
+                    {messages.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsRightSidebarExpanded(true);
+                    setActiveRightTab('ai');
+                  }}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer ${
+                    activeRightTab === 'ai' ? 'bg-zinc-900 text-[#c0c1ff]' : 'text-zinc-500 hover:text-zinc-350 hover:bg-zinc-900/50'
+                  }`}
+                  title="AI Insights"
+                >
+                  <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+                </button>
+
+                {isHost && (
+                  <button
+                    onClick={() => {
+                      setIsRightSidebarExpanded(true);
+                      setActiveRightTab('host');
+                    }}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer ${
+                      activeRightTab === 'host' ? 'bg-indigo-950/40 text-indigo-400 border border-indigo-900/30' : 'text-zinc-500 hover:text-zinc-350 hover:bg-zinc-900/50'
+                    }`}
+                    title="Host Controls"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">settings_accessibility</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </aside>
-
-        {/* Slide-in Host Control Overlay Panel */}
-        {showHostControls && isHost && (
-          <div className="absolute right-0 top-0 h-full shadow-2xl flex z-30 transition-transform duration-300 ease-in-out">
-            <HostControlPanel
-              onClose={() => setShowHostControls(false)}
-              roomLink={window.location.href}
-              participants={participants.map((p) => ({
-                id: p.socketId,
-                name: p.displayName,
-                role: p.role,
-                status: 'active',
-                avatarColor: p.role === 'host' ? 'bg-indigo-600' : 'bg-zinc-700'
-              }))}
-              autoDelete={autoDelete}
-              onToggleAutoDelete={(val) => {
-                wsClient.send('toggle_auto_delete', { autoDelete: val });
-              }}
-              onTransferHost={(targetId) => {
-                wsClient.send('transfer_host', { targetId });
-              }}
-              onRemoveParticipant={(targetId) => {
-                wsClient.send('remove_participant', { targetId });
-              }}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
 };
+

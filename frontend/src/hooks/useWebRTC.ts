@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { wsClient } from '../lib/websocket';
+import { useWebRTCAudit } from './useWebRTCAudit';
 
 const STUN_CONFIG: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -36,6 +37,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
   // This is the fundamental architectural change that enables Host <-> ViewerN.
   const pcsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
+
+  // WebRTC performance audit instrumentation
+  useWebRTCAudit({ isHost, pcsRef, localStream, remoteStream, sharingState });
 
   // ─── Cleanup all peer connections ────────────────────────────────────────
   const cleanup = useCallback(() => {
@@ -117,10 +121,12 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
 
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getDisplayMedia({
+      const constraints = {
         video: { frameRate: { ideal: 30, max: 60 } },
         audio: false,
-      });
+      };
+      console.log('[WEBRTC_AUDIT] getDisplayMedia constraints used by Host:', constraints);
+      stream = await navigator.mediaDevices.getDisplayMedia(constraints);
     } catch {
       setSharingState('idle');
       setErrorMessage('Screen sharing was cancelled or permission was denied.');

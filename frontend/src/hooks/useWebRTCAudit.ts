@@ -19,13 +19,25 @@ export interface WebRTCAuditData {
   framesDecoded?: number;
   actualInboundKbps?: number;
   actualOutboundKbps?: number;
-  captureSettings?: {
-    width?: number;
-    height?: number;
-    frameRate?: number;
-    displaySurface?: string;
-    resizeMode?: string;
-  };
+  captureSettings?: any;
+  
+  // New Sender fields
+  senderFrameWidth?: number;
+  senderFrameHeight?: number;
+  senderFramesSent?: number;
+  senderFramesPerSecond?: number;
+  qualityLimitationReason?: string;
+  qualityLimitationCpu?: number;
+  qualityLimitationBandwidth?: number;
+  qualityLimitationOther?: number;
+  qualityLimitationNone?: number;
+
+  // New Receiver fields
+  receiverFrameWidth?: number;
+  receiverFrameHeight?: number;
+  receiverFramesDecoded?: number;
+  receiverFramesDropped?: number;
+  receiverFramesPerSecond?: number;
 }
 
 interface UseWebRTCAuditOptions {
@@ -186,6 +198,24 @@ export function useWebRTCAudit({
           let localCandidateId: string | undefined;
           let remoteCandidateId: string | undefined;
 
+          // New Sender fields
+          let senderFrameWidth: number | undefined;
+          let senderFrameHeight: number | undefined;
+          let senderFramesSent: number | undefined;
+          let senderFramesPerSecond: number | undefined;
+          let qualityLimitationReason: string | undefined;
+          let qualityLimitationCpu: number | undefined;
+          let qualityLimitationBandwidth: number | undefined;
+          let qualityLimitationOther: number | undefined;
+          let qualityLimitationNone: number | undefined;
+
+          // New Receiver fields
+          let receiverFrameWidth: number | undefined;
+          let receiverFrameHeight: number | undefined;
+          let receiverFramesDecoded: number | undefined;
+          let receiverFramesDropped: number | undefined;
+          let receiverFramesPerSecond: number | undefined;
+
           stats.forEach((report) => {
             // Outbound Video Track (Host side)
             if (report.type === 'outbound-rtp' && report.kind === 'video') {
@@ -194,6 +224,19 @@ export function useWebRTCAudit({
               framesPerSecond = report.framesPerSecond;
               activeWidth = report.frameWidth;
               activeHeight = report.frameHeight;
+
+              // Extract extra sender fields
+              senderFrameWidth = report.frameWidth;
+              senderFrameHeight = report.frameHeight;
+              senderFramesSent = report.framesSent;
+              senderFramesPerSecond = report.framesPerSecond;
+              qualityLimitationReason = report.qualityLimitationReason;
+              if (report.qualityLimitationDurations) {
+                qualityLimitationCpu = report.qualityLimitationDurations.cpu;
+                qualityLimitationBandwidth = report.qualityLimitationDurations.bandwidth;
+                qualityLimitationOther = report.qualityLimitationDurations.other;
+                qualityLimitationNone = report.qualityLimitationDurations.none;
+              }
             }
 
             // Inbound Video Track (Viewer side)
@@ -205,6 +248,13 @@ export function useWebRTCAudit({
               packetsLost = report.packetsLost;
               activeWidth = report.frameWidth;
               activeHeight = report.frameHeight;
+
+              // Extract extra receiver fields
+              receiverFrameWidth = report.frameWidth;
+              receiverFrameHeight = report.frameHeight;
+              receiverFramesDecoded = report.framesDecoded;
+              receiverFramesDropped = report.framesDropped;
+              receiverFramesPerSecond = report.framesPerSecond;
             }
 
             // Remote Inbound RTP (Host side getting report from Viewer)
@@ -247,11 +297,7 @@ export function useWebRTCAudit({
             : remoteStream?.getVideoTracks()[0];
           const trackSettings = videoTrack?.getSettings();
           const captureSettings = trackSettings ? {
-            width: trackSettings.width,
-            height: trackSettings.height,
-            frameRate: trackSettings.frameRate,
-            displaySurface: trackSettings.displaySurface,
-            resizeMode: (trackSettings as any).resizeMode,
+            ...trackSettings
           } : undefined;
 
           // Calculate Deltas/Rates if we have a previous report
@@ -306,6 +352,24 @@ export function useWebRTCAudit({
             actualInboundKbps,
             actualOutboundKbps,
             captureSettings,
+
+            // New Sender fields
+            senderFrameWidth,
+            senderFrameHeight,
+            senderFramesSent,
+            senderFramesPerSecond,
+            qualityLimitationReason,
+            qualityLimitationCpu,
+            qualityLimitationBandwidth,
+            qualityLimitationOther,
+            qualityLimitationNone,
+
+            // New Receiver fields
+            receiverFrameWidth,
+            receiverFrameHeight,
+            receiverFramesDecoded,
+            receiverFramesDropped,
+            receiverFramesPerSecond,
           });
 
           // Log the metrics dump

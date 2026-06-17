@@ -10,6 +10,7 @@ import { apiClient } from '../lib/axios';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useCursorPresence } from '../hooks/useCursorPresence';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
+import { WebRTCAuditPanel } from '../components/WebRTCAuditPanel';
 
 
 interface Participant {
@@ -77,6 +78,7 @@ export const RoomPage: React.FC = () => {
     startSharing,
     stopSharing,
     errorMessage,
+    auditReports,
   } = useWebRTC({
     isHost,
     currentSocketId,
@@ -760,6 +762,11 @@ export const RoomPage: React.FC = () => {
           )}
         </aside>
       </div>
+      <WebRTCAuditPanel
+        auditReports={auditReports}
+        participants={participants}
+        sharingActive={sharingState === 'sharing' || sharingState === 'viewing'}
+      />
     </div>
   );
 };

@@ -1,5 +1,32 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SharingState } from './useWebRTC';
+
+export interface WebRTCAuditData {
+  peerId: string;
+  isHost: boolean;
+  selectedCandidatePairId?: string;
+  localCandidateType?: string;
+  remoteCandidateType?: string;
+  protocol?: string;
+  relayProtocol?: string;
+  networkType?: string;
+  availableOutgoingBitrate?: number;
+  currentRoundTripTime?: number;
+  packetsLost?: number;
+  framesPerSecond?: number;
+  framesSent?: number;
+  framesReceived?: number;
+  framesDecoded?: number;
+  actualInboundKbps?: number;
+  actualOutboundKbps?: number;
+  captureSettings?: {
+    width?: number;
+    height?: number;
+    frameRate?: number;
+    displaySurface?: string;
+    resizeMode?: string;
+  };
+}
 
 interface UseWebRTCAuditOptions {
   isHost: boolean;
@@ -24,8 +51,9 @@ export function useWebRTCAudit({
   localStream,
   remoteStream,
   sharingState,
-}: UseWebRTCAuditOptions) {
+}: UseWebRTCAuditOptions): WebRTCAuditData[] {
   const prevStatsMapRef = useRef<Map<string, PeerPrevStats>>(new Map());
+  const [auditReports, setAuditReports] = useState<WebRTCAuditData[]>([]);
 
   // 1. Log capture settings and monitor for changes when stream is acquired (for Host)
   useEffect(() => {
@@ -117,12 +145,18 @@ export function useWebRTCAudit({
     const isActive = sharingState === 'sharing' || sharingState === 'viewing';
     if (!isActive) {
       prevStatsMapRef.current.clear();
+      setAuditReports([]);
       return;
     }
 
     const intervalId = setInterval(async () => {
       const pcs = pcsRef.current;
-      if (pcs.size === 0) return;
+      if (pcs.size === 0) {
+        setAuditReports([]);
+        return;
+      }
+
+      const reports: WebRTCAuditData[] = [];
 
       for (const [peerId, pc] of pcs.entries()) {
         if (pc.signalingState === 'closed') {
@@ -147,6 +181,10 @@ export function useWebRTCAudit({
           let currentRoundTripTime: number | undefined;
           let activeWidth: number | undefined;
           let activeHeight: number | undefined;
+
+          let selectedCandidatePairId: string | undefined;
+          let localCandidateId: string | undefined;
+          let remoteCandidateId: string | undefined;
 
           stats.forEach((report) => {
             // Outbound Video Track (Host side)
@@ -178,13 +216,43 @@ export function useWebRTCAudit({
             }
 
             // Candidate Pair (Active Connection Info)
-            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
-              availableOutgoingBitrate = report.availableOutgoingBitrate; // in bps
-              if (report.currentRoundTripTime !== undefined) {
-                currentRoundTripTime = report.currentRoundTripTime; // in seconds
+            if (report.type === 'candidate-pair') {
+              if (report.state === 'succeeded' || report.nominated) {
+                selectedCandidatePairId = report.id;
+                localCandidateId = report.localCandidateId;
+                remoteCandidateId = report.remoteCandidateId;
+                if (report.availableOutgoingBitrate !== undefined) {
+                  availableOutgoingBitrate = report.availableOutgoingBitrate; // in bps
+                }
+                if (report.currentRoundTripTime !== undefined) {
+                  currentRoundTripTime = report.currentRoundTripTime; // in seconds
+                }
               }
             }
           });
+
+          // Fetch local and remote candidate details
+          const localCandidate = localCandidateId ? stats.get(localCandidateId) : null;
+          const remoteCandidate = remoteCandidateId ? stats.get(remoteCandidateId) : null;
+
+          const localCandidateType = localCandidate?.candidateType;
+          const remoteCandidateType = remoteCandidate?.candidateType;
+          const protocol = localCandidate?.protocol;
+          const relayProtocol = localCandidate?.relayProtocol || remoteCandidate?.relayProtocol;
+          const networkType = localCandidate?.networkType;
+
+          // Fetch capture track settings
+          const videoTrack = isHost
+            ? localStream?.getVideoTracks()[0]
+            : remoteStream?.getVideoTracks()[0];
+          const trackSettings = videoTrack?.getSettings();
+          const captureSettings = trackSettings ? {
+            width: trackSettings.width,
+            height: trackSettings.height,
+            frameRate: trackSettings.frameRate,
+            displaySurface: trackSettings.displaySurface,
+            resizeMode: (trackSettings as any).resizeMode,
+          } : undefined;
 
           // Calculate Deltas/Rates if we have a previous report
           let actualOutboundKbps: number | undefined;
@@ -216,6 +284,28 @@ export function useWebRTCAudit({
             framesSent,
             framesDecoded,
             framesReceived,
+          });
+
+          // Add to report list
+          reports.push({
+            peerId,
+            isHost,
+            selectedCandidatePairId,
+            localCandidateType,
+            remoteCandidateType,
+            protocol,
+            relayProtocol,
+            networkType,
+            availableOutgoingBitrate,
+            currentRoundTripTime,
+            packetsLost,
+            framesPerSecond: framesPerSecond ?? actualEffectiveFPS,
+            framesSent,
+            framesReceived,
+            framesDecoded,
+            actualInboundKbps,
+            actualOutboundKbps,
+            captureSettings,
           });
 
           // Log the metrics dump
@@ -256,10 +346,14 @@ export function useWebRTCAudit({
           console.error(`[WEBRTC_AUDIT] Failed to fetch stats for peer ${peerId}:`, err);
         }
       }
+
+      setAuditReports(reports);
     }, 2000);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [isHost, pcsRef, sharingState]);
+  }, [isHost, pcsRef, sharingState, localStream, remoteStream]);
+
+  return auditReports;
 }

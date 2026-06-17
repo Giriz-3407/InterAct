@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { wsClient } from '../lib/websocket';
-import { useWebRTCAudit } from './useWebRTCAudit';
+import { useWebRTCAudit, type WebRTCAuditData } from './useWebRTCAudit';
 
 const STUN_CONFIG: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -24,6 +24,7 @@ interface UseWebRTCReturn {
   startSharing: () => Promise<void>;
   stopSharing: () => void;
   errorMessage: string | null;
+  auditReports: WebRTCAuditData[];
 }
 
 export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptions): UseWebRTCReturn {
@@ -39,7 +40,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
   const localStreamRef = useRef<MediaStream | null>(null);
 
   // WebRTC performance audit instrumentation
-  useWebRTCAudit({ isHost, pcsRef, localStream, remoteStream, sharingState });
+  const auditReports = useWebRTCAudit({ isHost, pcsRef, localStream, remoteStream, sharingState });
 
   // ─── Cleanup all peer connections ────────────────────────────────────────
   const cleanup = useCallback(() => {
@@ -268,5 +269,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
     startSharing,
     stopSharing,
     errorMessage,
+    auditReports,
   };
 }

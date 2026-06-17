@@ -39,6 +39,7 @@ export function useWebRTCAudit({
 
     const logTrackSettings = () => {
       const settings = track.getSettings();
+      console.log('[WEBRTC_AUDIT] Host track.getSettings():', settings);
       console.log('[WEBRTC_AUDIT] Initial Captured Video Track Settings:', {
         width: settings.width,
         height: settings.height,
@@ -80,6 +81,7 @@ export function useWebRTCAudit({
 
     const logRemoteTrackSettings = () => {
       const settings = track.getSettings();
+      console.log('[WEBRTC_AUDIT] Viewer track.getSettings():', settings);
       console.log('[WEBRTC_AUDIT] Remote Inbound Video Track Settings:', {
         width: settings.width,
         height: settings.height,

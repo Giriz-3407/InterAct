@@ -123,8 +123,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     // Incoming tracks from remote peer
     pc.ontrack = (e) => {
       const track = e.track;
-      const stream = e.streams?.[0];
-      if (!stream) return;
+      const stream = e.streams?.[0] ?? new MediaStream([track]);
 
       console.log(`[WebRTC] Received track: id=${track.id}, kind=${track.kind}, streamId=${stream.id}, from=${peerId}`);
 
@@ -134,9 +133,21 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           console.log(`[WebRTC] Host received viewer mic track from ${peerId}`);
           viewerMicTracksRef.current.set(peerId, { track, stream });
 
+          // Host local playback — hear the viewer
+          setRemoteMicStreams((prev) => {
+            const next = new Map(prev);
+            next.set(stream.id, stream);
+            return next;
+          });
+
           track.onended = () => {
             console.log(`[WebRTC] Viewer mic track ended for ${peerId}`);
             viewerMicTracksRef.current.delete(peerId);
+            setRemoteMicStreams((prev) => {
+              const next = new Map(prev);
+              next.delete(stream.id);
+              return next;
+            });
           };
 
           // Relay this viewer's mic to all other viewers
@@ -479,6 +490,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     );
 
     if (sendSlot) {
+      if (sendSlot.sender.setStreams) {
+        sendSlot.sender.setStreams(micStreamObj);
+      }
       sendSlot.sender.replaceTrack(micTrack).then(() => {
         console.log('[WebRTC] Viewer mic attached to sendonly transceiver via replaceTrack');
       }).catch((err) => {
@@ -490,6 +504,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
         (t) => t.receiver.track?.kind === 'audio' && (t.direction === 'sendonly' || t.direction === 'sendrecv') && !t.sender.track
       );
       if (fallbackSlot) {
+        if (fallbackSlot.sender.setStreams) {
+          fallbackSlot.sender.setStreams(micStreamObj);
+        }
         fallbackSlot.sender.replaceTrack(micTrack).then(() => {
           console.log('[WebRTC] Viewer mic attached to fallback transceiver');
         }).catch((err) => {

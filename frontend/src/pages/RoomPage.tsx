@@ -70,12 +70,15 @@ export const RoomPage: React.FC = () => {
     .filter((p) => p.role !== 'host')
     .map((p) => p.socketId);
 
+  // Host socket ID (needed for viewer mic flow)
+  const hostSocketId = participants.find((p) => p.role === 'host')?.socketId || '';
+
   // WebRTC hook
   const {
     sharingState,
     localStream,
     remoteStream,
-    remoteHostMicStream,
+    remoteMicStreams,
     captureDisplaySurface,
     startSharing,
     stopSharing,
@@ -88,6 +91,7 @@ export const RoomPage: React.FC = () => {
     currentSocketId,
     viewerIds,
     micMuted: isMuted,
+    hostSocketId,
   });
 
   const isSharing = sharingState === 'sharing';
@@ -128,7 +132,7 @@ export const RoomPage: React.FC = () => {
   // Refs for remote video & audio elements
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
-  const remoteHostMicRef = useRef<HTMLAudioElement>(null);
+  const remoteMicAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
 
   // Attach remote stream to video & audio elements and handle volume/mute
   useEffect(() => {
@@ -178,21 +182,23 @@ export const RoomPage: React.FC = () => {
     }
   }, [remoteStream, viewerMuted, viewerVolume]);
 
-  // Attach remote microphone stream to its dedicated audio element
+  // Attach remote mic streams to their dynamic audio elements
   useEffect(() => {
-    if (remoteHostMicStream) {
-      console.log('[RoomPage] Attaching remote host microphone stream. Tracks:', remoteHostMicStream.getTracks().map(t => t.kind));
-      if (remoteHostMicRef.current) {
-        remoteHostMicRef.current.srcObject = remoteHostMicStream;
-        remoteHostMicRef.current.muted = false;
-        remoteHostMicRef.current.volume = 1.0;
+    remoteMicStreams.forEach((stream, streamId) => {
+      const el = remoteMicAudioRefs.current.get(streamId);
+      if (el && el.srcObject !== stream) {
+        el.srcObject = stream;
+        el.muted = false;
+        el.volume = 1.0;
       }
-    } else {
-      if (remoteHostMicRef.current) {
-        remoteHostMicRef.current.srcObject = null;
+    });
+    // Clean up refs for streams that no longer exist
+    remoteMicAudioRefs.current.forEach((_, streamId) => {
+      if (!remoteMicStreams.has(streamId)) {
+        remoteMicAudioRefs.current.delete(streamId);
       }
-    }
-  }, [remoteHostMicStream]);
+    });
+  }, [remoteMicStreams]);
 
   // Load message history on startup
   useEffect(() => {
@@ -590,22 +596,20 @@ export const RoomPage: React.FC = () => {
           {/* Floating RTC controls bar */}
           <div className="flex justify-center z-10 shrink-0">
             <div className="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-2xl">
-              {/* Microphone toggle — host only */}
-              {isHost && (
-                <button
-                  onClick={() => setIsMuted(!isMuted)}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
-                    isMuted
-                      ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                      : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
-                  }`}
-                  title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {isMuted ? 'mic_off' : 'mic'}
-                  </span>
-                </button>
-              )}
+              {/* Microphone toggle — all participants */}
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
+                  isMuted
+                    ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                    : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                }`}
+                title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  {isMuted ? 'mic_off' : 'mic'}
+                </span>
+              </button>
 
               {/* Screen share button — host only */}
               {isHost && (
@@ -940,11 +944,21 @@ export const RoomPage: React.FC = () => {
         autoPlay
         style={{ display: 'none' }}
       />
-      <audio
-        ref={remoteHostMicRef}
-        autoPlay
-        style={{ display: 'none' }}
-      />
+      {/* Dynamic audio elements for all remote mic streams (host mic + relayed viewer mics) */}
+      {Array.from(remoteMicStreams.entries()).map(([streamId]) => (
+        <audio
+          key={streamId}
+          ref={(el) => {
+            if (el) {
+              remoteMicAudioRefs.current.set(streamId, el);
+            } else {
+              remoteMicAudioRefs.current.delete(streamId);
+            }
+          }}
+          autoPlay
+          style={{ display: 'none' }}
+        />
+      ))}
       <WebRTCAuditPanel
         auditReports={auditReports}
         participants={participants}

@@ -401,7 +401,7 @@ class ConnectionManager:
                 await asyncio.gather(*tasks)
                 print(f"[Backend] {event} relayed to {len(tasks)} client(s) ✓")
 
-        elif event in ("annotation_update", "annotation_clear", "spotlight_update", "mic_status_update"):
+        elif event in ("annotation_update", "annotation_clear", "spotlight_update", "mic_status_update", "audio_publish_request"):
             room_code = self.socket_room_map.get(socket_id)
             display_name = self.socket_name_map.get(socket_id)
             if room_code and display_name:

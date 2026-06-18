@@ -113,16 +113,14 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
                 </span>
               </div>
               <div className="shrink-0 flex items-center gap-1.5">
-                {p.role === 'host' && (
-                  <span
-                    className={`material-symbols-outlined text-[14px] ${
-                      p.micMuted === false ? 'text-emerald-400 animate-pulse' : 'text-zinc-500'
-                    }`}
-                    title={p.micMuted === false ? 'Host microphone is active' : 'Host microphone is muted'}
-                  >
-                    {p.micMuted === false ? 'mic' : 'mic_off'}
-                  </span>
-                )}
+                <span
+                  className={`material-symbols-outlined text-[14px] ${
+                    p.micMuted === false ? 'text-emerald-400 animate-pulse' : 'text-zinc-500'
+                  }`}
+                  title={p.micMuted === false ? 'Microphone is active' : 'Microphone is muted'}
+                >
+                  {p.micMuted === false ? 'mic' : 'mic_off'}
+                </span>
                 <Badge variant={p.role} />
               </div>
             </div>

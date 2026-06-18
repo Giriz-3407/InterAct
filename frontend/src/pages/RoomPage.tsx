@@ -17,6 +17,7 @@ interface Participant {
   socketId: string;
   displayName: string;
   role: 'host' | 'viewer';
+  micMuted?: boolean;
 }
 
 interface MessageItem {
@@ -74,6 +75,7 @@ export const RoomPage: React.FC = () => {
     sharingState,
     localStream,
     remoteStream,
+    remoteHostMicStream,
     captureDisplaySurface,
     startSharing,
     stopSharing,
@@ -126,6 +128,7 @@ export const RoomPage: React.FC = () => {
   // Refs for remote video & audio elements
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const remoteHostMicRef = useRef<HTMLAudioElement>(null);
 
   // Attach remote stream to video & audio elements and handle volume/mute
   useEffect(() => {
@@ -174,6 +177,22 @@ export const RoomPage: React.FC = () => {
       }
     }
   }, [remoteStream, viewerMuted, viewerVolume]);
+
+  // Attach remote microphone stream to its dedicated audio element
+  useEffect(() => {
+    if (remoteHostMicStream) {
+      console.log('[RoomPage] Attaching remote host microphone stream. Tracks:', remoteHostMicStream.getTracks().map(t => t.kind));
+      if (remoteHostMicRef.current) {
+        remoteHostMicRef.current.srcObject = remoteHostMicStream;
+        remoteHostMicRef.current.muted = false;
+        remoteHostMicRef.current.volume = 1.0;
+      }
+    } else {
+      if (remoteHostMicRef.current) {
+        remoteHostMicRef.current.srcObject = null;
+      }
+    }
+  }, [remoteHostMicStream]);
 
   // Load message history on startup
   useEffect(() => {
@@ -269,6 +288,14 @@ export const RoomPage: React.FC = () => {
       }
     });
 
+    const unsubMicStatus = wsClient.on('mic_status_update', (data) => {
+      console.log('Mic status updated:', data);
+      const { participantId, micMuted } = data;
+      setParticipants((prev) =>
+        prev.map((p) => (p.socketId === participantId ? { ...p, micMuted } : p))
+      );
+    });
+
     const unsubKicked = wsClient.on('kicked', (data) => {
       console.log('Kicked from room:', data);
       alert(data.reason || 'You have been removed from the room.');
@@ -284,6 +311,7 @@ export const RoomPage: React.FC = () => {
       unsubUpdated();
       unsubChatMessage();
       unsubSettingsUpdated();
+      unsubMicStatus();
       unsubKicked();
     };
   }, [roomId, displayName]);
@@ -426,7 +454,7 @@ export const RoomPage: React.FC = () => {
         {/* Live Participant presence panel */}
         <ParticipantPanel
           roomCode={roomId || ''}
-          participants={participants}
+          participants={participants.map((p) => p.socketId === currentSocketId ? { ...p, micMuted: isMuted } : p)}
           currentUserId={currentSocketId}
           isExpanded={isLeftPanelExpanded}
           onToggleExpand={() => setIsLeftPanelExpanded(!isLeftPanelExpanded)}
@@ -486,20 +514,13 @@ export const RoomPage: React.FC = () => {
 
             {/* Remote stream video — visible to viewer when receiving */}
             {isViewing && remoteStream && (
-              <>
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-contain"
-                />
-                <audio
-                  ref={remoteAudioRef}
-                  autoPlay
-                  style={{ display: 'none' }}
-                />
-              </>
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-contain"
+              />
             )}
 
             {/* Waiting / Sharing state overlay when no video */}
@@ -914,6 +935,16 @@ export const RoomPage: React.FC = () => {
           )}
         </aside>
       </div>
+      <audio
+        ref={remoteAudioRef}
+        autoPlay
+        style={{ display: 'none' }}
+      />
+      <audio
+        ref={remoteHostMicRef}
+        autoPlay
+        style={{ display: 'none' }}
+      />
       <WebRTCAuditPanel
         auditReports={auditReports}
         participants={participants}

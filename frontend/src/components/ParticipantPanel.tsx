@@ -7,6 +7,7 @@ interface Participant {
   displayName: string;
   role: 'host' | 'viewer';
   status?: 'active' | 'idle' | 'offline';
+  micMuted?: boolean;
 }
 
 interface ParticipantPanelProps {
@@ -111,7 +112,17 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
                   {p.displayName} {isCurrentUser && '(You)'}
                 </span>
               </div>
-              <div className="shrink-0">
+              <div className="shrink-0 flex items-center gap-1.5">
+                {p.role === 'host' && (
+                  <span
+                    className={`material-symbols-outlined text-[14px] ${
+                      p.micMuted === false ? 'text-emerald-400 animate-pulse' : 'text-zinc-500'
+                    }`}
+                    title={p.micMuted === false ? 'Host microphone is active' : 'Host microphone is muted'}
+                  >
+                    {p.micMuted === false ? 'mic' : 'mic_off'}
+                  </span>
+                )}
                 <Badge variant={p.role} />
               </div>
             </div>

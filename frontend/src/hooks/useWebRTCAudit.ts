@@ -59,6 +59,16 @@ export interface WebRTCAuditData {
   audioBitrate?: number;
   concealedSamples?: number;
   totalAudioEnergy?: number;
+
+  // Microphone diagnostics (Host only)
+  micPresent?: boolean;
+  micEnabled?: boolean;
+  micMuted?: boolean;
+  micReadyState?: string;
+  micTrackLabel?: string;
+
+  // Audio track source
+  audioTrackSource?: 'display' | 'microphone' | 'mixed' | 'none';
 }
 
 interface UseWebRTCAuditOptions {
@@ -67,6 +77,8 @@ interface UseWebRTCAuditOptions {
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
   sharingState: SharingState;
+  micStream: MediaStream | null;
+  audioTrackSource: 'display' | 'microphone' | 'mixed' | 'none';
 }
 
 interface PeerPrevStats {
@@ -86,6 +98,8 @@ export function useWebRTCAudit({
   localStream,
   remoteStream,
   sharingState,
+  micStream,
+  audioTrackSource,
 }: UseWebRTCAuditOptions): WebRTCAuditData[] {
   const prevStatsMapRef = useRef<Map<string, PeerPrevStats>>(new Map());
   const [auditReports, setAuditReports] = useState<WebRTCAuditData[]>([]);
@@ -422,6 +436,24 @@ export function useWebRTCAudit({
             }
           }
 
+          // Fetch microphone diagnostics (Host only)
+          let micPresent: boolean | undefined;
+          let micEnabled: boolean | undefined;
+          let micMuted: boolean | undefined;
+          let micReadyState: string | undefined;
+          let micTrackLabel: string | undefined;
+
+          if (isHost && micStream) {
+            const micTracks = micStream.getAudioTracks();
+            micPresent = micTracks.length > 0;
+            if (micTracks.length > 0) {
+              micEnabled = micTracks[0].enabled;
+              micMuted = micTracks[0].muted;
+              micReadyState = micTracks[0].readyState;
+              micTrackLabel = micTracks[0].label;
+            }
+          }
+
           // Store current values for the next interval
           prevStatsMapRef.current.set(peerId, {
             timestamp: now,
@@ -489,6 +521,16 @@ export function useWebRTCAudit({
             audioBitrate,
             concealedSamples,
             totalAudioEnergy,
+
+            // Microphone diagnostics
+            micPresent,
+            micEnabled,
+            micMuted,
+            micReadyState,
+            micTrackLabel,
+
+            // Audio track source
+            audioTrackSource,
           });
 
           // Log the metrics dump

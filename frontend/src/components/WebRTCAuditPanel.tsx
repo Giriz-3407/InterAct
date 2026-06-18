@@ -171,9 +171,16 @@ export const WebRTCAuditPanel: React.FC<WebRTCAuditPanelProps> = ({
         reportText += `Track Muted: ${rep.senderAudioTrackMuted !== undefined ? (rep.senderAudioTrackMuted ? 'Yes' : 'No') : 'N/A'}\n`;
         reportText += `Audio Codec: ${rep.audioCodec || 'N/A'}\n`;
         reportText += `Audio Bitrate: ${rep.audioBitrate !== undefined ? Math.round(rep.audioBitrate) + ' kbps' : 'N/A'}\n`;
+        reportText += `Audio Track Source: ${rep.audioTrackSource || 'none'}\n`;
         reportText += `Audio Packets Lost: ${rep.audioPacketsLost ?? 0}\n`;
         reportText += `Audio Jitter: ${rep.audioJitter !== undefined ? (rep.audioJitter * 1000).toFixed(2) + ' ms' : 'N/A'}\n`;
-        reportText += `Total Audio Energy: ${rep.totalAudioEnergy !== undefined ? rep.totalAudioEnergy.toFixed(4) : 'N/A'}\n\n`;
+        reportText += `Total Audio Energy: ${rep.totalAudioEnergy !== undefined ? rep.totalAudioEnergy.toFixed(4) : 'N/A'}\n`;
+        reportText += `[Host Microphone Metrics]\n`;
+        reportText += `Microphone Present: ${rep.micPresent ? 'Yes' : 'No'}\n`;
+        reportText += `Track Enabled: ${rep.micEnabled !== undefined ? (rep.micEnabled ? 'Yes' : 'No') : 'N/A'}\n`;
+        reportText += `Track Muted: ${rep.micMuted !== undefined ? (rep.micMuted ? 'Yes' : 'No') : 'N/A'}\n`;
+        reportText += `Track ReadyState: ${rep.micReadyState || 'N/A'}\n`;
+        reportText += `Track Label: ${rep.micTrackLabel || 'N/A'}\n\n`;
       } else {
         reportText += `[Receiver Video Metrics]\n`;
         reportText += `Frame Size: ${rep.receiverFrameWidth ?? 'N/A'}x${rep.receiverFrameHeight ?? 'N/A'}\n`;
@@ -186,6 +193,7 @@ export const WebRTCAuditPanel: React.FC<WebRTCAuditPanelProps> = ({
         reportText += `Track Muted: ${rep.receiverAudioTrackMuted !== undefined ? (rep.receiverAudioTrackMuted ? 'Yes' : 'No') : 'N/A'}\n`;
         reportText += `Audio Codec: ${rep.audioCodec || 'N/A'}\n`;
         reportText += `Audio Bitrate: ${rep.audioBitrate !== undefined ? Math.round(rep.audioBitrate) + ' kbps' : 'N/A'}\n`;
+        reportText += `Audio Track Source: ${rep.audioTrackSource || 'none'}\n`;
         reportText += `Audio Packets Received: ${rep.audioPacketsReceived ?? 0}\n`;
         reportText += `Audio Packets Lost: ${rep.audioPacketsLost ?? 0}\n`;
         reportText += `Audio Jitter: ${rep.audioJitter !== undefined ? (rep.audioJitter * 1000).toFixed(2) + ' ms' : 'N/A'}\n`;
@@ -440,6 +448,10 @@ export const WebRTCAuditPanel: React.FC<WebRTCAuditPanelProps> = ({
                         <td className="text-zinc-300 text-right">{selectedReport.audioBitrate !== undefined ? `${Math.round(selectedReport.audioBitrate)} kbps` : 'N/A'}</td>
                       </tr>
                       <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Audio Track Source</td>
+                        <td className="text-zinc-300 text-right font-semibold text-[#c0c1ff]">{selectedReport.audioTrackSource || 'none'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
                         <td className="text-zinc-500 py-1 font-inter">packetsLost</td>
                         <td className="text-zinc-300 text-right">{selectedReport.audioPacketsLost ?? 0}</td>
                       </tr>
@@ -450,6 +462,34 @@ export const WebRTCAuditPanel: React.FC<WebRTCAuditPanelProps> = ({
                       <tr className="py-1">
                         <td className="text-zinc-500 py-1 font-inter">totalAudioEnergy</td>
                         <td className="text-zinc-300 text-right">{selectedReport.totalAudioEnergy !== undefined ? selectedReport.totalAudioEnergy.toFixed(4) : 'N/A'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex flex-col gap-1.5 shrink-0">
+                  <div className="text-[10px] text-zinc-500 font-geist uppercase tracking-wider">Host Microphone Metrics</div>
+                  <table className="w-full border-collapse font-mono text-[10px]">
+                    <tbody>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Microphone Present</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.micPresent ? 'Yes' : 'No'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Track Enabled</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.micEnabled !== undefined ? (selectedReport.micEnabled ? 'Yes' : 'No') : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Track Muted</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.micMuted !== undefined ? (selectedReport.micMuted ? 'Yes' : 'No') : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Track ReadyState</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.micReadyState || 'N/A'}</td>
+                      </tr>
+                      <tr className="py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Track Label</td>
+                        <td className="text-zinc-300 text-right truncate max-w-[150px]" title={selectedReport.micTrackLabel}>{selectedReport.micTrackLabel || 'N/A'}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -505,6 +545,10 @@ export const WebRTCAuditPanel: React.FC<WebRTCAuditPanelProps> = ({
                       <tr className="border-b border-zinc-900/40 py-1">
                         <td className="text-zinc-500 py-1 font-inter">Audio Bitrate</td>
                         <td className="text-zinc-300 text-right">{selectedReport.audioBitrate !== undefined ? `${Math.round(selectedReport.audioBitrate)} kbps` : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Audio Track Source</td>
+                        <td className="text-zinc-300 text-right font-semibold text-[#c0c1ff]">{selectedReport.audioTrackSource || 'none'}</td>
                       </tr>
                       <tr className="border-b border-zinc-900/40 py-1">
                         <td className="text-zinc-500 py-1 font-inter">packetsReceived</td>

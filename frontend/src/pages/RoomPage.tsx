@@ -79,11 +79,13 @@ export const RoomPage: React.FC = () => {
     stopSharing,
     errorMessage,
     audioWarning,
+    micWarning,
     auditReports,
   } = useWebRTC({
     isHost,
     currentSocketId,
     viewerIds,
+    micMuted: isMuted,
   });
 
   const isSharing = sharingState === 'sharing';
@@ -311,6 +313,7 @@ export const RoomPage: React.FC = () => {
     if (isSharing) {
       stopSharing();
     } else {
+      setIsMuted(false); // Unmute mic by default when starting share
       await startSharing();
     }
   }, [isSharing, startSharing, stopSharing]);
@@ -447,6 +450,14 @@ export const RoomPage: React.FC = () => {
             </div>
           )}
 
+          {/* Microphone warning banner */}
+          {micWarning && (
+            <div className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 font-inter flex items-center gap-2 shrink-0">
+              <span className="material-symbols-outlined text-[16px] text-amber-400">warning</span>
+              {micWarning}
+            </div>
+          )}
+
           {showLaserPointerNotice && (
             <div className="px-3 py-1.5 rounded-lg bg-zinc-900/80 border border-zinc-800 text-xs text-zinc-300 font-inter flex items-center gap-2 shrink-0">
               <span className="material-symbols-outlined text-[16px] text-amber-400">info</span>
@@ -558,19 +569,22 @@ export const RoomPage: React.FC = () => {
           {/* Floating RTC controls bar */}
           <div className="flex justify-center z-10 shrink-0">
             <div className="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-2xl">
-              <button
-                onClick={() => setIsMuted(!isMuted)}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
-                  isMuted
-                    ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                    : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
-                }`}
-                title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-              >
-                <span className="material-symbols-outlined text-[18px]">
-                  {isMuted ? 'mic_off' : 'mic'}
-                </span>
-              </button>
+              {/* Microphone toggle — host only */}
+              {isHost && (
+                <button
+                  onClick={() => setIsMuted(!isMuted)}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
+                    isMuted
+                      ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                      : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                  }`}
+                  title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    {isMuted ? 'mic_off' : 'mic'}
+                  </span>
+                </button>
+              )}
 
               {/* Screen share button — host only */}
               {isHost && (

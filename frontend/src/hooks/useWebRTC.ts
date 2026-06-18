@@ -14,6 +14,7 @@ interface UseWebRTCOptions {
   currentSocketId: string;
   /** All non-host participant socket IDs */
   viewerIds: string[];
+  micMuted: boolean;
 }
 
 interface UseWebRTCReturn {
@@ -25,16 +26,42 @@ interface UseWebRTCReturn {
   stopSharing: () => void;
   errorMessage: string | null;
   audioWarning: string | null;
+  micWarning: string | null;
+  micStream: MediaStream | null;
+  audioTrackSource: 'display' | 'microphone' | 'mixed' | 'none';
   auditReports: WebRTCAuditData[];
 }
 
-export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptions): UseWebRTCReturn {
+export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted }: UseWebRTCOptions): UseWebRTCReturn {
   const [sharingState, setSharingState] = useState<SharingState>('idle');
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [captureDisplaySurface, setCaptureDisplaySurface] = useState<CaptureDisplaySurface | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [audioWarning, setAudioWarning] = useState<string | null>(null);
+  const [micWarning, setMicWarning] = useState<string | null>(null);
+  const [micStream, setMicStream] = useState<MediaStream | null>(null);
+  const [audioTrackSource, setAudioTrackSource] = useState<'display' | 'microphone' | 'mixed' | 'none'>('none');
+
+  const displayStreamRef = useRef<MediaStream | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const micGainNodeRef = useRef<GainNode | null>(null);
+
+  // Synchronize microphone mute with gain node or track enabled state
+  useEffect(() => {
+    if (micGainNodeRef.current && audioContextRef.current) {
+      const gainVal = micMuted ? 0 : 1;
+      micGainNodeRef.current.gain.setValueAtTime(gainVal, audioContextRef.current.currentTime);
+      console.log(`[WebRTC] Set mic mixer gain to ${gainVal}`);
+    }
+    if (micStream) {
+      micStream.getAudioTracks().forEach((track) => {
+        track.enabled = !micMuted;
+      });
+      console.log(`[WebRTC] Set mic tracks enabled to ${!micMuted}`);
+    }
+  }, [micMuted, micStream]);
 
   // FIX #1: Map of peerId -> RTCPeerConnection instead of a single pcRef.
   // This is the fundamental architectural change that enables Host <-> ViewerN.
@@ -42,7 +69,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
   const localStreamRef = useRef<MediaStream | null>(null);
 
   // WebRTC performance audit instrumentation
-  const auditReports = useWebRTCAudit({ isHost, pcsRef, localStream, remoteStream, sharingState });
+  const auditReports = useWebRTCAudit({ isHost, pcsRef, localStream, remoteStream, sharingState, micStream, audioTrackSource });
 
   // ─── Cleanup all peer connections ────────────────────────────────────────
   const cleanup = useCallback(() => {
@@ -53,10 +80,27 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
     }
+    if (displayStreamRef.current) {
+      displayStreamRef.current.getTracks().forEach((t) => t.stop());
+      displayStreamRef.current = null;
+    }
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch((err) => console.error('[WebRTC] Error closing AudioContext:', err));
+      audioContextRef.current = null;
+    }
+    micGainNodeRef.current = null;
+
     setLocalStream(null);
     setRemoteStream(null);
     setCaptureDisplaySurface(null);
     setAudioWarning(null);
+    setMicWarning(null);
+    setMicStream(null);
+    setAudioTrackSource('none');
   }, []);
 
   // ─── Create one RTCPeerConnection keyed by peerId ─────────────────────────
@@ -117,37 +161,131 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
     console.log(`[WebRTC] Sent offer to viewer ${viewerId}`);
   }, [createPeerConnection]);
 
+  // ─── HOST: Stop sharing ────────────────────────────────────────────────────
+  const stopSharing = useCallback(() => {
+    cleanup();
+    setSharingState('idle');
+    wsClient.send('host_stop_share', {});
+  }, [cleanup]);
+
   // ─── HOST: Start screen sharing ────────────────────────────────────────────
   const startSharing = useCallback(async () => {
     if (!isHost) return;
     setErrorMessage(null);
+    setAudioWarning(null);
+    setMicWarning(null);
     setSharingState('requesting');
 
-    let stream: MediaStream;
+    // 1. Capture display media
+    let displayStream: MediaStream;
     try {
       const constraints = {
         video: { frameRate: { ideal: 30, max: 60 } },
         audio: true,
       };
       console.log('[WEBRTC_AUDIT] getDisplayMedia constraints used by Host:', constraints);
-      setAudioWarning(null);
-      stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+      displayStream = await navigator.mediaDevices.getDisplayMedia(constraints);
+      displayStreamRef.current = displayStream;
     } catch {
       setSharingState('idle');
       setErrorMessage('Screen sharing was cancelled or permission was denied.');
       return;
     }
 
-    if (stream.getAudioTracks().length === 0) {
-      setAudioWarning("Audio sharing is unavailable for this capture source. Try sharing a Chrome tab and enable 'Share tab audio'.");
-    } else {
-      setAudioWarning(null);
+    // 2. Request microphone stream
+    let micStreamObj: MediaStream | null = null;
+    try {
+      console.log('[WebRTC] Requesting microphone stream...');
+      micStreamObj = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = micStreamObj;
+      setMicStream(micStreamObj);
+    } catch (err) {
+      console.warn('[WebRTC] Microphone access denied or not available:', err);
+      setMicWarning("Microphone access denied. Screen audio sharing will continue.");
     }
 
-    localStreamRef.current = stream;
-    setLocalStream(stream);
+    // 3. Audio Mixing Optimization
+    const displayAudioTracks = displayStream.getAudioTracks();
+    const micAudioTracks = micStreamObj ? micStreamObj.getAudioTracks() : [];
+    
+    let finalAudioTrack: MediaStreamTrack | null = null;
+    let trackSource: 'display' | 'microphone' | 'mixed' | 'none' = 'none';
+
+    const hasDisplayAudio = displayAudioTracks.length > 0;
+    const hasMicAudio = micAudioTracks.length > 0;
+
+    if (hasDisplayAudio && hasMicAudio) {
+      // Case 1: Both display audio and mic are available -> mix them using AudioContext
+      try {
+        console.log('[WebRTC] Mixer Case 1: Mixing display audio + mic');
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const audioCtx = new AudioContextClass();
+        audioContextRef.current = audioCtx;
+
+        const dest = audioCtx.createMediaStreamDestination();
+
+        // Feed display stream audio
+        const displayAudioStream = new MediaStream([displayAudioTracks[0]]);
+        const dispSrc = audioCtx.createMediaStreamSource(displayAudioStream);
+        dispSrc.connect(dest);
+
+        // Feed microphone stream audio through a GainNode
+        const micAudioStream = new MediaStream([micAudioTracks[0]]);
+        const micSrc = audioCtx.createMediaStreamSource(micAudioStream);
+        const micGain = audioCtx.createGain();
+        
+        // Initial gain based on current micMuted status
+        micGain.gain.setValueAtTime(micMuted ? 0 : 1, audioCtx.currentTime);
+        micGainNodeRef.current = micGain;
+
+        micSrc.connect(micGain);
+        micGain.connect(dest);
+
+        if (dest.stream.getAudioTracks().length > 0) {
+          finalAudioTrack = dest.stream.getAudioTracks()[0];
+          trackSource = 'mixed';
+        }
+      } catch (err) {
+        console.error('[WebRTC] Audio mixing failed, falling back to display audio track:', err);
+        finalAudioTrack = displayAudioTracks[0];
+        trackSource = 'display';
+      }
+    } else if (hasDisplayAudio) {
+      // Case 2: Display audio only -> route directly
+      console.log('[WebRTC] Mixer Case 2: Display audio only');
+      finalAudioTrack = displayAudioTracks[0];
+      trackSource = 'display';
+    } else if (hasMicAudio) {
+      // Case 3: Microphone only -> route directly
+      console.log('[WebRTC] Mixer Case 3: Microphone audio only');
+      finalAudioTrack = micAudioTracks[0];
+      // Ensure the mic track matches initial micMuted state
+      finalAudioTrack.enabled = !micMuted;
+      trackSource = 'microphone';
+    } else {
+      // Case 4: No audio sources
+      console.log('[WebRTC] Mixer Case 4: No audio sources');
+      trackSource = 'none';
+      setAudioWarning("Audio sharing is unavailable for this capture source. Try sharing a Chrome tab and enable 'Share tab audio'.");
+    }
+
+    setAudioTrackSource(trackSource);
+
+    // 4. Construct final output stream (video + chosen/mixed audio track)
+    const combinedTracks: MediaStreamTrack[] = [];
+    if (displayStream.getVideoTracks().length > 0) {
+      combinedTracks.push(displayStream.getVideoTracks()[0]);
+    }
+    if (finalAudioTrack) {
+      combinedTracks.push(finalAudioTrack);
+    }
+
+    const combinedStream = new MediaStream(combinedTracks);
+    localStreamRef.current = combinedStream;
+    setLocalStream(combinedStream);
+
     const displaySurface = (
-      stream.getVideoTracks()[0]?.getSettings().displaySurface ?? 'unknown'
+      displayStream.getVideoTracks()[0]?.getSettings().displaySurface ?? 'unknown'
     ) as CaptureDisplaySurface;
     setCaptureDisplaySurface(displaySurface);
     if (displaySurface === 'monitor') {
@@ -162,22 +300,15 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
     setSharingState('sharing');
 
     // React when the user clicks "Stop sharing" in the browser native bar
-    stream.getVideoTracks()[0].onended = () => stopSharing();
+    displayStream.getVideoTracks()[0].onended = () => stopSharing();
 
-    // FIX #2: offer ALL viewers present at share-start time, not just targets[0]
+    // Send offer to all current viewers
     const currentViewers = viewerIds.filter((id) => id && id !== currentSocketId);
     console.log(`[WebRTC] Starting share, sending offers to ${currentViewers.length} viewer(s)`);
     for (const viewerId of currentViewers) {
-      await sendOfferToViewer(viewerId, stream);
+      await sendOfferToViewer(viewerId, combinedStream);
     }
-  }, [isHost, viewerIds, currentSocketId, sendOfferToViewer]);
-
-  // ─── HOST: Stop sharing ────────────────────────────────────────────────────
-  const stopSharing = useCallback(() => {
-    cleanup();
-    setSharingState('idle');
-    wsClient.send('host_stop_share', {});
-  }, [cleanup]);
+  }, [isHost, viewerIds, currentSocketId, micMuted, sendOfferToViewer, stopSharing]);
 
   // ─── WebSocket signaling handlers ──────────────────────────────────────────
   useEffect(() => {
@@ -280,6 +411,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
     stopSharing,
     errorMessage,
     audioWarning,
+    micWarning,
+    micStream,
+    audioTrackSource,
     auditReports,
   };
 }

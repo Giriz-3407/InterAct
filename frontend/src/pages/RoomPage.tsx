@@ -78,6 +78,7 @@ export const RoomPage: React.FC = () => {
     startSharing,
     stopSharing,
     errorMessage,
+    audioWarning,
     auditReports,
   } = useWebRTC({
     isHost,
@@ -89,6 +90,24 @@ export const RoomPage: React.FC = () => {
   const isViewing = sharingState === 'viewing';
   const isRequesting = sharingState === 'requesting';
   const showLaserPointerNotice = isHost && isSharing && captureDisplaySurface !== 'monitor';
+
+  // Audio sharing states
+  const [hostAudioEnabled, setHostAudioEnabled] = useState(true);
+  const [viewerMuted, setViewerMuted] = useState(false);
+  const [viewerVolume, setViewerVolume] = useState(0.8);
+
+  // Synchronize host audio enabled state
+  useEffect(() => {
+    if (localStream) {
+      localStream.getAudioTracks().forEach((track) => {
+        track.enabled = hostAudioEnabled;
+      });
+    }
+  }, [localStream, hostAudioEnabled]);
+
+  const toggleHostAudio = useCallback(() => {
+    setHostAudioEnabled((prev) => !prev);
+  }, []);
 
   // Live cursor presence — active while viewing a remote stream or sharing as host
   const isScreenVisible = (isViewing && !!remoteStream) || (isHost && isSharing);
@@ -102,15 +121,57 @@ export const RoomPage: React.FC = () => {
     localParticipantId: currentSocketId,
   });
 
-  // Ref for remote video element
+  // Refs for remote video & audio elements
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
 
-  // Attach remote stream to video element
+  // Attach remote stream to video & audio elements and handle volume/mute
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
+    if (remoteStream) {
+      console.log('[RoomPage] Attaching remote stream. Tracks:', remoteStream.getTracks().map(t => t.kind));
+      
+      // Attach to video element (video rendering only, keep muted)
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.muted = true;
+      }
+      
+      // Attach to audio element (audio playback only)
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.muted = viewerMuted;
+        remoteAudioRef.current.volume = viewerVolume;
+      }
+
+      const handleTrackAdded = () => {
+        console.log('[RoomPage] Track added to remoteStream. Tracks:', remoteStream.getTracks().map(t => t.kind));
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+          remoteVideoRef.current.muted = true;
+        }
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = remoteStream;
+          remoteAudioRef.current.muted = viewerMuted;
+          remoteAudioRef.current.volume = viewerVolume;
+        }
+      };
+
+      remoteStream.addEventListener('addtrack', handleTrackAdded);
+      remoteStream.addEventListener('removetrack', handleTrackAdded);
+
+      return () => {
+        remoteStream.removeEventListener('addtrack', handleTrackAdded);
+        remoteStream.removeEventListener('removetrack', handleTrackAdded);
+      };
+    } else {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = null;
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = null;
+      }
     }
-  }, [remoteStream]);
+  }, [remoteStream, viewerMuted, viewerVolume]);
 
   // Load message history on startup
   useEffect(() => {
@@ -378,6 +439,14 @@ export const RoomPage: React.FC = () => {
             </div>
           )}
 
+          {/* Audio warning banner */}
+          {audioWarning && (
+            <div className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 font-inter flex items-center gap-2 shrink-0">
+              <span className="material-symbols-outlined text-[16px] text-amber-400">warning</span>
+              {audioWarning}
+            </div>
+          )}
+
           {showLaserPointerNotice && (
             <div className="px-3 py-1.5 rounded-lg bg-zinc-900/80 border border-zinc-800 text-xs text-zinc-300 font-inter flex items-center gap-2 shrink-0">
               <span className="material-symbols-outlined text-[16px] text-amber-400">info</span>
@@ -406,13 +475,20 @@ export const RoomPage: React.FC = () => {
 
             {/* Remote stream video — visible to viewer when receiving */}
             {isViewing && remoteStream && (
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-contain"
-              />
+              <>
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-contain"
+                />
+                <audio
+                  ref={remoteAudioRef}
+                  autoPlay
+                  style={{ display: 'none' }}
+                />
+              </>
             )}
 
             {/* Waiting / Sharing state overlay when no video */}
@@ -514,6 +590,68 @@ export const RoomPage: React.FC = () => {
                   </span>
                   <span>{isSharing ? 'Stop Sharing' : isRequesting ? 'Requesting…' : 'Share Screen'}</span>
                 </button>
+              )}
+
+              {/* Host Toggle Shared Audio */}
+              {isHost && isSharing && (
+                <>
+                  <div className="w-px h-5 bg-zinc-800/80" />
+                  <button
+                    onClick={toggleHostAudio}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
+                      !hostAudioEnabled
+                        ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                        : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                    }`}
+                    title={hostAudioEnabled ? 'Mute shared audio' : 'Unmute shared audio'}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {hostAudioEnabled ? 'volume_up' : 'volume_off'}
+                    </span>
+                  </button>
+                </>
+              )}
+
+              {/* Viewer Local Mute/Volume controls */}
+              {isViewing && (
+                <>
+                  <div className="w-px h-5 bg-zinc-800/80" />
+                  <button
+                    onClick={() => setViewerMuted(!viewerMuted)}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
+                      viewerMuted
+                        ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                        : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
+                    }`}
+                    title={viewerMuted ? 'Unmute remote audio' : 'Mute remote audio'}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {viewerMuted ? 'volume_off' : 'volume_up'}
+                    </span>
+                  </button>
+                  <div className="flex items-center gap-1.5 px-1">
+                    <span className="text-[10px] text-zinc-500 font-mono">Vol</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={viewerVolume}
+                      onChange={(e) => {
+                        const vol = parseFloat(e.target.value);
+                        setViewerVolume(vol);
+                        if (vol > 0 && viewerMuted) {
+                          setViewerMuted(false);
+                        }
+                      }}
+                      className="w-16 h-1 bg-zinc-805 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                      style={{
+                        WebkitAppearance: 'none',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                </>
               )}
 
               <div className="w-px h-5 bg-zinc-800/80" />

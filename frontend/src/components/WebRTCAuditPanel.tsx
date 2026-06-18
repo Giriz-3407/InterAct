@@ -159,18 +159,38 @@ export const WebRTCAuditPanel: React.FC<WebRTCAuditPanelProps> = ({
       reportText += `FPS: ${fps}\n\n`;
 
       if (rep.isHost) {
-        reportText += `[Sender Metrics]\n`;
+        reportText += `[Sender Video Metrics]\n`;
         reportText += `Frame Size: ${rep.senderFrameWidth ?? 'N/A'}x${rep.senderFrameHeight ?? 'N/A'}\n`;
         reportText += `Frames Sent: ${rep.senderFramesSent ?? 'N/A'}\n`;
         reportText += `Outbound FPS: ${rep.senderFramesPerSecond ?? 'N/A'}\n`;
         reportText += `Quality Limitation Reason: ${rep.qualityLimitationReason || 'none'}\n`;
-        reportText += `Limitation Durations: CPU=${rep.qualityLimitationCpu?.toFixed(2) ?? '0.00'}s, Bandwidth=${rep.qualityLimitationBandwidth?.toFixed(2) ?? '0.00'}s, Other=${rep.qualityLimitationOther?.toFixed(2) ?? '0.00'}s, None=${rep.qualityLimitationNone?.toFixed(2) ?? '0.00'}s\n\n`;
+        reportText += `Limitation Durations: CPU=${rep.qualityLimitationCpu?.toFixed(2) ?? '0.00'}s, Bandwidth=${rep.qualityLimitationBandwidth?.toFixed(2) ?? '0.00'}s, Other=${rep.qualityLimitationOther?.toFixed(2) ?? '0.00'}s, None=${rep.qualityLimitationNone?.toFixed(2) ?? '0.00'}s\n`;
+        reportText += `[Sender Audio Metrics]\n`;
+        reportText += `Audio Track Count: ${rep.senderAudioTrackCount ?? 0}\n`;
+        reportText += `Track Enabled: ${rep.senderAudioTrackEnabled !== undefined ? (rep.senderAudioTrackEnabled ? 'Yes' : 'No') : 'N/A'}\n`;
+        reportText += `Track Muted: ${rep.senderAudioTrackMuted !== undefined ? (rep.senderAudioTrackMuted ? 'Yes' : 'No') : 'N/A'}\n`;
+        reportText += `Audio Codec: ${rep.audioCodec || 'N/A'}\n`;
+        reportText += `Audio Bitrate: ${rep.audioBitrate !== undefined ? Math.round(rep.audioBitrate) + ' kbps' : 'N/A'}\n`;
+        reportText += `Audio Packets Lost: ${rep.audioPacketsLost ?? 0}\n`;
+        reportText += `Audio Jitter: ${rep.audioJitter !== undefined ? (rep.audioJitter * 1000).toFixed(2) + ' ms' : 'N/A'}\n`;
+        reportText += `Total Audio Energy: ${rep.totalAudioEnergy !== undefined ? rep.totalAudioEnergy.toFixed(4) : 'N/A'}\n\n`;
       } else {
-        reportText += `[Receiver Metrics]\n`;
+        reportText += `[Receiver Video Metrics]\n`;
         reportText += `Frame Size: ${rep.receiverFrameWidth ?? 'N/A'}x${rep.receiverFrameHeight ?? 'N/A'}\n`;
         reportText += `Frames Decoded: ${rep.receiverFramesDecoded ?? 'N/A'}\n`;
         reportText += `Frames Dropped: ${rep.receiverFramesDropped ?? 'N/A'}\n`;
-        reportText += `Inbound FPS: ${rep.receiverFramesPerSecond ?? 'N/A'}\n\n`;
+        reportText += `Inbound FPS: ${rep.receiverFramesPerSecond ?? 'N/A'}\n`;
+        reportText += `[Receiver Audio Metrics]\n`;
+        reportText += `Audio Track Count: ${rep.receiverAudioTrackCount ?? 0}\n`;
+        reportText += `Track Enabled: ${rep.receiverAudioTrackEnabled !== undefined ? (rep.receiverAudioTrackEnabled ? 'Yes' : 'No') : 'N/A'}\n`;
+        reportText += `Track Muted: ${rep.receiverAudioTrackMuted !== undefined ? (rep.receiverAudioTrackMuted ? 'Yes' : 'No') : 'N/A'}\n`;
+        reportText += `Audio Codec: ${rep.audioCodec || 'N/A'}\n`;
+        reportText += `Audio Bitrate: ${rep.audioBitrate !== undefined ? Math.round(rep.audioBitrate) + ' kbps' : 'N/A'}\n`;
+        reportText += `Audio Packets Received: ${rep.audioPacketsReceived ?? 0}\n`;
+        reportText += `Audio Packets Lost: ${rep.audioPacketsLost ?? 0}\n`;
+        reportText += `Audio Jitter: ${rep.audioJitter !== undefined ? (rep.audioJitter * 1000).toFixed(2) + ' ms' : 'N/A'}\n`;
+        reportText += `Concealed Samples: ${rep.concealedSamples ?? 0}\n`;
+        reportText += `Total Audio Energy: ${rep.totalAudioEnergy !== undefined ? rep.totalAudioEnergy.toFixed(4) : 'N/A'}\n\n`;
       }
     });
 
@@ -348,76 +368,168 @@ export const WebRTCAuditPanel: React.FC<WebRTCAuditPanelProps> = ({
               </div>
             )}
 
-            {/* Sender Side Video Stats */}
+            {/* Sender Side Video & Audio Stats */}
             {selectedReport.isHost ? (
-              <div className="flex flex-col gap-1.5 shrink-0">
-                <div className="text-[10px] text-zinc-500 font-geist uppercase tracking-wider">Sender Video Metrics</div>
-                <table className="w-full border-collapse font-mono text-[10px]">
-                  <tbody>
-                    <tr className="border-b border-zinc-900/40 py-1">
-                      <td className="text-zinc-500 py-1 font-inter">frameWidth / height</td>
-                      <td className="text-zinc-300 text-right">{selectedReport.senderFrameWidth ?? 'N/A'}x{selectedReport.senderFrameHeight ?? 'N/A'}</td>
-                    </tr>
-                    <tr className="border-b border-zinc-900/40 py-1">
-                      <td className="text-zinc-500 py-1 font-inter">framesSent</td>
-                      <td className="text-zinc-300 text-right">{selectedReport.senderFramesSent ?? 'N/A'}</td>
-                    </tr>
-                    <tr className="border-b border-zinc-900/40 py-1">
-                      <td className="text-zinc-500 py-1 font-inter">framesPerSecond</td>
-                      <td className="text-zinc-300 text-right">{selectedReport.senderFramesPerSecond !== undefined ? Math.round(selectedReport.senderFramesPerSecond) : 'N/A'}</td>
-                    </tr>
-                    <tr className="border-b border-zinc-900/40 py-1">
-                      <td className="text-zinc-500 py-1 font-inter">qualityLimitationReason</td>
-                      <td className="text-zinc-300 text-right">
-                        <span className={`px-1 rounded ${selectedReport.qualityLimitationReason !== 'none' ? 'text-amber-400 font-semibold' : 'text-zinc-300'}`}>
-                          {selectedReport.qualityLimitationReason || 'none'}
-                        </span>
-                      </td>
-                    </tr>
-                    <tr className="border-b border-zinc-900/40 py-1">
-                      <td className="text-zinc-500 py-1 font-inter">qualityLimitationDurations.cpu</td>
-                      <td className="text-zinc-300 text-right">{selectedReport.qualityLimitationCpu !== undefined ? `${selectedReport.qualityLimitationCpu.toFixed(2)}s` : '0.00s'}</td>
-                    </tr>
-                    <tr className="border-b border-zinc-900/40 py-1">
-                      <td className="text-zinc-500 py-1 font-inter">qualityLimitationDurations.bandwidth</td>
-                      <td className="text-zinc-300 text-right">{selectedReport.qualityLimitationBandwidth !== undefined ? `${selectedReport.qualityLimitationBandwidth.toFixed(2)}s` : '0.00s'}</td>
-                    </tr>
-                    <tr className="border-b border-zinc-900/40 py-1">
-                      <td className="text-zinc-500 py-1 font-inter">qualityLimitationDurations.other</td>
-                      <td className="text-zinc-300 text-right">{selectedReport.qualityLimitationOther !== undefined ? `${selectedReport.qualityLimitationOther.toFixed(2)}s` : '0.00s'}</td>
-                    </tr>
-                    <tr className="py-1">
-                      <td className="text-zinc-500 py-1 font-inter">qualityLimitationDurations.none</td>
-                      <td className="text-zinc-300 text-right">{selectedReport.qualityLimitationNone !== undefined ? `${selectedReport.qualityLimitationNone.toFixed(2)}s` : '0.00s'}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="flex flex-col gap-1.5 shrink-0">
+                  <div className="text-[10px] text-zinc-500 font-geist uppercase tracking-wider">Sender Video Metrics</div>
+                  <table className="w-full border-collapse font-mono text-[10px]">
+                    <tbody>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">frameWidth / height</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.senderFrameWidth ?? 'N/A'}x{selectedReport.senderFrameHeight ?? 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">framesSent</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.senderFramesSent ?? 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">framesPerSecond</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.senderFramesPerSecond !== undefined ? Math.round(selectedReport.senderFramesPerSecond) : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">qualityLimitationReason</td>
+                        <td className="text-zinc-300 text-right">
+                          <span className={`px-1 rounded ${selectedReport.qualityLimitationReason !== 'none' ? 'text-amber-400 font-semibold' : 'text-zinc-300'}`}>
+                            {selectedReport.qualityLimitationReason || 'none'}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">qualityLimitationCpu</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.qualityLimitationCpu !== undefined ? `${selectedReport.qualityLimitationCpu.toFixed(2)}s` : '0.00s'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">qualityLimitationBandwidth</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.qualityLimitationBandwidth !== undefined ? `${selectedReport.qualityLimitationBandwidth.toFixed(2)}s` : '0.00s'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">qualityLimitationOther</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.qualityLimitationOther !== undefined ? `${selectedReport.qualityLimitationOther.toFixed(2)}s` : '0.00s'}</td>
+                      </tr>
+                      <tr className="py-1">
+                        <td className="text-zinc-500 py-1 font-inter">qualityLimitationNone</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.qualityLimitationNone !== undefined ? `${selectedReport.qualityLimitationNone.toFixed(2)}s` : '0.00s'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex flex-col gap-1.5 shrink-0">
+                  <div className="text-[10px] text-zinc-500 font-geist uppercase tracking-wider">Sender Audio Metrics</div>
+                  <table className="w-full border-collapse font-mono text-[10px]">
+                    <tbody>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Audio Track Count</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.senderAudioTrackCount ?? 0}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Track Enabled</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.senderAudioTrackEnabled !== undefined ? (selectedReport.senderAudioTrackEnabled ? 'Yes' : 'No') : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Track Muted</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.senderAudioTrackMuted !== undefined ? (selectedReport.senderAudioTrackMuted ? 'Yes' : 'No') : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Audio Codec</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.audioCodec || 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Audio Bitrate</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.audioBitrate !== undefined ? `${Math.round(selectedReport.audioBitrate)} kbps` : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">packetsLost</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.audioPacketsLost ?? 0}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">jitter</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.audioJitter !== undefined ? `${(selectedReport.audioJitter * 1000).toFixed(2)} ms` : 'N/A'}</td>
+                      </tr>
+                      <tr className="py-1">
+                        <td className="text-zinc-500 py-1 font-inter">totalAudioEnergy</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.totalAudioEnergy !== undefined ? selectedReport.totalAudioEnergy.toFixed(4) : 'N/A'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
-              /* Receiver Side Video Stats */
-              <div className="flex flex-col gap-1.5 shrink-0">
-                <div className="text-[10px] text-zinc-500 font-geist uppercase tracking-wider">Receiver Video Metrics</div>
-                <table className="w-full border-collapse font-mono text-[10px]">
-                  <tbody>
-                    <tr className="border-b border-zinc-900/40 py-1">
-                      <td className="text-zinc-500 py-1 font-inter">frameWidth / height</td>
-                      <td className="text-zinc-300 text-right">{selectedReport.receiverFrameWidth ?? 'N/A'}x{selectedReport.receiverFrameHeight ?? 'N/A'}</td>
-                    </tr>
-                    <tr className="border-b border-zinc-900/40 py-1">
-                      <td className="text-zinc-500 py-1 font-inter">framesDecoded</td>
-                      <td className="text-zinc-300 text-right">{selectedReport.receiverFramesDecoded ?? 'N/A'}</td>
-                    </tr>
-                    <tr className="border-b border-zinc-900/40 py-1">
-                      <td className="text-zinc-500 py-1 font-inter">framesDropped</td>
-                      <td className={`text-right ${selectedReport.receiverFramesDropped && selectedReport.receiverFramesDropped > 0 ? 'text-rose-400 font-bold' : 'text-zinc-300'}`}>{selectedReport.receiverFramesDropped ?? 0}</td>
-                    </tr>
-                    <tr className="py-1">
-                      <td className="text-zinc-500 py-1 font-inter">framesPerSecond</td>
-                      <td className="text-zinc-300 text-right">{selectedReport.receiverFramesPerSecond !== undefined ? Math.round(selectedReport.receiverFramesPerSecond) : 'N/A'}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              /* Receiver Side Video & Audio Stats */
+              <>
+                <div className="flex flex-col gap-1.5 shrink-0">
+                  <div className="text-[10px] text-zinc-500 font-geist uppercase tracking-wider">Receiver Video Metrics</div>
+                  <table className="w-full border-collapse font-mono text-[10px]">
+                    <tbody>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">frameWidth / height</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.receiverFrameWidth ?? 'N/A'}x{selectedReport.receiverFrameHeight ?? 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">framesDecoded</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.receiverFramesDecoded ?? 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">framesDropped</td>
+                        <td className={`text-right ${selectedReport.receiverFramesDropped && selectedReport.receiverFramesDropped > 0 ? 'text-rose-400 font-bold' : 'text-zinc-300'}`}>{selectedReport.receiverFramesDropped ?? 0}</td>
+                      </tr>
+                      <tr className="py-1">
+                        <td className="text-zinc-500 py-1 font-inter">framesPerSecond</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.receiverFramesPerSecond !== undefined ? Math.round(selectedReport.receiverFramesPerSecond) : 'N/A'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex flex-col gap-1.5 shrink-0">
+                  <div className="text-[10px] text-zinc-500 font-geist uppercase tracking-wider">Receiver Audio Metrics</div>
+                  <table className="w-full border-collapse font-mono text-[10px]">
+                    <tbody>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Audio Track Count</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.receiverAudioTrackCount ?? 0}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Track Enabled</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.receiverAudioTrackEnabled !== undefined ? (selectedReport.receiverAudioTrackEnabled ? 'Yes' : 'No') : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Track Muted</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.receiverAudioTrackMuted !== undefined ? (selectedReport.receiverAudioTrackMuted ? 'Yes' : 'No') : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Audio Codec</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.audioCodec || 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">Audio Bitrate</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.audioBitrate !== undefined ? `${Math.round(selectedReport.audioBitrate)} kbps` : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">packetsReceived</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.audioPacketsReceived ?? 0}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">packetsLost</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.audioPacketsLost ?? 0}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">jitter</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.audioJitter !== undefined ? `${(selectedReport.audioJitter * 1000).toFixed(2)} ms` : 'N/A'}</td>
+                      </tr>
+                      <tr className="border-b border-zinc-900/40 py-1">
+                        <td className="text-zinc-500 py-1 font-inter">concealedSamples</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.concealedSamples ?? 0}</td>
+                      </tr>
+                      <tr className="py-1">
+                        <td className="text-zinc-500 py-1 font-inter">totalAudioEnergy</td>
+                        <td className="text-zinc-300 text-right">{selectedReport.totalAudioEnergy !== undefined ? selectedReport.totalAudioEnergy.toFixed(4) : 'N/A'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
 
             {/* Connection Type Audit Table */}

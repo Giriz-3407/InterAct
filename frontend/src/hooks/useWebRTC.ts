@@ -24,6 +24,7 @@ interface UseWebRTCReturn {
   startSharing: () => Promise<void>;
   stopSharing: () => void;
   errorMessage: string | null;
+  audioWarning: string | null;
   auditReports: WebRTCAuditData[];
 }
 
@@ -33,6 +34,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [captureDisplaySurface, setCaptureDisplaySurface] = useState<CaptureDisplaySurface | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [audioWarning, setAudioWarning] = useState<string | null>(null);
 
   // FIX #1: Map of peerId -> RTCPeerConnection instead of a single pcRef.
   // This is the fundamental architectural change that enables Host <-> ViewerN.
@@ -54,6 +56,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
     setLocalStream(null);
     setRemoteStream(null);
     setCaptureDisplaySurface(null);
+    setAudioWarning(null);
   }, []);
 
   // ─── Create one RTCPeerConnection keyed by peerId ─────────────────────────
@@ -124,14 +127,21 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
     try {
       const constraints = {
         video: { frameRate: { ideal: 30, max: 60 } },
-        audio: false,
+        audio: true,
       };
       console.log('[WEBRTC_AUDIT] getDisplayMedia constraints used by Host:', constraints);
+      setAudioWarning(null);
       stream = await navigator.mediaDevices.getDisplayMedia(constraints);
     } catch {
       setSharingState('idle');
       setErrorMessage('Screen sharing was cancelled or permission was denied.');
       return;
+    }
+
+    if (stream.getAudioTracks().length === 0) {
+      setAudioWarning("Audio sharing is unavailable for this capture source. Try sharing a Chrome tab and enable 'Share tab audio'.");
+    } else {
+      setAudioWarning(null);
     }
 
     localStreamRef.current = stream;
@@ -269,6 +279,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds }: UseWebRTCOptio
     startSharing,
     stopSharing,
     errorMessage,
+    audioWarning,
     auditReports,
   };
 }

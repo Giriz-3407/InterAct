@@ -38,6 +38,27 @@ export interface WebRTCAuditData {
   receiverFramesDecoded?: number;
   receiverFramesDropped?: number;
   receiverFramesPerSecond?: number;
+
+  // Sender Audio track states
+  senderAudioTrackCount?: number;
+  senderAudioTrackEnabled?: boolean;
+  senderAudioTrackMuted?: boolean;
+
+  // Receiver Audio track states
+  receiverAudioTrackCount?: number;
+  receiverAudioTrackEnabled?: boolean;
+  receiverAudioTrackMuted?: boolean;
+
+  // Audio RTP metrics
+  audioPacketsReceived?: number;
+  audioPacketsLost?: number;
+  audioJitter?: number;
+
+  // Extended Audio metrics
+  audioCodec?: string;
+  audioBitrate?: number;
+  concealedSamples?: number;
+  totalAudioEnergy?: number;
 }
 
 interface UseWebRTCAuditOptions {
@@ -55,6 +76,8 @@ interface PeerPrevStats {
   framesSent?: number;
   framesDecoded?: number;
   framesReceived?: number;
+  audioBytesSent?: number;
+  audioBytesReceived?: number;
 }
 
 export function useWebRTCAudit({
@@ -216,6 +239,17 @@ export function useWebRTCAudit({
           let receiverFramesDropped: number | undefined;
           let receiverFramesPerSecond: number | undefined;
 
+          // Audio metrics fields
+          let audioPacketsReceived: number | undefined;
+          let audioPacketsLost: number | undefined;
+          let audioJitter: number | undefined;
+          let audioCodec: string | undefined;
+          let audioBitrate: number | undefined;
+          let concealedSamples: number | undefined;
+          let totalAudioEnergy: number | undefined;
+          let audioBytesSent: number | undefined;
+          let audioBytesReceived: number | undefined;
+
           stats.forEach((report) => {
             // Outbound Video Track (Host side)
             if (report.type === 'outbound-rtp' && report.kind === 'video') {
@@ -239,6 +273,17 @@ export function useWebRTCAudit({
               }
             }
 
+            // Outbound Audio Track (Host side)
+            if (report.type === 'outbound-rtp' && report.kind === 'audio') {
+              audioBytesSent = report.bytesSent;
+              if (report.codecId) {
+                const codecReport = stats.get(report.codecId);
+                if (codecReport) {
+                  audioCodec = codecReport.mimeType;
+                }
+              }
+            }
+
             // Inbound Video Track (Viewer side)
             if (report.type === 'inbound-rtp' && report.kind === 'video') {
               framesReceived = report.framesReceived; // Might be undefined on some browsers
@@ -257,12 +302,35 @@ export function useWebRTCAudit({
               receiverFramesPerSecond = report.framesPerSecond;
             }
 
+            // Inbound Audio Track (Viewer side)
+            if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+              audioPacketsReceived = report.packetsReceived;
+              audioPacketsLost = report.packetsLost;
+              audioJitter = report.jitter;
+              audioBytesReceived = report.bytesReceived;
+              concealedSamples = report.concealedSamples;
+              totalAudioEnergy = report.totalAudioEnergy;
+
+              if (report.codecId) {
+                const codecReport = stats.get(report.codecId);
+                if (codecReport) {
+                  audioCodec = codecReport.mimeType;
+                }
+              }
+            }
+
             // Remote Inbound RTP (Host side getting report from Viewer)
             if (report.type === 'remote-inbound-rtp' && report.kind === 'video') {
               packetsLost = report.packetsLost;
               if (report.roundTripTime !== undefined) {
                 currentRoundTripTime = report.roundTripTime;
               }
+            }
+
+            // Remote Inbound Audio RTP (Host side getting report from Viewer)
+            if (report.type === 'remote-inbound-rtp' && report.kind === 'audio') {
+              audioPacketsLost = report.packetsLost;
+              audioJitter = report.jitter;
             }
 
             // Candidate Pair (Active Connection Info)
@@ -319,6 +387,38 @@ export function useWebRTCAudit({
               } else if (!isHost && framesDecoded !== undefined && prev.framesDecoded !== undefined) {
                 actualEffectiveFPS = (framesDecoded - prev.framesDecoded) / deltaSec;
               }
+
+              // Compute audio bitrates
+              if (isHost && audioBytesSent !== undefined && prev.audioBytesSent !== undefined) {
+                audioBitrate = ((audioBytesSent - prev.audioBytesSent) * 8) / 1000 / deltaSec;
+              } else if (!isHost && audioBytesReceived !== undefined && prev.audioBytesReceived !== undefined) {
+                audioBitrate = ((audioBytesReceived - prev.audioBytesReceived) * 8) / 1000 / deltaSec;
+              }
+            }
+          }
+
+          // Fetch local track level audio info
+          let senderAudioTrackCount: number | undefined;
+          let senderAudioTrackEnabled: boolean | undefined;
+          let senderAudioTrackMuted: boolean | undefined;
+          if (isHost && localStream) {
+            const audioTracks = localStream.getAudioTracks();
+            senderAudioTrackCount = audioTracks.length;
+            if (audioTracks.length > 0) {
+              senderAudioTrackEnabled = audioTracks[0].enabled;
+              senderAudioTrackMuted = audioTracks[0].muted;
+            }
+          }
+
+          let receiverAudioTrackCount: number | undefined;
+          let receiverAudioTrackEnabled: boolean | undefined;
+          let receiverAudioTrackMuted: boolean | undefined;
+          if (!isHost && remoteStream) {
+            const audioTracks = remoteStream.getAudioTracks();
+            receiverAudioTrackCount = audioTracks.length;
+            if (audioTracks.length > 0) {
+              receiverAudioTrackEnabled = audioTracks[0].enabled;
+              receiverAudioTrackMuted = audioTracks[0].muted;
             }
           }
 
@@ -330,6 +430,8 @@ export function useWebRTCAudit({
             framesSent,
             framesDecoded,
             framesReceived,
+            audioBytesSent,
+            audioBytesReceived,
           });
 
           // Add to report list
@@ -370,6 +472,23 @@ export function useWebRTCAudit({
             receiverFramesDecoded,
             receiverFramesDropped,
             receiverFramesPerSecond,
+
+            // Audio track metrics
+            senderAudioTrackCount,
+            senderAudioTrackEnabled,
+            senderAudioTrackMuted,
+            receiverAudioTrackCount,
+            receiverAudioTrackEnabled,
+            receiverAudioTrackMuted,
+
+            // Audio RTP & Quality metrics
+            audioPacketsReceived,
+            audioPacketsLost,
+            audioJitter,
+            audioCodec,
+            audioBitrate,
+            concealedSamples,
+            totalAudioEnergy,
           });
 
           // Log the metrics dump

@@ -2,6 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { wsClient } from '../lib/websocket';
 import { useWebRTCAudit, type WebRTCAuditData } from './useWebRTCAudit';
 import {
+  voiceNegotiationLog,
+  VOICE_NEGOTIATION_IDLE,
+  type VoiceNegotiationState,
+} from '../lib/voiceNegotiationDiag';
+import {
   diagStage1_syncMicCalled,
   diagStage2_micAcquired,
   diagStage3_attachCalled,
@@ -62,6 +67,9 @@ interface UseWebRTCReturn {
   audioTrackSource: 'display' | 'microphone' | 'mixed' | 'none';
   auditReports: WebRTCAuditData[];
   getPeerConnectionStates: () => { connectionState: string; iceConnectionState: string };
+  /** Temporary diagnostic UX — voice publish negotiation timing */
+  voiceNegotiation: VoiceNegotiationState;
+  beginVoiceNegotiation: () => void;
 }
 
 export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSocketId }: UseWebRTCOptions): UseWebRTCReturn {
@@ -86,6 +94,57 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
   // Host-side: tracks received from viewers' microphones, keyed by viewerId
   const viewerMicTracksRef = useRef<Map<string, { track: MediaStreamTrack; stream: MediaStream }>>(new Map());
+
+  // Temporary diagnostic: voice publish negotiation UX
+  const [voiceNegotiation, setVoiceNegotiation] = useState<VoiceNegotiationState>(VOICE_NEGOTIATION_IDLE);
+  const voiceNegotiationStartedAtRef = useRef<number | null>(null);
+  const voiceNegotiationPhaseRef = useRef<VoiceNegotiationState['phase']>('idle');
+  const pendingHostAnswersRef = useRef<Set<string>>(new Set());
+  const voiceConnectedHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelVoiceNegotiation = useCallback(() => {
+    if (voiceConnectedHideTimerRef.current) {
+      clearTimeout(voiceConnectedHideTimerRef.current);
+      voiceConnectedHideTimerRef.current = null;
+    }
+    pendingHostAnswersRef.current.clear();
+    voiceNegotiationStartedAtRef.current = null;
+    voiceNegotiationPhaseRef.current = 'idle';
+    setVoiceNegotiation(VOICE_NEGOTIATION_IDLE);
+  }, []);
+
+  const confirmVoiceConnected = useCallback((reason: string) => {
+    if (voiceNegotiationPhaseRef.current !== 'connecting') return;
+
+    voiceNegotiationLog(`voice_connected (${reason})`, voiceNegotiationStartedAtRef.current);
+    voiceNegotiationPhaseRef.current = 'connected';
+    setVoiceNegotiation({
+      phase: 'connected',
+      startedAt: voiceNegotiationStartedAtRef.current,
+    });
+
+    if (voiceConnectedHideTimerRef.current) {
+      clearTimeout(voiceConnectedHideTimerRef.current);
+    }
+    voiceConnectedHideTimerRef.current = setTimeout(() => {
+      cancelVoiceNegotiation();
+    }, 2000);
+  }, [cancelVoiceNegotiation]);
+
+  const beginVoiceNegotiation = useCallback(() => {
+    if (voiceNegotiationPhaseRef.current === 'connecting') return;
+
+    if (voiceConnectedHideTimerRef.current) {
+      clearTimeout(voiceConnectedHideTimerRef.current);
+      voiceConnectedHideTimerRef.current = null;
+    }
+
+    const startedAt = performance.now();
+    voiceNegotiationStartedAtRef.current = startedAt;
+    voiceNegotiationPhaseRef.current = 'connecting';
+    setVoiceNegotiation({ phase: 'connecting', startedAt });
+    voiceNegotiationLog('mic_button_pressed', startedAt);
+  }, []);
 
   // WebRTC performance audit instrumentation
   const auditReports = useWebRTCAudit({ isHost, pcsRef, localStream, remoteStream, sharingState, micStream, audioTrackSource });
@@ -113,6 +172,15 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     }
     micGainNodeRef.current = null;
     viewerMicTracksRef.current.clear();
+
+    if (voiceConnectedHideTimerRef.current) {
+      clearTimeout(voiceConnectedHideTimerRef.current);
+      voiceConnectedHideTimerRef.current = null;
+    }
+    pendingHostAnswersRef.current.clear();
+    voiceNegotiationStartedAtRef.current = null;
+    voiceNegotiationPhaseRef.current = 'idle';
+    setVoiceNegotiation(VOICE_NEGOTIATION_IDLE);
 
     setLocalStream(null);
     setRemoteStream(null);
@@ -466,6 +534,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     }
     wsClient.send('audio_publish_request', { targetId: hostSocketId });
     console.log('[WebRTC] Sent audio_publish_request to host');
+    voiceNegotiationLog('audio_publish_request_sent', voiceNegotiationStartedAtRef.current);
   }, [hostSocketId]);
 
   // ─── Synchronize microphone mute and capture mic on-demand ────────────────
@@ -485,7 +554,12 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
             if (!isHost) diagStage2_micAcquired(true, micStreamObj.getAudioTracks()[0] ?? null);
 
             if (isHost) {
+              const viewers = viewerIds.filter((id) => id && id !== currentSocketId);
+              pendingHostAnswersRef.current = new Set(viewers);
               await syncAllViewers();
+              if (viewers.length === 0) {
+                confirmVoiceConnected('host_no_viewers');
+              }
             } else {
               // Viewer: always negotiate via host offer → attach → answer
               requestViewerMicPublish();
@@ -494,6 +568,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
             console.error('[WebRTC] Microphone access denied or not available:', err);
             if (!isHost) diagStage2_micAcquired(false, null, err);
             setMicWarning('Microphone access denied.');
+            cancelVoiceNegotiation();
           }
         } else {
           micStreamRef.current.getAudioTracks().forEach((track) => {
@@ -501,7 +576,12 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           });
 
           if (isHost) {
+            const viewers = viewerIds.filter((id) => id && id !== currentSocketId);
+            pendingHostAnswersRef.current = new Set(viewers);
             await syncAllViewers();
+            if (viewers.length === 0) {
+              confirmVoiceConnected('host_no_viewers');
+            }
           } else {
             // Re-unmute: renegotiate so upload m-line is sendonly (not just track.enabled)
             requestViewerMicPublish();
@@ -510,6 +590,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
         wsClient.send('mic_status_update', { micMuted: false });
         console.log('[WebRTC] Mic enabled, sent mic_status_update (false)');
       } else {
+        cancelVoiceNegotiation();
         if (micStreamRef.current) {
           micStreamRef.current.getAudioTracks().forEach((track) => {
             track.enabled = false;
@@ -521,7 +602,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     };
 
     syncMic();
-  }, [micMuted, isHost, syncAllViewers, requestViewerMicPublish]);
+  }, [micMuted, isHost, syncAllViewers, requestViewerMicPublish, viewerIds, currentSocketId, confirmVoiceConnected, cancelVoiceNegotiation]);
 
   // ─── Helper: attach viewer mic track to the host's recvonly mic-slot transceiver ──
   // The host adds the recvonly slot as the LAST audio transceiver in syncTracks.
@@ -584,6 +665,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
       // Viewer: receives an offer from the host
       console.log(`[WebRTC] Viewer received offer from host ${senderId}`);
+      voiceNegotiationLog('offer_received', voiceNegotiationStartedAtRef.current);
       let pc = pcsRef.current.get(senderId);
       if (!pc) {
         pc = createPeerConnection(senderId);
@@ -592,9 +674,11 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       if (!isHost) diagStage4_sdp('offer', offer.sdp);
 
+      const publishingMic = !!(micStreamRef.current && !micMuted);
+
       // If viewer has an active mic, attach it to the mic-slot transceiver before answering
-      if (micStreamRef.current && !micMuted) {
-        await attachViewerMicToPC(pc, micStreamRef.current);
+      if (publishingMic) {
+        await attachViewerMicToPC(pc, micStreamRef.current!);
       }
 
       const answer = await pc.createAnswer();
@@ -605,6 +689,10 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       }
 
       wsClient.send('webrtc_answer', { targetId: senderId, answer: pc.localDescription });
+      voiceNegotiationLog('answer_sent', voiceNegotiationStartedAtRef.current);
+      if (publishingMic) {
+        confirmVoiceConnected('viewer_answer_sent');
+      }
     });
 
     // Receives an answer
@@ -621,6 +709,17 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
       console.log(`[WebRTC] Host applying answer from viewer ${senderId}`);
       await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      voiceNegotiationLog('answer_received', voiceNegotiationStartedAtRef.current);
+
+      if (
+        voiceNegotiationPhaseRef.current === 'connecting' &&
+        pendingHostAnswersRef.current.has(senderId)
+      ) {
+        pendingHostAnswersRef.current.delete(senderId);
+        if (pendingHostAnswersRef.current.size === 0) {
+          confirmVoiceConnected('host_all_answers');
+        }
+      }
 
       console.log(`[DIAG:HostTransceivers] --- Transceiver Dump for Peer ${senderId} ---`);
       const transceivers = pc.getTransceivers();
@@ -674,7 +773,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       unsubStop();
       unsubAudioPublish();
     };
-  }, [isHost, currentSocketId, createPeerConnection, cleanup, sendOfferToViewer, micMuted]);
+  }, [isHost, currentSocketId, createPeerConnection, cleanup, sendOfferToViewer, micMuted, confirmVoiceConnected]);
 
   // ─── HOST: late-joiner — new viewer joins ──────────────────────────────────
   useEffect(() => {
@@ -731,5 +830,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     audioTrackSource,
     auditReports,
     getPeerConnectionStates,
+    voiceNegotiation,
+    beginVoiceNegotiation,
   };
 }

@@ -13,6 +13,7 @@ import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
 import { WebRTCAuditPanel } from '../components/WebRTCAuditPanel';
 import { diagStage7_hostPlayback, diagPrintSummary } from '../hooks/useViewerMicDiag';
 import { DiagnosticsPanel } from '../components/DiagnosticsPanel';
+import { VoiceNegotiationToast } from '../components/VoiceNegotiationToast';
 
 
 interface Participant {
@@ -89,6 +90,8 @@ export const RoomPage: React.FC = () => {
     micWarning,
     auditReports,
     getPeerConnectionStates,
+    voiceNegotiation,
+    beginVoiceNegotiation,
   } = useWebRTC({
     isHost,
     currentSocketId,
@@ -616,7 +619,12 @@ export const RoomPage: React.FC = () => {
             <div className="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-2xl">
               {/* Microphone toggle — all participants */}
               <button
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={() => {
+                  if (isMuted) {
+                    beginVoiceNegotiation();
+                  }
+                  setIsMuted(!isMuted);
+                }}
                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
                   isMuted
                     ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
@@ -990,6 +998,7 @@ export const RoomPage: React.FC = () => {
           getPeerConnectionStates={getPeerConnectionStates}
         />
       )}
+      <VoiceNegotiationToast state={voiceNegotiation} />
     </div>
   );
 };

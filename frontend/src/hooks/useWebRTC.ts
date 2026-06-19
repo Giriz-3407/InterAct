@@ -136,6 +136,12 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       const track = e.track;
       const stream = e.streams?.[0] ?? new MediaStream([track]);
 
+      console.log(`[DIAG:HostOnTrack] Invocation for peer: ${peerId}`);
+      console.log(`[DIAG:HostOnTrack] track.id: ${track.id}`);
+      console.log(`[DIAG:HostOnTrack] kind: ${track.kind}`);
+      console.log(`[DIAG:HostOnTrack] streams.length: ${e.streams ? e.streams.length : 0}`);
+      console.log(`[DIAG:HostOnTrack] transceiver.mid: ${e.transceiver?.mid ?? 'undefined'}`);
+
       console.log(`[WebRTC] Received track: id=${track.id}, kind=${track.kind}, streamId=${stream.id}, from=${peerId}`);
 
       if (isHost) {
@@ -599,6 +605,13 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
       console.log(`[WebRTC] Host applying answer from viewer ${senderId}`);
       await pc.setRemoteDescription(new RTCSessionDescription(answer));
+
+      console.log(`[DIAG:HostTransceivers] --- Transceiver Dump for Peer ${senderId} ---`);
+      const transceivers = pc.getTransceivers();
+      transceivers.forEach((t, i) => {
+        console.log(`[DIAG:HostTransceivers] Index ${i} | mid: ${t.mid} | direction: ${t.direction} | currentDirection: ${t.currentDirection} | sender.track.id: ${t.sender.track?.id ?? 'null'} | receiver.track.id: ${t.receiver.track?.id ?? 'null'}`);
+      });
+      console.log(`[DIAG:HostTransceivers] ----------------------------------------------`);
     });
 
     // BOTH: ICE candidate

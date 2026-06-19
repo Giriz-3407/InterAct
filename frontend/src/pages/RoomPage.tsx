@@ -137,6 +137,17 @@ export const RoomPage: React.FC = () => {
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const remoteMicAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
 
+  const attachRemoteMicStream = useCallback((el: HTMLAudioElement, stream: MediaStream) => {
+    if (el.srcObject !== stream) {
+      el.srcObject = stream;
+    }
+    el.muted = false;
+    el.volume = 1.0;
+    void el.play().catch((err) => {
+      console.warn('[RoomPage] Remote mic play failed:', err);
+    });
+  }, []);
+
   // Attach remote stream to video & audio elements and handle volume/mute
   useEffect(() => {
     if (remoteStream) {
@@ -189,12 +200,9 @@ export const RoomPage: React.FC = () => {
   useEffect(() => {
     remoteMicStreams.forEach((stream, streamId) => {
       const el = remoteMicAudioRefs.current.get(streamId);
-      if (el && el.srcObject !== stream) {
-        el.srcObject = stream;
-        el.muted = false;
-        el.volume = 1.0;
+      if (el) {
+        attachRemoteMicStream(el, stream);
       }
-      // Stage 7 diagnostic: check playback state after a tick (audio element needs to mount)
       if (isHost) {
         setTimeout(() => {
           const audioEl = remoteMicAudioRefs.current.get(streamId) ?? null;
@@ -203,13 +211,12 @@ export const RoomPage: React.FC = () => {
         }, 500);
       }
     });
-    // Clean up refs for streams that no longer exist
     remoteMicAudioRefs.current.forEach((_, streamId) => {
       if (!remoteMicStreams.has(streamId)) {
         remoteMicAudioRefs.current.delete(streamId);
       }
     });
-  }, [remoteMicStreams, isHost]);
+  }, [remoteMicStreams, isHost, attachRemoteMicStream]);
 
   // Load message history on startup
   useEffect(() => {
@@ -956,12 +963,13 @@ export const RoomPage: React.FC = () => {
         style={{ display: 'none' }}
       />
       {/* Dynamic audio elements for all remote mic streams (host mic + relayed viewer mics) */}
-      {Array.from(remoteMicStreams.entries()).map(([streamId]) => (
+      {Array.from(remoteMicStreams.entries()).map(([streamId, stream]) => (
         <audio
           key={streamId}
           ref={(el) => {
             if (el) {
               remoteMicAudioRefs.current.set(streamId, el);
+              attachRemoteMicStream(el, stream);
             } else {
               remoteMicAudioRefs.current.delete(streamId);
             }

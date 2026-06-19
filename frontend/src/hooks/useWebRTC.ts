@@ -458,6 +458,16 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     });
   }, [viewerIds, isHost, syncAllViewers]);
 
+  // ─── Viewer: request host offer so mic attaches before createAnswer ─────────
+  const requestViewerMicPublish = useCallback(() => {
+    if (!hostSocketId) {
+      console.warn('[WebRTC] Cannot publish mic: host socket ID unknown');
+      return;
+    }
+    wsClient.send('audio_publish_request', { targetId: hostSocketId });
+    console.log('[WebRTC] Sent audio_publish_request to host');
+  }, [hostSocketId]);
+
   // ─── Synchronize microphone mute and capture mic on-demand ────────────────
   // Works for BOTH host and viewer
   useEffect(() => {
@@ -475,18 +485,10 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
             if (!isHost) diagStage2_micAcquired(true, micStreamObj.getAudioTracks()[0] ?? null);
 
             if (isHost) {
-              // Host: sync tracks with all viewers and renegotiate (add mic track)
               await syncAllViewers();
             } else {
-              // Viewer: attach mic to existing PC's sendonly transceiver, or request PC
-              const pc = pcsRef.current.get(hostSocketId);
-              if (pc) {
-                await attachViewerMicToPC(pc, micStreamObj);
-              } else {
-                // No PC exists — request host to establish one
-                wsClient.send('audio_publish_request', { targetId: hostSocketId });
-                console.log('[WebRTC] Sent audio_publish_request to host (no existing PC)');
-              }
+              // Viewer: always negotiate via host offer → attach → answer
+              requestViewerMicPublish();
             }
           } catch (err) {
             console.error('[WebRTC] Microphone access denied or not available:', err);
@@ -501,10 +503,8 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           if (isHost) {
             await syncAllViewers();
           } else {
-            const pc = pcsRef.current.get(hostSocketId);
-            if (pc) {
-              await attachViewerMicToPC(pc, micStreamRef.current);
-            }
+            // Re-unmute: renegotiate so upload m-line is sendonly (not just track.enabled)
+            requestViewerMicPublish();
           }
         }
         wsClient.send('mic_status_update', { micMuted: false });
@@ -521,7 +521,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     };
 
     syncMic();
-  }, [micMuted, isHost, syncAllViewers, hostSocketId]);
+  }, [micMuted, isHost, syncAllViewers, requestViewerMicPublish]);
 
   // ─── Helper: attach viewer mic track to the host's recvonly mic-slot transceiver ──
   // The host adds the recvonly slot as the LAST audio transceiver in syncTracks.

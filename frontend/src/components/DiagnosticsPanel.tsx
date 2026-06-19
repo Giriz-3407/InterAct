@@ -14,7 +14,7 @@ export const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
 }) => {
   const [results, setResults] = useState<StageResult[]>([]);
   const [sessionId, setSessionId] = useState('');
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(window.innerWidth >= 768);
   const [copied, setCopied] = useState(false);
   const [expandedStage, setExpandedStage] = useState<number | null>(null);
 
@@ -161,10 +161,10 @@ export const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
     return (
       <button
         onClick={() => setIsExpanded(true)}
-        className="fixed bottom-4 right-4 z-[9999] flex items-center gap-2.5 px-4 py-2.5 rounded-full border border-zinc-700 bg-zinc-900/90 text-zinc-100 shadow-xl backdrop-blur-md cursor-pointer transition-all hover:bg-zinc-800 hover:-translate-y-0.5"
+        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-[9999] flex items-center gap-2.5 px-4 py-2.5 rounded-full border border-zinc-700 bg-zinc-900/90 text-zinc-100 shadow-xl backdrop-blur-md cursor-pointer transition-all hover:bg-zinc-800 hover:-translate-y-0.5 max-w-[calc(100vw-32px)]"
       >
         <span className={`h-2.5 w-2.5 rounded-full ${getOverallDotColor()} animate-pulse-subtle`} />
-        <span className="text-xs font-semibold tracking-wider uppercase font-mono">
+        <span className="text-xs font-semibold tracking-wider uppercase font-mono truncate max-w-[180px] sm:max-w-none">
           Diagnostics ({overallResult})
         </span>
       </button>
@@ -172,7 +172,7 @@ export const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] w-96 max-h-[85vh] flex flex-col glass-panel rounded-xl shadow-2xl overflow-hidden font-sans border border-zinc-800 select-none">
+    <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 right-4 md:left-auto md:right-4 md:w-96 z-[9999] max-h-[calc(85vh-env(safe-area-inset-bottom))] flex flex-col glass-panel rounded-xl shadow-2xl overflow-hidden font-sans border border-zinc-800 select-none">
       {/* Header */}
       <div className="flex items-center justify-between p-3.5 border-b border-zinc-800 bg-zinc-950/40">
         <div className="flex items-center gap-2">
@@ -197,9 +197,9 @@ export const DiagnosticsPanel: React.FC<DiagnosticsPanelProps> = ({
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4">
         {/* Session Meta */}
-        <div className="flex items-center justify-between text-[11px] text-zinc-500 font-mono bg-zinc-900/40 p-2 rounded-lg border border-zinc-800/60">
-          <span>Session: {sessionId}</span>
-          <span className="capitalize">Role: {isHost ? 'Host' : 'Viewer'}</span>
+        <div className="flex flex-col xs:flex-row xs:items-center justify-between text-[10px] md:text-[11px] text-zinc-500 font-mono bg-zinc-900/40 p-2 rounded-lg border border-zinc-800/60 gap-1 overflow-hidden">
+          <span className="truncate pr-1">Session: {sessionId}</span>
+          <span className="capitalize shrink-0">Role: {isHost ? 'Host' : 'Viewer'}</span>
         </div>
 
         {/* Summary Dashboard */}

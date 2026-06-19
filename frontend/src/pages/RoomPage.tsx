@@ -53,8 +53,10 @@ export const RoomPage: React.FC = () => {
   const [autoDelete, setAutoDelete] = useState(true);
 
   // Layout & Sidebar collapse/tab states
-  const [isLeftPanelExpanded, setIsLeftPanelExpanded] = useState(true);
-  const [isRightSidebarExpanded, setIsRightSidebarExpanded] = useState(true);
+  const [isLeftPanelExpanded, setIsLeftPanelExpanded] = useState(window.innerWidth >= 768);
+  const [isLeftPanelPinned, setIsLeftPanelPinned] = useState(false);
+  const [isRightSidebarExpanded, setIsRightSidebarExpanded] = useState(window.innerWidth >= 768);
+  const [isRightSidebarPinned, setIsRightSidebarPinned] = useState(false);
   const [activeRightTab, setActiveRightTab] = useState<'chat' | 'ai' | 'host'>('chat');
 
   // Check if current user is host
@@ -118,6 +120,19 @@ export const RoomPage: React.FC = () => {
       });
     }
   }, [localStream, hostAudioEnabled]);
+
+  // Screen Share Priority Mode: Automatically close non-pinned drawers on mobile when screen sharing/viewing starts
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    if (isMobile && (isSharing || isViewing)) {
+      if (!isLeftPanelPinned) {
+        setIsLeftPanelExpanded(false);
+      }
+      if (!isRightSidebarPinned) {
+        setIsRightSidebarExpanded(false);
+      }
+    }
+  }, [isSharing, isViewing, isLeftPanelPinned, isRightSidebarPinned]);
 
   const toggleHostAudio = useCallback(() => {
     setHostAudioEnabled((prev) => !prev);
@@ -362,6 +377,11 @@ export const RoomPage: React.FC = () => {
 
     wsClient.send('chat_message', { message: trimmed });
     setChatInput('');
+
+    // Auto-close chat drawer on mobile after sending a message if not pinned
+    if (window.innerWidth < 768 && !isRightSidebarPinned) {
+      setIsRightSidebarExpanded(false);
+    }
   };
 
   const handleShareToggle = useCallback(async () => {
@@ -390,7 +410,7 @@ export const RoomPage: React.FC = () => {
   if (showNamePrompt) {
     return (
       <div className="min-h-screen bg-bg text-on-surface flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="glass-panel w-full max-w-sm rounded-2xl p-6 shadow-2xl flex flex-col gap-4">
+        <div className="glass-panel w-full max-w-[95vw] sm:max-w-sm rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col gap-4">
           <div className="mb-2">
             <h2 className="text-base font-bold font-geist text-white">Join Room: {roomId}</h2>
             <p className="text-xs text-zinc-500 mt-1 font-inter">Please choose a display name to join this session</p>
@@ -424,15 +444,15 @@ export const RoomPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-bg text-on-surface font-inter flex flex-col h-screen overflow-hidden">
       {/* Top Navigation Bar */}
-      <header className="h-14 border-b border-slate-border bg-zinc-950/80 backdrop-blur-md flex items-center justify-between px-6 z-25 shrink-0">
-        <div className="flex items-center gap-3">
-          <h1 className="text-sm font-bold font-geist text-white tracking-tight leading-none">
+      <header className="h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-slate-border bg-zinc-950/80 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-25 shrink-0">
+        <div className="flex items-center gap-2 md:gap-3">
+          <h1 className="text-xs md:text-sm font-bold font-geist text-white tracking-tight leading-none">
             Room: {roomId}
           </h1>
           {isHost && <AgentStatusIndicator />}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 md:gap-3">
           {/* Sharing status indicator in header */}
           {isSharing && (
             <span className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-rose-400 animate-pulse">
@@ -449,26 +469,72 @@ export const RoomPage: React.FC = () => {
 
           <div className="h-4 w-px bg-zinc-850 hidden sm:block" />
 
+          {/* Participants Toggle Button */}
+          <button
+            onClick={() => setIsLeftPanelExpanded(!isLeftPanelExpanded)}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 cursor-pointer ${
+              isLeftPanelExpanded
+                ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
+            }`}
+            title="Toggle Participants"
+          >
+            <span className="material-symbols-outlined text-[16px]">group</span>
+            <span className="hidden sm:inline">Participants</span>
+            <span className="text-[10px] px-1 bg-zinc-950 rounded text-zinc-400 font-mono">
+              {participants.length}
+            </span>
+          </button>
+
+          {/* Chat Toggle Button */}
+          <button
+            onClick={() => {
+              if (!isRightSidebarExpanded) {
+                setIsRightSidebarExpanded(true);
+                setActiveRightTab('chat');
+              } else {
+                if (activeRightTab === 'chat') {
+                  setIsRightSidebarExpanded(false);
+                } else {
+                  setActiveRightTab('chat');
+                }
+              }
+            }}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 cursor-pointer ${
+              isRightSidebarExpanded && activeRightTab === 'chat'
+                ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
+            }`}
+            title="Toggle Chat"
+          >
+            <span className="material-symbols-outlined text-[16px]">forum</span>
+            <span className="hidden sm:inline">Chat</span>
+            <span className="text-[10px] px-1 bg-zinc-950 rounded text-zinc-400 font-mono">
+              {messages.length}
+            </span>
+          </button>
+
           {/* Action buttons */}
           {isHost && (
             <button
               onClick={handleHostControlsClick}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 cursor-pointer ${
                 isRightSidebarExpanded && activeRightTab === 'host'
                   ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
                   : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">settings_accessibility</span>
-              <span>Host Controls</span>
+              <span className="hidden md:inline">Host Controls</span>
             </button>
           )}
 
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-3.5 py-1.5 rounded-full text-xs font-semibold font-geist bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/10 cursor-pointer"
+            className="px-3 py-1.5 rounded-full text-xs font-semibold font-geist bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/10 cursor-pointer"
           >
-            Leave Room
+            <span className="hidden sm:inline">Leave Room</span>
+            <span className="sm:hidden">Leave</span>
           </button>
         </div>
       </header>
@@ -485,10 +551,12 @@ export const RoomPage: React.FC = () => {
           currentUserId={currentSocketId}
           isExpanded={isLeftPanelExpanded}
           onToggleExpand={() => setIsLeftPanelExpanded(!isLeftPanelExpanded)}
+          isPinned={isLeftPanelPinned}
+          onTogglePin={() => setIsLeftPanelPinned(!isLeftPanelPinned)}
         />
 
         {/* Center Screen Sharing Canvas Area */}
-        <main className="flex-1 bg-zinc-950/20 p-3 flex flex-col justify-between overflow-hidden relative gap-3">
+        <main className="flex-1 bg-zinc-950/20 p-3 pb-24 landscape:pb-20 md:pb-3 flex flex-col justify-between overflow-hidden relative gap-3">
           {/* Error message banner */}
           {errorMessage && (
             <div className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 font-inter flex items-center gap-2 shrink-0">
@@ -552,28 +620,28 @@ export const RoomPage: React.FC = () => {
 
             {/* Waiting / Sharing state overlay when no video */}
             {!isViewing && (
-              <div className="text-center flex flex-col items-center gap-4 max-w-sm z-10 p-8">
+              <div className="text-center flex flex-col items-center gap-3 sm:gap-4 max-w-sm z-10 p-4 sm:p-8">
                 {isRequesting ? (
                   <>
-                    <div className="w-12 h-12 rounded-full border-2 border-indigo-500/40 border-t-indigo-500 animate-spin" />
-                    <h3 className="text-sm font-bold font-geist text-zinc-400">Opening screen picker…</h3>
-                    <p className="text-xs text-zinc-500 font-inter">Select a window, tab, or entire screen to share.</p>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-indigo-500/40 border-t-indigo-500 animate-spin" />
+                    <h3 className="text-xs sm:text-sm font-bold font-geist text-zinc-400">Opening screen picker…</h3>
+                    <p className="text-[10px] sm:text-xs text-zinc-500 font-inter">Select a window, tab, or entire screen to share.</p>
                   </>
                 ) : isSharing ? (
                   <>
-                    <span className="material-symbols-outlined text-[48px] text-indigo-500">screen_share</span>
-                    <h3 className="text-sm font-bold font-geist text-zinc-300">You are sharing your screen</h3>
-                    <p className="text-xs text-zinc-500 font-inter leading-relaxed">
+                    <span className="material-symbols-outlined text-[40px] sm:text-[48px] text-indigo-500">screen_share</span>
+                    <h3 className="text-xs sm:text-sm font-bold font-geist text-zinc-300">You are sharing your screen</h3>
+                    <p className="text-[10px] sm:text-xs text-zinc-500 font-inter leading-relaxed">
                       Participants in this room can see your screen. Use the Stop button to end sharing.
                     </p>
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-[56px] text-zinc-700">monitor</span>
-                    <h3 className="text-sm font-bold font-geist text-zinc-400">
+                    <span className="material-symbols-outlined text-[44px] sm:text-[56px] text-zinc-700">monitor</span>
+                    <h3 className="text-xs sm:text-sm font-bold font-geist text-zinc-400">
                       {isHost ? 'Ready to share your screen' : 'Waiting for host to share screen'}
                     </h3>
-                    <p className="text-xs text-zinc-500 leading-relaxed font-inter">
+                    <p className="text-[10px] sm:text-xs text-zinc-500 leading-relaxed font-inter">
                       {isHost
                         ? 'Click "Start Sharing" below to begin broadcasting your screen to all participants.'
                         : 'Only the host of the room can initiate a sharing stream. Watching sessions is optimized automatically.'}
@@ -582,9 +650,9 @@ export const RoomPage: React.FC = () => {
                     {isHost && (
                       <button
                         onClick={handleShareToggle}
-                        className="mt-2 px-5 py-2.5 rounded-xl text-xs font-semibold font-geist bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:opacity-90 shadow-lg shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-2"
+                        className="mt-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs font-semibold font-geist bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:opacity-90 shadow-lg shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-2"
                       >
-                        <span className="material-symbols-outlined text-[18px]">screen_share</span>
+                        <span className="material-symbols-outlined text-[16px] sm:text-[18px]">screen_share</span>
                         Start Sharing
                       </button>
                     )}
@@ -615,8 +683,8 @@ export const RoomPage: React.FC = () => {
           </div>
 
           {/* Floating RTC controls bar */}
-          <div className="flex justify-center z-10 shrink-0">
-            <div className="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-2xl">
+          <div className="fixed bottom-0 left-0 right-0 z-30 bg-zinc-950/95 border-t border-slate-border px-4 py-3 flex items-center justify-center gap-3 pb-[calc(12px+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] md:static md:bg-transparent md:border-t-0 md:p-0 md:z-10 md:shrink-0 md:flex md:justify-center landscape:py-2">
+            <div className="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-2xl flex-wrap justify-center max-w-full overflow-x-auto custom-scrollbar md:flex-nowrap">
               {/* Microphone toggle — all participants */}
               <button
                 onClick={() => {
@@ -625,14 +693,14 @@ export const RoomPage: React.FC = () => {
                   }
                   setIsMuted(!isMuted);
                 }}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
+                className={`w-11 h-11 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer shrink-0 ${
                   isMuted
                     ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
                     : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
                 }`}
                 title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
               >
-                <span className="material-symbols-outlined text-[18px]">
+                <span className="material-symbols-outlined text-[20px] md:text-[18px]">
                   {isMuted ? 'mic_off' : 'mic'}
                 </span>
               </button>
@@ -642,7 +710,7 @@ export const RoomPage: React.FC = () => {
                 <button
                   onClick={handleShareToggle}
                   disabled={isRequesting}
-                  className={`px-3.5 h-8 rounded-lg flex items-center justify-center transition-all border gap-1.5 text-xs font-bold font-geist cursor-pointer ${
+                  className={`px-4 h-11 md:px-3.5 md:h-8 rounded-lg flex items-center justify-center transition-all border gap-1.5 text-xs font-bold font-geist cursor-pointer shrink-0 ${
                     isSharing
                       ? 'bg-rose-600 hover:bg-rose-500 text-white border-transparent'
                       : isRequesting
@@ -650,7 +718,7 @@ export const RoomPage: React.FC = () => {
                       : 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-transparent hover:opacity-90'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px]">
+                  <span className="material-symbols-outlined text-[20px] md:text-[18px]">
                     {isSharing ? 'stop_screen_share' : 'screen_share'}
                   </span>
                   <span>{isSharing ? 'Stop Sharing' : isRequesting ? 'Requesting…' : 'Share Screen'}</span>
@@ -660,17 +728,17 @@ export const RoomPage: React.FC = () => {
               {/* Host Toggle Shared Audio */}
               {isHost && isSharing && (
                 <>
-                  <div className="w-px h-5 bg-zinc-800/80" />
+                  <div className="w-px h-5 bg-zinc-800/80 shrink-0" />
                   <button
                     onClick={toggleHostAudio}
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
+                    className={`w-11 h-11 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer shrink-0 ${
                       !hostAudioEnabled
                         ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
                         : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
                     }`}
                     title={hostAudioEnabled ? 'Mute shared audio' : 'Unmute shared audio'}
                   >
-                    <span className="material-symbols-outlined text-[18px]">
+                    <span className="material-symbols-outlined text-[20px] md:text-[18px]">
                       {hostAudioEnabled ? 'volume_up' : 'volume_off'}
                     </span>
                   </button>
@@ -680,21 +748,21 @@ export const RoomPage: React.FC = () => {
               {/* Viewer Local Mute/Volume controls */}
               {isViewing && (
                 <>
-                  <div className="w-px h-5 bg-zinc-800/80" />
+                  <div className="w-px h-5 bg-zinc-800/80 shrink-0" />
                   <button
                     onClick={() => setViewerMuted(!viewerMuted)}
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer ${
+                    className={`w-11 h-11 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer shrink-0 ${
                       viewerMuted
                         ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
                         : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
                     }`}
                     title={viewerMuted ? 'Unmute remote audio' : 'Mute remote audio'}
                   >
-                    <span className="material-symbols-outlined text-[18px]">
+                    <span className="material-symbols-outlined text-[20px] md:text-[18px]">
                       {viewerMuted ? 'volume_off' : 'volume_up'}
                     </span>
                   </button>
-                  <div className="flex items-center gap-1.5 px-1">
+                  <div className="flex items-center gap-1.5 px-1 shrink-0">
                     <span className="text-[10px] text-zinc-500 font-mono">Vol</span>
                     <input
                       type="range"
@@ -719,23 +787,32 @@ export const RoomPage: React.FC = () => {
                 </>
               )}
 
-              <div className="w-px h-5 bg-zinc-800/80" />
+              <div className="w-px h-5 bg-zinc-800/80 shrink-0" />
 
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-8 h-8 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center cursor-pointer transition-colors"
+                className="w-11 h-11 md:w-8 md:h-8 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
                 title="Leave Room"
               >
-                <span className="material-symbols-outlined text-[18px]">call_end</span>
+                <span className="material-symbols-outlined text-[20px] md:text-[18px]">call_end</span>
               </button>
             </div>
           </div>
         </main>
 
+        {isRightSidebarExpanded && (
+          <div
+            onClick={() => setIsRightSidebarExpanded(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-35 md:hidden"
+          />
+        )}
+
         {/* Right Chat and AI Panel */}
-        <aside className={`border-l border-slate-border bg-zinc-950/40 flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${
-          isRightSidebarExpanded ? 'w-80' : 'w-12'
-        }`}>
+        <aside className={`border-l border-slate-border bg-zinc-950 md:bg-zinc-950/40 flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out fixed md:static top-0 bottom-0 right-0 z-40 pr-[env(safe-area-inset-right)] ${
+          isRightSidebarExpanded
+            ? 'w-full max-w-[85vw] sm:w-80 translate-x-0'
+            : 'w-full max-w-[85vw] sm:w-80 translate-x-full md:translate-x-0 md:w-12'
+        } ${!isRightSidebarExpanded ? 'invisible md:visible' : ''}`}>
           {isRightSidebarExpanded ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Tab Header Bar */}
@@ -786,13 +863,27 @@ export const RoomPage: React.FC = () => {
                   )}
                 </div>
 
-                <button
-                  onClick={() => setIsRightSidebarExpanded(false)}
-                  className="p-1 rounded hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300 cursor-pointer"
-                  title="Collapse sidebar"
-                >
-                  <span className="material-symbols-outlined text-[18px] block">chevron_right</span>
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsRightSidebarPinned(!isRightSidebarPinned)}
+                    className={`p-1 rounded hover:bg-zinc-900 transition-colors cursor-pointer md:hidden ${
+                      isRightSidebarPinned ? 'text-indigo-400' : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                    title={isRightSidebarPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
+                  >
+                    <span className="material-symbols-outlined text-[16px] block">
+                      push_pin
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setIsRightSidebarExpanded(false)}
+                    className="p-1 rounded hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300 cursor-pointer"
+                    title="Collapse sidebar"
+                  >
+                    <span className="material-symbols-outlined text-[18px] block">chevron_right</span>
+                  </button>
+                </div>
               </div>
 
               {/* Tab Contents */}

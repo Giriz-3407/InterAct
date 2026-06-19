@@ -53,7 +53,7 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="glass-panel w-full max-w-sm rounded-2xl p-6 shadow-2xl relative flex flex-col gap-4">
+      <div className="glass-panel w-full max-w-[95vw] sm:max-w-sm rounded-2xl p-4 sm:p-6 shadow-2xl relative flex flex-col gap-4 animate-scale-up">
         {/* Close Button */}
         <button
           onClick={onClose}

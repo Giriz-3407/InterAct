@@ -16,6 +16,8 @@ interface ParticipantPanelProps {
   currentUserId?: string;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
@@ -24,13 +26,24 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
   currentUserId,
   isExpanded,
   onToggleExpand,
+  isPinned = false,
+  onTogglePin,
 }) => {
   return (
-    <aside
-      className={`ml-16 bg-zinc-950/40 border-r border-slate-border flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out overflow-hidden ${
-        isExpanded ? 'w-60 p-3' : 'w-12 p-2 items-center'
-      }`}
-    >
+    <>
+      {isExpanded && (
+        <div
+          onClick={onToggleExpand}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-35 md:hidden"
+        />
+      )}
+      <aside
+        className={`fixed md:static top-0 bottom-0 left-0 z-40 h-full bg-zinc-950 md:bg-zinc-950/40 border-r border-slate-border flex flex-col shrink-0 transition-all duration-300 ease-in-out pl-[env(safe-area-inset-left)] md:ml-16 md:transform-none ${
+          isExpanded
+            ? 'w-full max-w-[85vw] sm:w-72 translate-x-0 p-4 md:p-3 md:w-60'
+            : 'w-full max-w-[85vw] sm:w-72 -translate-x-full md:translate-x-0 md:w-12 p-4 md:p-2 md:items-center'
+        } ${!isExpanded ? 'invisible md:visible' : ''}`}
+      >
       {/* Header section */}
       {isExpanded ? (
         <div className="mb-3 pb-2 border-b border-zinc-800/60 w-full flex flex-col shrink-0">
@@ -40,6 +53,20 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
               <span className="text-[10px] font-mono bg-zinc-850 px-1.5 py-0.5 rounded text-zinc-400">
                 {participants.length}
               </span>
+              {onTogglePin && (
+                <button
+                  type="button"
+                  onClick={onTogglePin}
+                  className={`p-1 rounded hover:bg-zinc-900 transition-colors cursor-pointer md:hidden ${
+                    isPinned ? 'text-indigo-400' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                  title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
+                >
+                  <span className="material-symbols-outlined text-[16px] block">
+                    push_pin
+                  </span>
+                </button>
+              )}
               <button
                 onClick={onToggleExpand}
                 className="p-1 rounded hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
@@ -128,5 +155,6 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
         })}
       </div>
     </aside>
+  </>
   );
 };

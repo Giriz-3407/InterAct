@@ -122,10 +122,14 @@ export function diagStage3_attachCalled(
   }
 
   const transceivers = pc.getTransceivers();
-  const audioSlots = transceivers.filter(
-    (t) => t.receiver.track?.kind === 'audio'
-  );
-  const micSlot = audioSlots[audioSlots.length - 1];
+  const audioTransceivers = transceivers.filter((t) => {
+    if (t.sender.track?.kind === 'audio') return true;
+    if (t.receiver.track?.kind === 'audio') return true;
+    if (t.sender.track || t.receiver.track) return false;
+    const dir = t.currentDirection ?? t.direction;
+    return dir === 'sendonly' || dir === 'recvonly' || dir === 'sendrecv';
+  });
+  const micSlot = audioTransceivers[audioTransceivers.length - 1];
 
   const transceiverDump = transceivers.map((t, i) => ({
     index: i,
@@ -143,7 +147,7 @@ export function diagStage3_attachCalled(
     status: micSlot ? 'PASS' : 'FAIL',
     details: {
       totalTransceivers: transceivers.length,
-      audioSlotCount: audioSlots.length,
+      audioSlotCount: audioTransceivers.length,
       selectedMicSlotMid: micSlot?.mid ?? 'NONE',
       selectedSlotDirection: micSlot?.direction ?? 'NONE',
       selectedSlotCurrentDirection: micSlot?.currentDirection ?? 'NONE',

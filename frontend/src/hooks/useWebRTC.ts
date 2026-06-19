@@ -16,6 +16,24 @@ const STUN_CONFIG: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 };
 
+/** All audio m-lines on a PC, in negotiation order. */
+function getAudioTransceivers(pc: RTCPeerConnection): RTCRtpTransceiver[] {
+  return pc.getTransceivers().filter((t) => {
+    if (t.sender.track?.kind === 'audio') return true;
+    if (t.receiver.track?.kind === 'audio') return true;
+    // Host-reserved viewer upload slot: empty audio m-line before attach
+    if (t.sender.track || t.receiver.track) return false;
+    const dir = t.currentDirection ?? t.direction;
+    return dir === 'sendonly' || dir === 'recvonly' || dir === 'sendrecv';
+  });
+}
+
+/** Host always appends the viewer upload slot as the last audio transceiver in syncTracks. */
+function selectViewerMicPublishSlot(pc: RTCPeerConnection): RTCRtpTransceiver | undefined {
+  const audioTransceivers = getAudioTransceivers(pc);
+  return audioTransceivers[audioTransceivers.length - 1];
+}
+
 export type SharingState = 'idle' | 'requesting' | 'sharing' | 'viewing' | 'error';
 export type CaptureDisplaySurface = 'monitor' | 'window' | 'browser' | string;
 
@@ -298,10 +316,11 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     // 3. Host: ensure a recvonly audio transceiver exists for receiving viewer mic
     if (isHost) {
       const transceivers = pc.getTransceivers();
-      const hasRecvSlot = transceivers.some((t) =>
-        t.receiver.track?.kind === 'audio' &&
-        (t.direction === 'recvonly') &&
-        !t.sender.track
+      const hasRecvSlot = transceivers.some(
+        (t) =>
+          !t.sender.track &&
+          !t.receiver.track &&
+          (t.direction === 'recvonly' || t.currentDirection === 'recvonly')
       );
       if (!hasRecvSlot) {
         try {
@@ -479,8 +498,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
             track.enabled = true;
           });
 
-          // Viewer: also re-enable on the transceiver sender
-          if (!isHost) {
+          if (isHost) {
+            await syncAllViewers();
+          } else {
             const pc = pcsRef.current.get(hostSocketId);
             if (pc) {
               await attachViewerMicToPC(pc, micStreamRef.current);
@@ -514,11 +534,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       return;
     }
 
-    const transceivers = pc.getTransceivers();
-    const audioSlots = transceivers.filter(
-      (t) => t.receiver.track?.kind === 'audio'
-    );
-    const micSlot = audioSlots[audioSlots.length - 1];
+    const micSlot = selectViewerMicPublishSlot(pc);
 
     if (micSlot) {
       micSlot.direction = 'sendonly';

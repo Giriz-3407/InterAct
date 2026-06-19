@@ -393,17 +393,33 @@ export const RoomPage: React.FC = () => {
     }
   }, [isSharing, startSharing, stopSharing]);
 
-  const handleHostControlsClick = useCallback(() => {
+  const handleParticipantsToggle = useCallback(() => {
+    setIsLeftPanelExpanded((prev) => {
+      const next = !prev;
+      if (next && window.innerWidth < 768) {
+        setIsRightSidebarExpanded(false);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleRightPanelToggle = useCallback((tab: 'chat' | 'ai' | 'host') => {
+    if (window.innerWidth < 768) {
+      setIsLeftPanelExpanded(false);
+    }
+
     if (!isRightSidebarExpanded) {
       setIsRightSidebarExpanded(true);
-      setActiveRightTab('host');
-    } else {
-      if (activeRightTab === 'host') {
-        setIsRightSidebarExpanded(false);
-      } else {
-        setActiveRightTab('host');
-      }
+      setActiveRightTab(tab);
+      return;
     }
+
+    if (activeRightTab === tab) {
+      setIsRightSidebarExpanded(false);
+      return;
+    }
+
+    setActiveRightTab(tab);
   }, [isRightSidebarExpanded, activeRightTab]);
 
   // Name Entry Prompt Dialog overlay
@@ -444,35 +460,38 @@ export const RoomPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-bg text-on-surface font-inter flex flex-col h-screen overflow-hidden">
       {/* Top Navigation Bar */}
-      <header className="h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-slate-border bg-zinc-950/80 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-25 shrink-0">
-        <div className="flex items-center gap-2 md:gap-3">
-          <h1 className="text-xs md:text-sm font-bold font-geist text-white tracking-tight leading-none">
-            Room: {roomId}
-          </h1>
+      <header className="min-h-[calc(4rem+env(safe-area-inset-top))] md:h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-slate-border bg-zinc-950/90 backdrop-blur-md flex items-center justify-between gap-2 px-3 md:px-6 z-[25] shrink-0 select-none">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex flex-col min-w-0">
+            <span className="text-[9px] uppercase tracking-wider text-zinc-600 font-geist leading-none mb-1 md:hidden">Room</span>
+            <h1 className="text-sm md:text-sm font-bold font-geist text-white tracking-tight leading-none flex items-center gap-1.5 min-w-0">
+              <span className="font-mono text-[#c0c1ff] truncate max-w-[7.5rem] sm:max-w-none">{roomId}</span>
+            </h1>
+          </div>
           {isHost && <AgentStatusIndicator />}
         </div>
 
-        <div className="flex items-center gap-1.5 md:gap-3">
+        <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
           {/* Sharing status indicator in header */}
           {isSharing && (
-            <span className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-rose-400 animate-pulse">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-              LIVE
+            <span className="h-8 px-2 flex items-center gap-1 text-[10px] font-mono text-rose-400 rounded-lg bg-rose-500/10 border border-rose-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+              <span>LIVE</span>
             </span>
           )}
           {isViewing && (
-            <span className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-indigo-400">
+            <span className="h-8 px-2 flex items-center gap-1 text-[10px] font-mono text-indigo-400 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              Receiving Stream
+              <span className="hidden min-[380px]:inline">LIVE</span>
             </span>
           )}
 
-          <div className="h-4 w-px bg-zinc-850 hidden sm:block" />
+          <div className="h-5 w-px bg-zinc-850 hidden md:block" />
 
           {/* Participants Toggle Button */}
           <button
-            onClick={() => setIsLeftPanelExpanded(!isLeftPanelExpanded)}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 cursor-pointer ${
+            onClick={handleParticipantsToggle}
+            className={`h-8 min-w-8 px-2 md:px-2.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
               isLeftPanelExpanded
                 ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
                 : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
@@ -480,27 +499,16 @@ export const RoomPage: React.FC = () => {
             title="Toggle Participants"
           >
             <span className="material-symbols-outlined text-[16px]">group</span>
-            <span className="hidden sm:inline">Participants</span>
-            <span className="text-[10px] px-1 bg-zinc-950 rounded text-zinc-400 font-mono">
+            <span className="hidden md:inline">Participants</span>
+            <span className="text-[10px] px-1 bg-zinc-950 rounded text-zinc-400 font-mono leading-4">
               {participants.length}
             </span>
           </button>
 
           {/* Chat Toggle Button */}
           <button
-            onClick={() => {
-              if (!isRightSidebarExpanded) {
-                setIsRightSidebarExpanded(true);
-                setActiveRightTab('chat');
-              } else {
-                if (activeRightTab === 'chat') {
-                  setIsRightSidebarExpanded(false);
-                } else {
-                  setActiveRightTab('chat');
-                }
-              }
-            }}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 cursor-pointer ${
+            onClick={() => handleRightPanelToggle('chat')}
+            className={`h-8 min-w-8 px-2 md:px-2.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
               isRightSidebarExpanded && activeRightTab === 'chat'
                 ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
                 : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
@@ -508,33 +516,48 @@ export const RoomPage: React.FC = () => {
             title="Toggle Chat"
           >
             <span className="material-symbols-outlined text-[16px]">forum</span>
-            <span className="hidden sm:inline">Chat</span>
-            <span className="text-[10px] px-1 bg-zinc-950 rounded text-zinc-400 font-mono">
+            <span className="hidden md:inline">Chat</span>
+            <span className="text-[10px] px-1 bg-zinc-950 rounded text-zinc-400 font-mono leading-4">
               {messages.length}
             </span>
+          </button>
+
+          <button
+            onClick={() => handleRightPanelToggle('ai')}
+            className={`h-8 min-w-8 px-2 md:px-2.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
+              isRightSidebarExpanded && activeRightTab === 'ai'
+                ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
+                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
+            }`}
+            title="AI Insights"
+          >
+            <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+            <span className="hidden md:inline">Insights</span>
           </button>
 
           {/* Action buttons */}
           {isHost && (
             <button
-              onClick={handleHostControlsClick}
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center gap-1.5 cursor-pointer ${
+              onClick={() => handleRightPanelToggle('host')}
+              className={`h-8 min-w-8 px-2 md:px-2.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
                 isRightSidebarExpanded && activeRightTab === 'host'
                   ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
                   : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
               }`}
+              title="Toggle Host Controls"
             >
               <span className="material-symbols-outlined text-[16px]">settings_accessibility</span>
-              <span className="hidden md:inline">Host Controls</span>
+              <span className="hidden md:inline">Host</span>
             </button>
           )}
 
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-3 py-1.5 rounded-full text-xs font-semibold font-geist bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/10 cursor-pointer"
+            className="w-8 h-8 md:w-auto md:px-3 md:py-1.5 rounded-lg text-xs font-semibold font-geist bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/10 cursor-pointer flex items-center justify-center shrink-0"
+            title="Leave Room"
           >
-            <span className="hidden sm:inline">Leave Room</span>
-            <span className="sm:hidden">Leave</span>
+            <span className="material-symbols-outlined text-[16px] md:hidden block">logout</span>
+            <span className="hidden md:inline">Leave Room</span>
           </button>
         </div>
       </header>
@@ -550,13 +573,13 @@ export const RoomPage: React.FC = () => {
           participants={participants.map((p) => p.socketId === currentSocketId ? { ...p, micMuted: isMuted } : p)}
           currentUserId={currentSocketId}
           isExpanded={isLeftPanelExpanded}
-          onToggleExpand={() => setIsLeftPanelExpanded(!isLeftPanelExpanded)}
+          onToggleExpand={handleParticipantsToggle}
           isPinned={isLeftPanelPinned}
           onTogglePin={() => setIsLeftPanelPinned(!isLeftPanelPinned)}
         />
 
         {/* Center Screen Sharing Canvas Area */}
-        <main className="flex-1 bg-zinc-950/20 p-3 pb-24 landscape:pb-20 md:pb-3 flex flex-col justify-between overflow-hidden relative gap-3">
+        <main className="flex-1 bg-zinc-950/20 p-2.5 sm:p-3 pb-[7rem] landscape:pb-[5.5rem] md:pb-3 flex flex-col justify-between overflow-hidden relative gap-2.5 md:gap-3 min-w-0">
           {/* Error message banner */}
           {errorMessage && (
             <div className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 font-inter flex items-center gap-2 shrink-0">
@@ -589,20 +612,20 @@ export const RoomPage: React.FC = () => {
           )}
 
           {/* Viewport container */}
-          <div ref={viewportRef} className="flex-1 flex items-center justify-center rounded-2xl border border-zinc-850/60 bg-[#0d1117]/60 overflow-hidden relative w-full h-full">
+          <div ref={viewportRef} className="flex-1 min-h-0 flex items-center justify-center rounded-xl md:rounded-2xl border border-zinc-850/60 bg-[#0d1117]/70 overflow-hidden relative w-full h-full shadow-inner">
 
             {/* Active Indicators Row */}
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 flex gap-2 pointer-events-none">
+            <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-50 flex gap-2 pointer-events-none max-w-[calc(100%-1.5rem)]">
               {laserModeActive && (
-                <div className="bg-zinc-950/85 text-zinc-100 px-3 py-1.5 rounded-full text-xs font-semibold border border-zinc-800 shadow-md flex items-center gap-2">
+                <div className="bg-zinc-950/85 text-zinc-100 px-3 py-1.5 rounded-full text-[11px] md:text-xs font-semibold border border-zinc-800 shadow-md flex items-center gap-2 whitespace-nowrap">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>🟢 Laser Active</span>
+                  <span>Laser Active</span>
                 </div>
               )}
               {spotlightActive && (
-                <div className="bg-zinc-950/85 text-zinc-100 px-3 py-1.5 rounded-full text-xs font-semibold border border-zinc-800 shadow-md flex items-center gap-2">
+                <div className="bg-zinc-950/85 text-zinc-100 px-3 py-1.5 rounded-full text-[11px] md:text-xs font-semibold border border-zinc-800 shadow-md flex items-center gap-2 whitespace-nowrap">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-                  <span>🔦 Spotlight Active</span>
+                  <span>Spotlight Active</span>
                 </div>
               )}
             </div>
@@ -620,28 +643,32 @@ export const RoomPage: React.FC = () => {
 
             {/* Waiting / Sharing state overlay when no video */}
             {!isViewing && (
-              <div className="text-center flex flex-col items-center gap-3 sm:gap-4 max-w-sm z-10 p-4 sm:p-8">
+              <div className="text-center flex flex-col items-center justify-center gap-3 max-w-[19rem] z-10 p-5 sm:p-8 min-h-[18rem]">
                 {isRequesting ? (
                   <>
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-indigo-500/40 border-t-indigo-500 animate-spin" />
-                    <h3 className="text-xs sm:text-sm font-bold font-geist text-zinc-400">Opening screen picker…</h3>
-                    <p className="text-[10px] sm:text-xs text-zinc-500 font-inter">Select a window, tab, or entire screen to share.</p>
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-indigo-500/40 border-t-indigo-500 animate-spin mb-1" />
+                    <h3 className="text-xs sm:text-sm font-bold font-geist text-zinc-300">Opening screen picker…</h3>
+                    <p className="text-[10px] sm:text-xs text-zinc-500 font-inter max-w-[280px]">Select a window, tab, or entire screen to share.</p>
                   </>
                 ) : isSharing ? (
                   <>
-                    <span className="material-symbols-outlined text-[40px] sm:text-[48px] text-indigo-500">screen_share</span>
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center mb-1 animate-pulse-subtle">
+                      <span className="material-symbols-outlined text-[26px] sm:text-[28px] text-indigo-400">screen_share</span>
+                    </div>
                     <h3 className="text-xs sm:text-sm font-bold font-geist text-zinc-300">You are sharing your screen</h3>
-                    <p className="text-[10px] sm:text-xs text-zinc-500 font-inter leading-relaxed">
+                    <p className="text-[10px] sm:text-xs text-zinc-500 font-inter leading-relaxed max-w-[280px]">
                       Participants in this room can see your screen. Use the Stop button to end sharing.
                     </p>
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-[44px] sm:text-[56px] text-zinc-700">monitor</span>
-                    <h3 className="text-xs sm:text-sm font-bold font-geist text-zinc-400">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-zinc-900/60 border border-zinc-800 flex items-center justify-center mb-1">
+                      <span className="material-symbols-outlined text-[26px] sm:text-[28px] text-zinc-500">monitor</span>
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-bold font-geist text-zinc-300">
                       {isHost ? 'Ready to share your screen' : 'Waiting for host to share screen'}
                     </h3>
-                    <p className="text-[10px] sm:text-xs text-zinc-500 leading-relaxed font-inter">
+                    <p className="text-[10px] sm:text-xs text-zinc-500 leading-relaxed font-inter max-w-[280px]">
                       {isHost
                         ? 'Click "Start Sharing" below to begin broadcasting your screen to all participants.'
                         : 'Only the host of the room can initiate a sharing stream. Watching sessions is optimized automatically.'}
@@ -650,7 +677,7 @@ export const RoomPage: React.FC = () => {
                     {isHost && (
                       <button
                         onClick={handleShareToggle}
-                        className="mt-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs font-semibold font-geist bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:opacity-90 shadow-lg shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-2"
+                        className="mt-2 px-5 py-3 rounded-xl text-xs font-semibold font-geist bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:opacity-90 shadow-lg shadow-indigo-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2 min-h-11"
                       >
                         <span className="material-symbols-outlined text-[16px] sm:text-[18px]">screen_share</span>
                         Start Sharing
@@ -663,11 +690,11 @@ export const RoomPage: React.FC = () => {
 
             {/* Presenter floating pill when sharing */}
             {isSharing && (
-              <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 backdrop-blur">
+              <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 backdrop-blur max-w-[calc(100%-1.5rem)]">
                 <Avatar name={displayName} size="xs" color="bg-indigo-600" />
-                <div className="flex flex-col">
-                  <span className="text-3xs text-zinc-300 font-inter font-semibold">{displayName} is sharing</span>
-                  <span className="text-4xs text-zinc-500 font-mono">LIVE • Screen</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] text-zinc-300 font-inter font-semibold truncate">{displayName} is sharing</span>
+                  <span className="text-[9px] text-zinc-500 font-mono">LIVE - Screen</span>
                 </div>
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse ml-1" />
               </div>
@@ -675,16 +702,16 @@ export const RoomPage: React.FC = () => {
 
             {/* Viewer status pill */}
             {isViewing && (
-              <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 backdrop-blur">
+              <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 backdrop-blur">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                <span className="text-3xs text-zinc-300 font-inter font-semibold">Receiving live stream</span>
+                <span className="text-[10px] text-zinc-300 font-inter font-semibold">Receiving live stream</span>
               </div>
             )}
           </div>
 
           {/* Floating RTC controls bar */}
-          <div className="fixed bottom-0 left-0 right-0 z-30 bg-zinc-950/95 border-t border-slate-border px-4 py-3 flex items-center justify-center gap-3 pb-[calc(12px+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] md:static md:bg-transparent md:border-t-0 md:p-0 md:z-10 md:shrink-0 md:flex md:justify-center landscape:py-2">
-            <div className="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2.5 shadow-2xl flex-wrap justify-center max-w-full overflow-x-auto custom-scrollbar md:flex-nowrap">
+          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 py-3 flex items-center justify-center pointer-events-none pb-[calc(12px+env(safe-area-inset-bottom))] pl-[calc(12px+env(safe-area-inset-left))] pr-[calc(12px+env(safe-area-inset-right))] md:static md:bg-transparent md:border-t-0 md:p-0 md:z-10 md:shrink-0 md:flex md:justify-center landscape:py-2">
+            <div className="glass-panel pointer-events-auto w-full max-w-[30rem] md:w-auto md:max-w-full px-2.5 py-2 rounded-2xl md:rounded-xl flex items-center gap-2 shadow-2xl justify-center overflow-hidden md:flex-nowrap">
               {/* Microphone toggle — all participants */}
               <button
                 onClick={() => {
@@ -693,7 +720,7 @@ export const RoomPage: React.FC = () => {
                   }
                   setIsMuted(!isMuted);
                 }}
-                className={`w-11 h-11 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer shrink-0 ${
+                className={`w-11 h-11 md:w-8 md:h-8 rounded-xl md:rounded-lg flex items-center justify-center transition-all border cursor-pointer shrink-0 ${
                   isMuted
                     ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
                     : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
@@ -710,7 +737,7 @@ export const RoomPage: React.FC = () => {
                 <button
                   onClick={handleShareToggle}
                   disabled={isRequesting}
-                  className={`px-4 h-11 md:px-3.5 md:h-8 rounded-lg flex items-center justify-center transition-all border gap-1.5 text-xs font-bold font-geist cursor-pointer shrink-0 ${
+                  className={`min-w-0 flex-1 md:flex-none px-3 h-11 md:px-3.5 md:h-8 rounded-xl md:rounded-lg flex items-center justify-center transition-all border gap-1.5 text-xs font-bold font-geist cursor-pointer shrink-0 ${
                     isSharing
                       ? 'bg-rose-600 hover:bg-rose-500 text-white border-transparent'
                       : isRequesting
@@ -721,7 +748,7 @@ export const RoomPage: React.FC = () => {
                   <span className="material-symbols-outlined text-[20px] md:text-[18px]">
                     {isSharing ? 'stop_screen_share' : 'screen_share'}
                   </span>
-                  <span>{isSharing ? 'Stop Sharing' : isRequesting ? 'Requesting…' : 'Share Screen'}</span>
+                  <span className="truncate">{isSharing ? 'Stop Sharing' : isRequesting ? 'Requesting...' : 'Share Screen'}</span>
                 </button>
               )}
 
@@ -731,7 +758,7 @@ export const RoomPage: React.FC = () => {
                   <div className="w-px h-5 bg-zinc-800/80 shrink-0" />
                   <button
                     onClick={toggleHostAudio}
-                    className={`w-11 h-11 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer shrink-0 ${
+                    className={`w-11 h-11 md:w-8 md:h-8 rounded-xl md:rounded-lg flex items-center justify-center transition-all border cursor-pointer shrink-0 ${
                       !hostAudioEnabled
                         ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
                         : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
@@ -751,7 +778,7 @@ export const RoomPage: React.FC = () => {
                   <div className="w-px h-5 bg-zinc-800/80 shrink-0" />
                   <button
                     onClick={() => setViewerMuted(!viewerMuted)}
-                    className={`w-11 h-11 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all border cursor-pointer shrink-0 ${
+                    className={`w-11 h-11 md:w-8 md:h-8 rounded-xl md:rounded-lg flex items-center justify-center transition-all border cursor-pointer shrink-0 ${
                       viewerMuted
                         ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
                         : 'bg-zinc-900 border-zinc-850 text-zinc-300 hover:bg-zinc-800 hover:text-white'
@@ -762,7 +789,7 @@ export const RoomPage: React.FC = () => {
                       {viewerMuted ? 'volume_off' : 'volume_up'}
                     </span>
                   </button>
-                  <div className="flex items-center gap-1.5 px-1 shrink-0">
+                  <div className="hidden min-[390px]:flex items-center gap-1.5 px-1 shrink-0">
                     <span className="text-[10px] text-zinc-500 font-mono">Vol</span>
                     <input
                       type="range"
@@ -777,7 +804,7 @@ export const RoomPage: React.FC = () => {
                           setViewerMuted(false);
                         }
                       }}
-                      className="w-16 h-1 bg-zinc-805 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                      className="w-14 md:w-16 h-1 bg-zinc-805 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                       style={{
                         WebkitAppearance: 'none',
                         outline: 'none',
@@ -791,7 +818,7 @@ export const RoomPage: React.FC = () => {
 
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-11 h-11 md:w-8 md:h-8 rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+                className="w-11 h-11 md:w-8 md:h-8 rounded-xl md:rounded-lg bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
                 title="Leave Room"
               >
                 <span className="material-symbols-outlined text-[20px] md:text-[18px]">call_end</span>
@@ -803,24 +830,24 @@ export const RoomPage: React.FC = () => {
         {isRightSidebarExpanded && (
           <div
             onClick={() => setIsRightSidebarExpanded(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-35 md:hidden"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[35] md:hidden"
           />
         )}
 
         {/* Right Chat and AI Panel */}
-        <aside className={`border-l border-slate-border bg-zinc-950 md:bg-zinc-950/40 flex flex-col h-full shrink-0 transition-all duration-300 ease-in-out fixed md:static top-0 bottom-0 right-0 z-40 pr-[env(safe-area-inset-right)] ${
+        <aside className={`border-l border-slate-border bg-zinc-950/95 md:bg-zinc-950/40 flex flex-col h-[100dvh] md:h-full shrink-0 transition-transform md:transition-all duration-300 ease-out fixed md:static top-0 bottom-0 right-0 z-40 pr-[env(safe-area-inset-right)] shadow-2xl md:shadow-none ${
           isRightSidebarExpanded
-            ? 'w-full max-w-[85vw] sm:w-80 translate-x-0'
-            : 'w-full max-w-[85vw] sm:w-80 translate-x-full md:translate-x-0 md:w-12'
+            ? 'w-[min(100vw,24rem)] max-w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right))] md:max-w-none md:w-80 translate-x-0'
+            : 'w-[min(100vw,24rem)] max-w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right))] md:max-w-none translate-x-full md:translate-x-0 md:w-12'
         } ${!isRightSidebarExpanded ? 'invisible md:visible' : ''}`}>
           {isRightSidebarExpanded ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Tab Header Bar */}
-              <div className="h-11 border-b border-slate-border bg-zinc-950/60 flex items-center justify-between px-2 shrink-0">
-                <div className="flex items-center gap-1">
+              <div className="min-h-14 pt-[env(safe-area-inset-top)] md:pt-0 border-b border-slate-border bg-zinc-950/60 flex items-center justify-between gap-2 px-3 shrink-0">
+                <div className="flex items-center gap-1 min-w-0 overflow-hidden">
                   <button
                     onClick={() => setActiveRightTab('chat')}
-                    className={`px-2.5 py-1 text-xs font-semibold font-geist flex items-center gap-1.5 transition-colors cursor-pointer rounded-lg ${
+                    className={`h-8 px-2 text-xs font-semibold font-geist flex items-center gap-1.5 transition-colors cursor-pointer rounded-lg shrink-0 ${
                       activeRightTab === 'chat'
                         ? 'bg-zinc-900 text-[#c0c1ff]'
                         : 'text-zinc-550 hover:text-zinc-300 hover:bg-zinc-900/50'
@@ -828,7 +855,7 @@ export const RoomPage: React.FC = () => {
                     title="Chat"
                   >
                     <span className="material-symbols-outlined text-[15px]">forum</span>
-                    <span className="hidden sm:inline">Chat</span>
+                    <span>Chat</span>
                     <span className="text-[10px] px-1 bg-zinc-950 rounded text-zinc-500 font-mono">
                       {messages.length}
                     </span>
@@ -836,7 +863,7 @@ export const RoomPage: React.FC = () => {
 
                   <button
                     onClick={() => setActiveRightTab('ai')}
-                    className={`px-2.5 py-1 text-xs font-semibold font-geist flex items-center gap-1.5 transition-colors cursor-pointer rounded-lg ${
+                    className={`h-8 px-2 text-xs font-semibold font-geist flex items-center gap-1.5 transition-colors cursor-pointer rounded-lg shrink-0 ${
                       activeRightTab === 'ai'
                         ? 'bg-zinc-900 text-[#c0c1ff]'
                         : 'text-zinc-550 hover:text-zinc-300 hover:bg-zinc-900/50'
@@ -844,13 +871,13 @@ export const RoomPage: React.FC = () => {
                     title="AI Insights"
                   >
                     <span className="material-symbols-outlined text-[15px]">auto_awesome</span>
-                    <span className="hidden sm:inline">Insights</span>
+                    <span>Insights</span>
                   </button>
 
                   {isHost && (
                     <button
                       onClick={() => setActiveRightTab('host')}
-                      className={`px-2.5 py-1 text-xs font-semibold font-geist flex items-center gap-1.5 transition-colors cursor-pointer rounded-lg ${
+                      className={`h-8 px-2 text-xs font-semibold font-geist flex items-center gap-1.5 transition-colors cursor-pointer rounded-lg shrink-0 ${
                         activeRightTab === 'host'
                           ? 'bg-indigo-950/40 text-indigo-400 border border-indigo-900/30'
                           : 'text-zinc-555 hover:text-zinc-300 hover:bg-zinc-900/50 border border-transparent'
@@ -858,7 +885,7 @@ export const RoomPage: React.FC = () => {
                       title="Host Controls"
                     >
                       <span className="material-symbols-outlined text-[15px]">settings_accessibility</span>
-                      <span className="hidden sm:inline">Host</span>
+                      <span>Host</span>
                     </button>
                   )}
                 </div>
@@ -881,7 +908,7 @@ export const RoomPage: React.FC = () => {
                     className="p-1 rounded hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300 cursor-pointer"
                     title="Collapse sidebar"
                   >
-                    <span className="material-symbols-outlined text-[18px] block">chevron_right</span>
+                    <span className="material-symbols-outlined text-[18px] block">close</span>
                   </button>
                 </div>
               </div>
@@ -889,13 +916,16 @@ export const RoomPage: React.FC = () => {
               {/* Tab Contents */}
               <div className="flex-1 flex flex-col overflow-hidden relative">
                 {activeRightTab === 'chat' && (
-                  <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                     {/* Chat message logs */}
-                    <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5 custom-scrollbar">
+                    <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5 custom-scrollbar min-h-0">
                       {messages.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-600 gap-2 mt-10">
-                          <span className="material-symbols-outlined text-[24px]">chat_bubble_outline</span>
-                          <p className="text-2xs font-inter leading-relaxed">No messages yet. Send a message to start the room conversation.</p>
+                        <div className="flex-1 min-h-[18rem] flex flex-col items-center justify-center text-center p-6 text-zinc-650 gap-2 my-auto max-w-[260px] mx-auto select-none">
+                          <div className="w-11 h-11 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center mb-1">
+                            <span className="material-symbols-outlined text-[20px] text-zinc-550">forum</span>
+                          </div>
+                          <p className="text-xs font-bold font-geist text-zinc-300">No messages yet</p>
+                          <p className="text-[10px] font-inter text-zinc-500 leading-normal">Start the room conversation here.</p>
                         </div>
                       ) : (
                         messages.map((m, idx) => {
@@ -910,7 +940,7 @@ export const RoomPage: React.FC = () => {
                           };
 
                           return (
-                            <div key={idx} className="flex gap-2 items-start">
+                            <div key={idx} className="flex gap-2 items-start min-w-0">
                               <Avatar name={m.sender} size="xs" color={isMe ? 'bg-indigo-600' : 'bg-zinc-700'} />
                               <div className="flex-1 flex flex-col min-w-0">
                                 <div className="flex items-baseline justify-between gap-2">
@@ -929,32 +959,32 @@ export const RoomPage: React.FC = () => {
                     </div>
 
                     {/* Chat Message Input */}
-                    <form onSubmit={handleSendMessage} className="p-2.5 border-t border-slate-border flex gap-1.5 shrink-0 bg-zinc-950/20">
+                    <form onSubmit={handleSendMessage} className="sticky bottom-0 p-2.5 pb-[calc(10px+env(safe-area-inset-bottom))] border-t border-slate-border flex gap-1.5 shrink-0 bg-zinc-950/95 backdrop-blur">
                       <input
                         type="text"
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         placeholder="Message everyone..."
-                        className="flex-1 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-850 text-xs text-zinc-300 placeholder-zinc-550 focus:outline-none focus:border-indigo-500/50 focus:ring-0 font-inter"
+                        className="min-w-0 flex-1 px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-850 text-sm md:text-xs text-zinc-300 placeholder-zinc-550 focus:outline-none focus:border-indigo-500/50 focus:ring-0 font-inter"
                       />
                       <button
                         type="submit"
-                        className="p-1.5 px-2.5 bg-indigo-600 hover:bg-indigo-500 text-zinc-950 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
+                        className="h-10 w-10 bg-indigo-600 hover:bg-indigo-500 text-zinc-950 rounded-lg flex items-center justify-center cursor-pointer transition-colors shrink-0"
                       >
-                        <span className="material-symbols-outlined text-[14px] block font-bold">send</span>
+                        <span className="material-symbols-outlined text-[16px] block font-bold">send</span>
                       </button>
                     </form>
                   </div>
                 )}
 
                 {activeRightTab === 'ai' && (
-                  <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3 custom-scrollbar">
+                  <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3 custom-scrollbar pb-[calc(12px+env(safe-area-inset-bottom))]">
                     <div className="flex items-center gap-1.5 text-[10px] font-bold font-geist text-[#c0c1ff] uppercase tracking-wider">
                       <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
                       <span>AI Insights Summary</span>
                     </div>
                     {/* Compact Card */}
-                    <div className="p-3 rounded-xl bg-indigo-600/5 border border-indigo-500/10 shadow-md">
+                    <div className="p-3 rounded-lg bg-indigo-600/5 border border-indigo-500/10 shadow-md">
                       <div className="flex items-start gap-2.5">
                         <span className="material-symbols-outlined text-[16px] text-indigo-400 mt-0.5">assignment</span>
                         <div className="flex-1 flex flex-col gap-1">
@@ -971,6 +1001,7 @@ export const RoomPage: React.FC = () => {
                 {activeRightTab === 'host' && isHost && (
                   <div className="flex-1 overflow-hidden">
                     <HostControlPanel
+                      onClose={() => setIsRightSidebarExpanded(false)}
                       roomLink={window.location.href}
                       participants={participants.map((p) => ({
                         id: p.socketId,

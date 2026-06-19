@@ -29,28 +29,34 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
   isPinned = false,
   onTogglePin,
 }) => {
+  const panelWidth =
+    'w-[min(100vw,24rem)] max-w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right))] md:max-w-none';
+
   return (
     <>
       {isExpanded && (
         <div
           onClick={onToggleExpand}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-35 md:hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[35] md:hidden"
         />
       )}
       <aside
-        className={`fixed md:static top-0 bottom-0 left-0 z-40 h-full bg-zinc-950 md:bg-zinc-950/40 border-r border-slate-border flex flex-col shrink-0 transition-all duration-300 ease-in-out pl-[env(safe-area-inset-left)] md:ml-16 md:transform-none ${
+        className={`fixed md:static top-0 bottom-0 left-0 z-40 h-full bg-zinc-950/95 md:bg-zinc-950/40 border-r border-slate-border flex flex-col shrink-0 transition-transform md:transition-all duration-300 ease-out pl-[env(safe-area-inset-left)] md:ml-16 md:transform-none shadow-2xl md:shadow-none ${
           isExpanded
-            ? 'w-full max-w-[85vw] sm:w-72 translate-x-0 p-4 md:p-3 md:w-60'
-            : 'w-full max-w-[85vw] sm:w-72 -translate-x-full md:translate-x-0 md:w-12 p-4 md:p-2 md:items-center'
+            ? `${panelWidth} translate-x-0 p-3 md:p-3 md:w-60`
+            : `${panelWidth} -translate-x-full md:translate-x-0 md:w-12 p-3 md:p-2 md:items-center`
         } ${!isExpanded ? 'invisible md:visible' : ''}`}
       >
       {/* Header section */}
       {isExpanded ? (
-        <div className="mb-3 pb-2 border-b border-zinc-800/60 w-full flex flex-col shrink-0">
+        <div className="mb-3 pb-3 border-b border-zinc-800/70 w-full flex flex-col shrink-0 gap-3 pt-[env(safe-area-inset-top)] md:pt-0">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold font-geist text-white tracking-tight uppercase">Participants</h2>
+            <div className="min-w-0">
+              <h2 className="text-xs font-bold font-geist text-white tracking-tight uppercase">Participants</h2>
+              <p className="text-[10px] text-zinc-500 font-inter mt-0.5">{participants.length} in room</p>
+            </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono bg-zinc-850 px-1.5 py-0.5 rounded text-zinc-400">
+              <span className="text-[10px] font-mono bg-zinc-900 px-1.5 py-0.5 rounded text-zinc-400 border border-zinc-800">
                 {participants.length}
               </span>
               {onTogglePin && (
@@ -72,13 +78,13 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
                 className="p-1 rounded hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
                 title="Collapse sidebar"
               >
-                <span className="material-symbols-outlined text-[16px] block">chevron_left</span>
+                <span className="material-symbols-outlined text-[18px] block">close</span>
               </button>
             </div>
           </div>
-          <div className="flex items-center justify-between mt-2.5">
-            <span className="text-[10px] font-geist text-zinc-500 uppercase tracking-wider">Room Code</span>
-            <span className="text-xs font-mono text-[#c0c1ff] tracking-wide font-bold">{roomCode}</span>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-indigo-500/15 bg-indigo-500/5 px-3 py-2">
+            <span className="text-[10px] font-geist text-zinc-500 uppercase tracking-wider shrink-0">Room Code</span>
+            <span className="text-sm font-mono text-[#c0c1ff] tracking-wide font-bold truncate">{roomCode}</span>
           </div>
         </div>
       ) : (
@@ -97,7 +103,7 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
       )}
 
       {/* Participant list */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1 w-full">
+      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1.5 w-full pb-[env(safe-area-inset-bottom)]">
         {participants.map((p) => {
           const isCurrentUser = p.socketId === currentUserId;
           const initialsColor = p.role === 'host' ? 'bg-indigo-600' : 'bg-zinc-700';
@@ -122,7 +128,7 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
           return (
             <div
               key={p.socketId}
-              className={`p-1.5 px-2 rounded-lg border flex items-center justify-between gap-2 transition-colors ${
+              className={`p-2 rounded-lg border flex items-center justify-between gap-2 transition-colors min-w-0 ${
                 p.role === 'host'
                   ? 'bg-indigo-600/5 border-indigo-500/15'
                   : 'bg-zinc-900/20 border-zinc-850 hover:bg-zinc-900/40'
@@ -135,9 +141,12 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
                   color={initialsColor}
                   status="active"
                 />
-                <span className="text-xs text-zinc-350 font-inter truncate pr-1">
-                  {p.displayName} {isCurrentUser && '(You)'}
-                </span>
+                <div className="min-w-0 flex flex-col">
+                  <span className="text-xs text-zinc-300 font-inter font-medium truncate pr-1">
+                    {p.displayName} {isCurrentUser && '(You)'}
+                  </span>
+                  <span className="text-[9px] text-zinc-600 font-geist capitalize leading-none mt-0.5">{p.role}</span>
+                </div>
               </div>
               <div className="shrink-0 flex items-center gap-1.5">
                 <span
@@ -148,7 +157,7 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
                 >
                   {p.micMuted === false ? 'mic' : 'mic_off'}
                 </span>
-                <Badge variant={p.role} />
+                {p.role === 'host' && <Badge variant="host" />}
               </div>
             </div>
           );

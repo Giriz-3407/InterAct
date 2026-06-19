@@ -27,7 +27,10 @@ export const HostControlPanel: React.FC<HostControlPanelProps> = ({
     <div className="w-full h-full flex flex-col bg-transparent overflow-hidden">
       {/* Header (optional Close if onClose is provided) */}
       <div className="p-3 border-b border-slate-border flex items-center justify-between shrink-0 bg-zinc-950/20">
-        <h2 className="text-xs font-bold font-geist text-white uppercase tracking-wider">Host Controls</h2>
+        <div className="min-w-0">
+          <h2 className="text-xs font-bold font-geist text-white uppercase tracking-wider">Host Controls</h2>
+          <p className="text-[10px] text-zinc-500 font-inter mt-0.5">Room settings and moderation</p>
+        </div>
         {onClose && (
           <button onClick={onClose} className="p-1 rounded hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 cursor-pointer">
             <span className="material-symbols-outlined text-[18px] block">close</span>
@@ -35,20 +38,20 @@ export const HostControlPanel: React.FC<HostControlPanelProps> = ({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3 custom-scrollbar pb-[calc(12px+env(safe-area-inset-bottom))]">
         {/* Stream Quality Preferences (Disabled / Auto-configured) */}
-        <div className="bg-zinc-900/30 border border-zinc-850 p-3 rounded-xl flex flex-col gap-2">
+        <div className="bg-zinc-900/30 border border-zinc-850 p-2.5 rounded-lg flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <h3 className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-wider">Stream Quality</h3>
             <span className="text-[9px] font-mono text-zinc-500 bg-zinc-900 px-1 rounded">Automated</span>
           </div>
           <div className="flex flex-col gap-1.5 opacity-60" title="Stream quality is optimized automatically by connection strength.">
-            <div className="grid grid-cols-3 gap-1 rounded-lg bg-zinc-950 p-0.5 border border-zinc-900 pointer-events-none">
+            <div className="grid grid-cols-3 gap-1 rounded-md bg-zinc-950 p-0.5 border border-zinc-900 pointer-events-none">
               {(['auto', '720p', '1080p'] as const).map((q) => (
                 <button
                   key={q}
                   disabled
-                  className={`py-1 text-[10px] font-bold font-geist uppercase rounded transition-colors ${
+                  className={`py-1 text-[10px] font-bold font-geist uppercase rounded transition-colors min-w-0 ${
                     quality === q ? 'bg-zinc-900 text-zinc-400' : 'text-zinc-600'
                   }`}
                 >
@@ -60,13 +63,13 @@ export const HostControlPanel: React.FC<HostControlPanelProps> = ({
         </div>
 
         {/* Participant list with host roles */}
-        <div className="bg-zinc-900/30 border border-zinc-850 p-3 rounded-xl flex flex-col gap-2">
+        <div className="bg-zinc-900/30 border border-zinc-850 p-2.5 rounded-lg flex flex-col gap-2">
           <h3 className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-wider">
             Manage Room ({participants.length})
           </h3>
-          <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-0.5">
+          <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto custom-scrollbar pr-0.5">
             {participants.map((p) => (
-              <div key={p.id} className="flex items-center justify-between p-1.5 rounded-lg bg-zinc-900/20 border border-zinc-900/40 gap-2">
+              <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/20 border border-zinc-900/40 gap-2 min-w-0">
                 <div className="flex items-center gap-2 min-w-0">
                   <Avatar name={p.name} size="xs" color={p.avatarColor} status={p.status} />
                   <div className="flex flex-col min-w-0">
@@ -79,13 +82,13 @@ export const HostControlPanel: React.FC<HostControlPanelProps> = ({
                   <div className="flex gap-1 shrink-0">
                     <button
                       onClick={() => onTransferHost(p.id)}
-                      className="px-2 py-0.5 rounded border border-zinc-800 text-[10px] font-semibold font-geist text-zinc-400 hover:bg-zinc-900 hover:text-[#c0c1ff] transition-all cursor-pointer"
+                      className="px-2 py-1 rounded border border-zinc-800 text-[10px] font-semibold font-geist text-zinc-400 hover:bg-zinc-900 hover:text-[#c0c1ff] transition-all cursor-pointer whitespace-nowrap"
                     >
                       Make Host
                     </button>
                     <button
                       onClick={() => onRemoveParticipant(p.id)}
-                      className="px-2 py-0.5 rounded border border-red-950/60 text-[10px] font-semibold font-geist text-red-400/90 hover:bg-red-500/10 transition-all cursor-pointer"
+                      className="px-2 py-1 rounded border border-red-950/60 text-[10px] font-semibold font-geist text-red-400/90 hover:bg-red-500/10 transition-all cursor-pointer whitespace-nowrap"
                     >
                       Kick
                     </button>
@@ -97,21 +100,21 @@ export const HostControlPanel: React.FC<HostControlPanelProps> = ({
         </div>
 
         {/* Room Settings */}
-        <div className="bg-zinc-900/30 border border-zinc-850 p-3 rounded-xl flex flex-col gap-3">
+        <div className="bg-zinc-900/30 border border-zinc-850 p-2.5 rounded-lg flex flex-col gap-3">
           <h3 className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-wider">Session Info</h3>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] text-zinc-500 font-geist">Room Link</label>
-            <div className="flex gap-1.5">
+            <label className="text-[10px] text-zinc-500 font-geist uppercase tracking-wider">Session Link</label>
+            <div className="grid grid-cols-[minmax(0,1fr)_2.25rem] gap-1.5">
               <input
                 type="text"
                 readOnly
                 value={roomLink}
-                className="flex-1 px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-900 text-xs text-zinc-500 focus:outline-none font-mono"
+                className="min-w-0 px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-900 text-[11px] text-zinc-500 focus:outline-none font-mono truncate"
               />
               <button
                 onClick={() => navigator.clipboard.writeText(roomLink)}
-                className="p-1.5 bg-zinc-900 border border-zinc-850 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer flex items-center justify-center"
+                className="h-9 w-9 bg-zinc-900 border border-zinc-850 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer flex items-center justify-center"
                 title="Copy room link"
               >
                 <span className="material-symbols-outlined text-[16px] block">content_copy</span>
@@ -142,14 +145,17 @@ export const HostControlPanel: React.FC<HostControlPanelProps> = ({
         </div>
 
         {/* Danger Zone / Destructive Actions (Disabled / Non-functional) */}
-        <div className="bg-red-950/5 border border-red-950/35 p-3 rounded-xl flex flex-col gap-2.5 mt-auto">
-          <h3 className="text-[10px] font-bold font-geist text-red-400 uppercase tracking-wider">Danger Zone</h3>
+        <div className="bg-red-950/5 border border-red-950/30 p-2.5 rounded-lg flex items-center justify-between gap-2 mt-auto">
+          <div className="min-w-0">
+            <h3 className="text-[10px] font-bold font-geist text-red-400 uppercase tracking-wider">Danger Zone</h3>
+            <p className="text-[9px] text-red-300/40 font-inter truncate">Auto cleanup handles ended rooms.</p>
+          </div>
           <button 
             disabled 
-            className="w-full py-1.5 bg-rose-950/20 text-rose-500/40 border border-rose-950/30 rounded-lg text-[11px] font-semibold font-geist cursor-not-allowed opacity-50"
+            className="shrink-0 px-2.5 py-1.5 bg-rose-950/20 text-rose-500/40 border border-rose-950/30 rounded-lg text-[10px] font-semibold font-geist cursor-not-allowed opacity-50 whitespace-nowrap"
             title="Room terminates automatically when all participants exit."
           >
-            End Room for All
+            End Room
           </button>
         </div>
       </div>

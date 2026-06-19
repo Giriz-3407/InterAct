@@ -14,9 +14,17 @@ export const TopBar: React.FC<TopBarProps> = ({
   actions,
 }) => {
   return (
-    <header className="sticky top-0 right-0 h-14 border-b border-slate-border bg-zinc-950/80 backdrop-blur-md flex items-center justify-between px-6 z-10">
-      <div className="flex items-center gap-4">
-        <h1 className="text-base font-bold font-geist text-white tracking-tight leading-none">
+    <header className="sticky top-0 right-0 h-14 border-b border-slate-border bg-zinc-950/80 backdrop-blur-md flex items-center justify-between px-4 md:px-6 z-10">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('toggle-sidebar'))}
+          className="md:hidden p-1 rounded-lg hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer flex items-center justify-center shrink-0"
+          title="Toggle Navigation"
+        >
+          <span className="material-symbols-outlined text-[20px] block">menu</span>
+        </button>
+        <h1 className="text-sm md:text-base font-bold font-geist text-white tracking-tight leading-none">
           {title}
         </h1>
         {showSearch && (

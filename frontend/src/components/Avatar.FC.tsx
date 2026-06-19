@@ -18,9 +18,9 @@ export const Avatar: React.FC<AvatarProps> = ({
 }) => {
   const sizeClasses = {
     xs: 'w-6 h-6 text-[10px]',
-    sm: 'w-8 h-8 text-xs',
-    md: 'w-10 h-10 text-sm',
-    lg: 'w-12 h-12 text-base',
+    sm: 'w-7 h-7 sm:w-8 sm:h-8 text-[11px] sm:text-xs',
+    md: 'w-8 h-8 sm:w-10 sm:h-10 text-xs sm:text-sm',
+    lg: 'w-10 h-10 sm:w-12 sm:h-12 text-sm sm:text-base',
   };
 
   const statusColors = {

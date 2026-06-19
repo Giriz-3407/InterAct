@@ -21,7 +21,7 @@ export const AvatarStack: React.FC<AvatarStackProps> = ({ users, limit = 3 }) =>
         />
       ))}
       {extraCount > 0 && (
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 text-xs font-semibold text-zinc-300 font-geist">
+        <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-zinc-800 border border-zinc-700 text-[11px] sm:text-xs font-semibold text-zinc-300 font-geist">
           +{extraCount}
         </div>
       )}

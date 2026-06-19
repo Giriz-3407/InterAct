@@ -10,9 +10,11 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ context, isExpanded, onToggle }) => {
   return (
     <aside
-      className={`h-screen fixed left-0 top-0 bg-zinc-950/70 backdrop-blur-md border-r border-zinc-850 flex flex-col z-30 transition-all duration-300 ease-in-out overflow-hidden ${
-        isExpanded ? 'w-64 p-4' : 'w-16 p-2 items-center'
-      }`}
+      className={`h-screen fixed left-0 top-0 bg-zinc-950 md:bg-zinc-950/70 backdrop-blur-md border-r border-zinc-850 flex flex-col z-30 transition-all duration-300 ease-in-out overflow-hidden ${
+        isExpanded
+          ? 'w-[280px] md:w-64 translate-x-0 p-4'
+          : 'w-[280px] md:w-16 -translate-x-full md:translate-x-0 p-4 md:p-2 md:items-center'
+      } ${!isExpanded ? 'invisible md:visible' : ''}`}
     >
       {/* Top Brand / Logo & Collapse Toggle */}
       <div className={`flex items-center justify-between w-full mb-6 shrink-0 ${!isExpanded ? 'flex-col gap-4' : ''}`}>

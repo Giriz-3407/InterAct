@@ -313,8 +313,6 @@ export function diagPrintSummary() {
     'Host playback',
   ];
 
-  const stagesSeen = new Set(results.map((r) => r.stage));
-
   for (let i = 1; i <= 7; i++) {
     const stageResults = results.filter((r) => r.stage === i);
     if (stageResults.length === 0) {

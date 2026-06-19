@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getDiagResults, getSessionId, subscribeToDiag, StageResult } from '../hooks/useViewerMicDiag';
+import { getDiagResults, getSessionId, subscribeToDiag, type StageResult } from '../hooks/useViewerMicDiag';
 
 interface DiagnosticsPanelProps {
   isHost: boolean;

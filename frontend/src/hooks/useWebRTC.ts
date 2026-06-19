@@ -43,6 +43,7 @@ interface UseWebRTCReturn {
   micStream: MediaStream | null;
   audioTrackSource: 'display' | 'microphone' | 'mixed' | 'none';
   auditReports: WebRTCAuditData[];
+  getPeerConnectionStates: () => { connectionState: string; iceConnectionState: string };
 }
 
 export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSocketId }: UseWebRTCOptions): UseWebRTCReturn {

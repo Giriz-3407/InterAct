@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { wsClient } from '../lib/websocket';
 import { useWebRTCAudit, type WebRTCAuditData } from './useWebRTCAudit';
+import {
+  diagStage1_syncMicCalled,
+  diagStage2_micAcquired,
+  diagStage3_attachCalled,
+  diagStage3_replaceTrackResult,
+  diagStage4_sdp,
+  diagStage5_pcState,
+  diagStage6_hostOnTrack,
+  diagReset,
+} from './useViewerMicDiag';
 
 const STUN_CONFIG: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -131,6 +141,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
         // Host receiving track from a viewer — this is a viewer's microphone
         if (track.kind === 'audio') {
           console.log(`[WebRTC] Host received viewer mic track from ${peerId}`);
+          diagStage6_hostOnTrack(track, e.streams, e.transceiver, peerId);
           viewerMicTracksRef.current.set(peerId, { track, stream });
 
           // Host local playback — hear the viewer
@@ -200,6 +211,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     pc.oniceconnectionstatechange = () => {
       const state = pc.iceConnectionState;
       console.log(`[WebRTC] ICE state for peer ${peerId}:`, state);
+      if (state === 'connected' || state === 'completed' || state === 'failed') {
+        diagStage5_pcState(pc);
+      }
       if (state === 'failed' || state === 'closed') {
         pcsRef.current.delete(peerId);
         if (isHost) {
@@ -422,14 +436,17 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   // Works for BOTH host and viewer
   useEffect(() => {
     const syncMic = async () => {
+      diagStage1_syncMicCalled(micMuted, isHost);
       if (!micMuted) {
         if (!micStreamRef.current) {
           try {
             console.log('[WebRTC] Requesting microphone stream...');
+            if (!isHost) diagReset();
             const micStreamObj = await navigator.mediaDevices.getUserMedia({ audio: true });
             micStreamRef.current = micStreamObj;
             micStreamObj.getAudioTracks().forEach((t) => (t.enabled = true));
             setMicStream(micStreamObj);
+            if (!isHost) diagStage2_micAcquired(true, micStreamObj.getAudioTracks()[0] ?? null);
 
             if (isHost) {
               // Host: sync tracks with all viewers and renegotiate (add mic track)
@@ -447,6 +464,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
             }
           } catch (err) {
             console.error('[WebRTC] Microphone access denied or not available:', err);
+            if (!isHost) diagStage2_micAcquired(false, null, err);
             setMicWarning('Microphone access denied.');
           }
         } else {
@@ -484,6 +502,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   // (per RFC 8829 §5.10), so we cannot match by direction. We select by position instead.
   function attachViewerMicToPC(pc: RTCPeerConnection, micStreamObj: MediaStream) {
     const micTrack = micStreamObj.getAudioTracks()[0];
+    diagStage3_attachCalled(pc, micTrack ?? null);
     if (!micTrack) return;
 
     const transceivers = pc.getTransceivers();
@@ -499,6 +518,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
     if (micSlot.sender.track?.id === micTrack.id) {
       console.log('[WebRTC] Viewer mic already on correct transceiver');
+      diagStage3_replaceTrackResult(true, micTrack.id);
       return;
     }
 
@@ -507,8 +527,10 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     }
     micSlot.sender.replaceTrack(micTrack).then(() => {
       console.log('[WebRTC] Viewer mic attached to last audio transceiver (mic slot) via replaceTrack');
+      diagStage3_replaceTrackResult(true, micSlot.sender.track?.id ?? null);
     }).catch((err) => {
       console.warn('[WebRTC] Failed to replaceTrack on mic slot transceiver:', err);
+      diagStage3_replaceTrackResult(false, null, err);
     });
   }
 
@@ -536,6 +558,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       }
 
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      if (!isHost) diagStage4_sdp('offer', offer.sdp);
 
       // If viewer has an active mic, attach it to the mic-slot transceiver before answering
       if (micStreamRef.current && !micMuted) {
@@ -544,6 +567,10 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      if (!isHost) {
+        diagStage4_sdp('answer', answer.sdp);
+        diagStage5_pcState(pc);
+      }
 
       wsClient.send('webrtc_answer', { targetId: senderId, answer: pc.localDescription });
     });
@@ -640,6 +667,16 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   // Cleanup on unmount
   useEffect(() => () => cleanup(), [cleanup]);
 
+  const getPeerConnectionStates = useCallback(() => {
+    if (pcsRef.current.size === 0) {
+      return { connectionState: 'new', iceConnectionState: 'new' };
+    }
+    const pcs = Array.from(pcsRef.current.values());
+    const connectionState = pcs.map((pc) => pc.connectionState).join(', ');
+    const iceConnectionState = pcs.map((pc) => pc.iceConnectionState).join(', ');
+    return { connectionState, iceConnectionState };
+  }, []);
+
   return {
     sharingState,
     localStream,
@@ -654,5 +691,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     micStream,
     audioTrackSource,
     auditReports,
+    getPeerConnectionStates,
   };
 }

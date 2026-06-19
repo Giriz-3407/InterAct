@@ -11,6 +11,8 @@ import { useWebRTC } from '../hooks/useWebRTC';
 import { useCursorPresence } from '../hooks/useCursorPresence';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
 import { WebRTCAuditPanel } from '../components/WebRTCAuditPanel';
+import { diagStage7_hostPlayback, diagPrintSummary } from '../hooks/useViewerMicDiag';
+import { DiagnosticsPanel } from '../components/DiagnosticsPanel';
 
 
 interface Participant {
@@ -86,6 +88,7 @@ export const RoomPage: React.FC = () => {
     audioWarning,
     micWarning,
     auditReports,
+    getPeerConnectionStates,
   } = useWebRTC({
     isHost,
     currentSocketId,
@@ -191,6 +194,14 @@ export const RoomPage: React.FC = () => {
         el.muted = false;
         el.volume = 1.0;
       }
+      // Stage 7 diagnostic: check playback state after a tick (audio element needs to mount)
+      if (isHost) {
+        setTimeout(() => {
+          const audioEl = remoteMicAudioRefs.current.get(streamId) ?? null;
+          diagStage7_hostPlayback(streamId, audioEl);
+          diagPrintSummary();
+        }, 500);
+      }
     });
     // Clean up refs for streams that no longer exist
     remoteMicAudioRefs.current.forEach((_, streamId) => {
@@ -198,7 +209,7 @@ export const RoomPage: React.FC = () => {
         remoteMicAudioRefs.current.delete(streamId);
       }
     });
-  }, [remoteMicStreams]);
+  }, [remoteMicStreams, isHost]);
 
   // Load message history on startup
   useEffect(() => {
@@ -964,6 +975,13 @@ export const RoomPage: React.FC = () => {
         participants={participants}
         sharingActive={sharingState === 'sharing' || sharingState === 'viewing'}
       />
+      {searchParams.get('diag') === '1' && (
+        <DiagnosticsPanel
+          isHost={isHost}
+          roomId={roomId || ''}
+          getPeerConnectionStates={getPeerConnectionStates}
+        />
+      )}
     </div>
   );
 };

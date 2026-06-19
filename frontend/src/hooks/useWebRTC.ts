@@ -456,7 +456,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
               // Viewer: attach mic to existing PC's sendonly transceiver, or request PC
               const pc = pcsRef.current.get(hostSocketId);
               if (pc) {
-                attachViewerMicToPC(pc, micStreamObj);
+                await attachViewerMicToPC(pc, micStreamObj);
               } else {
                 // No PC exists — request host to establish one
                 wsClient.send('audio_publish_request', { targetId: hostSocketId });
@@ -477,7 +477,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           if (!isHost) {
             const pc = pcsRef.current.get(hostSocketId);
             if (pc) {
-              attachViewerMicToPC(pc, micStreamRef.current);
+              await attachViewerMicToPC(pc, micStreamRef.current);
             }
           }
         }
@@ -501,16 +501,24 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   // The host adds the recvonly slot as the LAST audio transceiver in syncTracks.
   // After setRemoteDescription(offer), all viewer transceivers have direction 'sendrecv'
   // (per RFC 8829 §5.10), so we cannot match by direction. We select by position instead.
-  function attachViewerMicToPC(pc: RTCPeerConnection, micStreamObj: MediaStream) {
+  async function attachViewerMicToPC(pc: RTCPeerConnection, micStreamObj: MediaStream) {
     const micTrack = micStreamObj.getAudioTracks()[0];
-    diagStage3_attachCalled(pc, micTrack ?? null);
-    if (!micTrack) return;
+    if (!micTrack) {
+      diagStage3_attachCalled(pc, null);
+      return;
+    }
 
     const transceivers = pc.getTransceivers();
     const audioSlots = transceivers.filter(
       (t) => t.receiver.track?.kind === 'audio'
     );
     const micSlot = audioSlots[audioSlots.length - 1];
+
+    if (micSlot) {
+      micSlot.direction = 'sendonly';
+    }
+
+    diagStage3_attachCalled(pc, micTrack);
 
     if (!micSlot) {
       console.warn('[WebRTC] No audio transceiver available for viewer mic');
@@ -526,13 +534,14 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     if (micSlot.sender.setStreams) {
       micSlot.sender.setStreams(micStreamObj);
     }
-    micSlot.sender.replaceTrack(micTrack).then(() => {
+    try {
+      await micSlot.sender.replaceTrack(micTrack);
       console.log('[WebRTC] Viewer mic attached to last audio transceiver (mic slot) via replaceTrack');
       diagStage3_replaceTrackResult(true, micSlot.sender.track?.id ?? null);
-    }).catch((err) => {
+    } catch (err) {
       console.warn('[WebRTC] Failed to replaceTrack on mic slot transceiver:', err);
       diagStage3_replaceTrackResult(false, null, err);
-    });
+    }
   }
 
   // ─── WebSocket signaling handlers ──────────────────────────────────────────
@@ -563,7 +572,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
       // If viewer has an active mic, attach it to the mic-slot transceiver before answering
       if (micStreamRef.current && !micMuted) {
-        attachViewerMicToPC(pc, micStreamRef.current);
+        await attachViewerMicToPC(pc, micStreamRef.current);
       }
 
       const answer = await pc.createAnswer();

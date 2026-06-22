@@ -38,11 +38,18 @@ class RoomManager:
             code = self._generate_room_code()
             room = {
                 "roomCode": code,
-                "hostId": None,
-                "hostName": None,
+                "owner_client_id": None,
+                "owner_name": None,
                 "participants": [],
                 "createdAt": time.time(),
                 "active": True,
+                "auto_delete_when_empty": True,
+                "host_last_seen_at": None,
+                "pending_deletion_at": None,
+                
+                # Keep these for compatibility if frontend/WebRTC references them
+                "hostId": None,
+                "hostName": None,
                 "autoDelete": True,
                 "emptyAt": None,
                 "lastHostName": None
@@ -57,7 +64,7 @@ class RoomManager:
         async with self._lock:
             return self._rooms.get(room_code.upper())
 
-    async def join_room(self, room_code: str, socket_id: str, display_name: str) -> Optional[dict]:
+    async def join_room(self, room_code: str, socket_id: str, display_name: str, client_id: str) -> Optional[dict]:
         """
         Add a participant to the room. The first user to join becomes the host.
         """
@@ -73,46 +80,26 @@ class RoomManager:
             if existing:
                 return room
 
-            # If room was empty, reset emptyAt (restarting the counter)
-            was_empty = len(room["participants"]) == 0
-            if was_empty:
-                room["emptyAt"] = None
+            # Set owner if not already set
+            if room["owner_client_id"] is None:
+                room["owner_client_id"] = client_id
+                room["owner_name"] = display_name
 
             # Determine role
-            role = "viewer"
-            last_host_name = room.get("lastHostName")
-
-            if was_empty:
-                if last_host_name:
-                    # Only the last host can be the host
-                    if display_name == last_host_name:
-                        role = "host"
-                        room["hostId"] = socket_id
-                        room["hostName"] = display_name
-                    else:
-                        role = "viewer"
-                        # hostId and hostName remain None
-                else:
-                    # No last host name recorded (first time joining the created room)
-                    role = "host"
-                    room["hostId"] = socket_id
-                    room["hostName"] = display_name
+            is_owner = room["owner_client_id"] == client_id
+            if is_owner:
+                role = "host"
+                room["hostId"] = socket_id
+                room["hostName"] = display_name
+                # Restore owner privileges, cancel pending deletion
+                room["pending_deletion_at"] = None
+                room["host_last_seen_at"] = None
             else:
-                # Room is not empty. Is there currently a host?
-                # If there's no host yet (e.g. last host hasn't joined), can a new joiner be the host?
-                # Only if their display name matches lastHostName
-                if room.get("hostId") is None:
-                    if last_host_name and display_name == last_host_name:
-                        role = "host"
-                        room["hostId"] = socket_id
-                        room["hostName"] = display_name
-                    else:
-                        role = "viewer"
-                else:
-                    role = "viewer"
+                role = "viewer"
 
             participant = {
                 "socketId": socket_id,
+                "clientId": client_id,
                 "displayName": display_name,
                 "joinedAt": time.time(),
                 "role": role,
@@ -134,36 +121,32 @@ class RoomManager:
                 
             room = self._rooms[code]
             
-            # Save if the leaving participant was host
-            leaving_is_host = room["hostId"] == socket_id
-            leaving_host_name = None
-            if leaving_is_host:
-                leaving_host_name = room["hostName"]
+            # Find the participant
+            participant = next((p for p in room["participants"] if p["socketId"] == socket_id), None)
+            if not participant:
+                return room
+            
+            client_id = participant["clientId"]
+            is_owner = room["owner_client_id"] == client_id
             
             # Remove participant
             room["participants"] = [p for p in room["participants"] if p["socketId"] != socket_id]
             
-            # If the leaving participant was host, reassign host role to next participant (if any)
-            if leaving_is_host:
-                room["lastHostName"] = leaving_host_name
-                if len(room["participants"]) > 0:
-                    next_host = room["participants"][0]
-                    next_host["role"] = "host"
-                    room["hostId"] = next_host["socketId"]
-                    room["hostName"] = next_host["displayName"]
-                else:
-                    room["hostId"] = None
-                    room["hostName"] = None
+            # If the leaving participant was the owner:
+            if is_owner:
+                room["hostId"] = None
+                room["hostName"] = None
+                if not room.get("auto_delete_when_empty", True):
+                    now = time.time()
+                    room["host_last_seen_at"] = now
+                    room["pending_deletion_at"] = now + 86400  # 24 hours
 
-            # If room is empty, decide based on autoDelete
+            # Mode 1: Auto-delete when empty = ENABLED
             if len(room["participants"]) == 0:
-                if room.get("autoDelete", True):
+                if room.get("auto_delete_when_empty", True):
                     if code in self._rooms:
                         del self._rooms[code]
                     return None
-                else:
-                    room["emptyAt"] = time.time()
-                    return room
 
             return room
 
@@ -177,32 +160,27 @@ class RoomManager:
             rooms_to_check = list(self._rooms.keys())
             for code in rooms_to_check:
                 room = self._rooms[code]
-                if any(p["socketId"] == socket_id for p in room["participants"]):
-                    leaving_is_host = room["hostId"] == socket_id
-                    leaving_host_name = None
-                    if leaving_is_host:
-                        leaving_host_name = room["hostName"]
-                        
+                participant = next((p for p in room["participants"] if p["socketId"] == socket_id), None)
+                if participant:
+                    client_id = participant["clientId"]
+                    is_owner = room["owner_client_id"] == client_id
+                    
                     room["participants"] = [p for p in room["participants"] if p["socketId"] != socket_id]
                     
-                    if leaving_is_host:
-                        room["lastHostName"] = leaving_host_name
-                        if len(room["participants"]) > 0:
-                            next_host = room["participants"][0]
-                            next_host["role"] = "host"
-                            room["hostId"] = next_host["socketId"]
-                            room["hostName"] = next_host["displayName"]
-                        else:
-                            room["hostId"] = None
-                            room["hostName"] = None
+                    if is_owner:
+                        room["hostId"] = None
+                        room["hostName"] = None
+                        if not room.get("auto_delete_when_empty", True):
+                            now = time.time()
+                            room["host_last_seen_at"] = now
+                            room["pending_deletion_at"] = now + 86400  # 24 hours
                     
                     if len(room["participants"]) == 0:
-                        if room.get("autoDelete", True):
+                        if room.get("auto_delete_when_empty", True):
                             if code in self._rooms:
                                 del self._rooms[code]
                             affected.append((code, None))
                         else:
-                            room["emptyAt"] = time.time()
                             affected.append((code, room))
                     else:
                         affected.append((code, room))
@@ -218,7 +196,10 @@ class RoomManager:
                 return None
             
             room = self._rooms[code]
-            if room["hostId"] != host_socket_id:
+            
+            # Check if host_socket_id is the owner of the room
+            owner_participant = next((p for p in room["participants"] if p["socketId"] == host_socket_id), None)
+            if not owner_participant or owner_participant["clientId"] != room["owner_client_id"]:
                 return None
             
             # Find target participant
@@ -235,14 +216,21 @@ class RoomManager:
             target["role"] = "host"
             room["hostId"] = target_socket_id
             room["hostName"] = target["displayName"]
-            room["lastHostName"] = target["displayName"]
+            
+            # Update ownership
+            room["owner_client_id"] = target["clientId"]
+            room["owner_name"] = target["displayName"]
+            
+            # Cancel pending deletion since owner is now active
+            room["pending_deletion_at"] = None
+            room["host_last_seen_at"] = None
             
             return room
 
     async def start_cleanup_loop(self):
         """
         Periodic background task that runs indefinitely to clean up rooms that
-        have been empty for more than 24 hours (86400 seconds).
+        have expired their deletion criteria.
         """
         logger.info("Room expiry cleanup background task started.")
         while True:
@@ -252,12 +240,15 @@ class RoomManager:
                     now = time.time()
                     to_delete = []
                     for code, room in self._rooms.items():
-                        if not room.get("autoDelete", True) and len(room["participants"]) == 0:
-                            empty_at = room.get("emptyAt")
-                            if empty_at and (now - empty_at >= 86400):
+                        if room.get("auto_delete_when_empty", True):
+                            if len(room["participants"]) == 0:
+                                to_delete.append(code)
+                        else:
+                            pending_deletion_at = room.get("pending_deletion_at")
+                            if pending_deletion_at and now > pending_deletion_at:
                                 to_delete.append(code)
                     for code in to_delete:
-                        logger.info(f"Room {code} has been empty for > 24 hours. Deleting room.")
+                        logger.info(f"Room {code} has expired. Deleting room.")
                         if code in self._rooms:
                             del self._rooms[code]
             except Exception as e:

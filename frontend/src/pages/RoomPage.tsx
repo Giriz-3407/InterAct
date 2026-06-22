@@ -265,12 +265,16 @@ export const RoomPage: React.FC = () => {
       return wsUrl;
     };
 
+    const clientId = localStorage.getItem("client_id") ?? crypto.randomUUID();
+    localStorage.setItem("client_id", clientId);
+
     // Connect to backend WebSocket gateway
     wsClient.connect(getWsUrl(), () => {
       // Send join event
       wsClient.send('join_room', {
         roomCode: roomId,
-        displayName: displayName
+        displayName: displayName,
+        clientId: clientId
       });
     });
 

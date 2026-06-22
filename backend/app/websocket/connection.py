@@ -109,13 +109,16 @@ class ConnectionManager:
         if event == "join_room":
             room_code = data.get("roomCode", "").upper()
             display_name = data.get("displayName", "")
-            
+            client_id = data.get("clientId")
+            if not client_id:
+                client_id = socket_id
+
             if not room_code or not display_name:
                 await self._send_error(socket_id, "Missing roomCode or displayName")
                 return
             
             # Register inside room manager
-            room = await room_manager.join_room(room_code, socket_id, display_name)
+            room = await room_manager.join_room(room_code, socket_id, display_name, client_id)
             if not room:
                 await self._send_error(socket_id, "Room not found or inactive")
                 return
@@ -134,7 +137,9 @@ class ConnectionManager:
                     "isHost": is_host,
                     "socketId": socket_id,
                     "participants": room["participants"],
-                    "autoDelete": room.get("autoDelete", True)
+                    "autoDelete": room.get("auto_delete_when_empty", True),
+                    "ownerClientId": room.get("owner_client_id"),
+                    "ownerName": room.get("owner_name")
                 }
                 await ws.send_text(json.dumps(join_confirmation))
 
@@ -235,11 +240,18 @@ class ConnectionManager:
                 return
             
             room = await room_manager.get_room(room_code)
-            if not room or room.get("hostId") != socket_id:
+            if not room:
+                await self._send_error(socket_id, "Room not found")
+                return
+            
+            # Authorize: Only the owner (when online) can toggle room settings
+            owner_participant = next((p for p in room["participants"] if p["clientId"] == room["owner_client_id"]), None)
+            if not owner_participant or owner_participant["socketId"] != socket_id:
                 await self._send_error(socket_id, "Unauthorized: Only the host can toggle room settings")
                 return
             
             auto_delete = data.get("autoDelete", True)
+            room["auto_delete_when_empty"] = auto_delete
             room["autoDelete"] = auto_delete
             
             await self.broadcast_to_room(
@@ -288,7 +300,13 @@ class ConnectionManager:
                 return
             
             room = await room_manager.get_room(room_code)
-            if not room or room.get("hostId") != socket_id:
+            if not room:
+                await self._send_error(socket_id, "Room not found")
+                return
+            
+            # Authorize: Only the owner (when online) can remove participants
+            owner_participant = next((p for p in room["participants"] if p["clientId"] == room["owner_client_id"]), None)
+            if not owner_participant or owner_participant["socketId"] != socket_id:
                 await self._send_error(socket_id, "Unauthorized: Only the host can remove participants")
                 return
             

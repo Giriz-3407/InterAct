@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { wsClient } from '../lib/websocket';
+import { isMobileDevice } from '../lib/mobile';
 import { CURSOR_COLORS, colorForParticipant, desktopAgent, toDesktopCoords } from '../lib/desktopAgent';
 import type { CaptureDisplaySurface } from './useWebRTC';
 
@@ -166,11 +167,12 @@ export function useCursorPresence({
     wasLaserPointerEnabledRef.current = laserPointerEnabled;
   }, [captureDisplaySurface]);
 
-  // ── Desktop agent connection — host only ──────────────────────────────────
+  // ── Desktop agent connection — host only, never on mobile ─────────────────
   // Connect when this browser becomes the host; disconnect on role change or unmount.
   // Viewers never reach this branch (isHost stays false for them).
   useEffect(() => {
     if (!isHost) return;
+    if (isMobileDevice) return;
     desktopAgent.connect();
     return () => desktopAgent.disconnect();
   }, [isHost]);

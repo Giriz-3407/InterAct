@@ -29,6 +29,8 @@ export const BROWSER_PROTOCOL_VERSION = 1;
 type VoidCallback = () => void;
 type StatusCallback = (status: ConnectionStatus) => void;
 
+import { isMobileDevice } from './mobile';
+
 // ---------------------------------------------------------------------------
 // Configurable Host-only agent URL resolution
 // ---------------------------------------------------------------------------
@@ -106,6 +108,7 @@ class DesktopAgentClient {
    * No-op if already connecting or connected.
    */
   connect(): void {
+    if (isMobileDevice) return;
     if (this.shouldConnect) return;
     this.shouldConnect = true;
     this.currentDelayMs = this.baseDelayMs; // Reset backoff when user explicitly connects
@@ -356,6 +359,7 @@ class DesktopAgentClient {
   }
 
   private _scheduleReconnect(): void {
+    if (isMobileDevice) return;
     this._clearReconnectTimer();
 
     // Jitter calculation: ±10%

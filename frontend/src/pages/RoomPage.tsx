@@ -8,6 +8,7 @@ import { wsClient } from '../lib/websocket';
 import { apiClient } from '../lib/axios';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useCursorPresence } from '../hooks/useCursorPresence';
+import { isMobileDevice } from '../lib/mobile';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
 import { WebRTCAuditPanel } from '../components/WebRTCAuditPanel';
 import { diagStage7_hostPlayback, diagPrintSummary } from '../hooks/useViewerMicDiag';
@@ -450,7 +451,7 @@ export const RoomPage: React.FC = () => {
               <span className="font-mono text-[#c0c1ff] truncate max-w-[7.5rem] sm:max-w-none">{roomId}</span>
             </h1>
           </div>
-          {isHost && <AgentStatusIndicator />}
+          {isHost && !isMobileDevice && <AgentStatusIndicator />}
         </div>
 
         <div className="flex items-center gap-1.5 md:gap-3 shrink-0">

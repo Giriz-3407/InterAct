@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { isMobileDevice } from '../lib/mobile';
 import { desktopAgent } from '../lib/desktopAgent';
 import type { ConnectionStatus } from '../lib/desktopAgent';
 
@@ -14,6 +15,8 @@ export const AgentStatusIndicator: React.FC = () => {
     });
     return unsubscribe;
   }, []);
+
+  if (isMobileDevice) return null;
 
   let dotColor = 'bg-zinc-500';
   let label = 'Agent Offline';

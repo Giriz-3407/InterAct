@@ -43,7 +43,7 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
       <aside
         className={`fixed md:static top-0 bottom-0 left-0 z-40 h-full bg-zinc-950/95 md:bg-zinc-950/40 border-r border-slate-border flex flex-col shrink-0 transition-transform md:transition-all duration-300 ease-out pl-[env(safe-area-inset-left)] md:transform-none shadow-2xl md:shadow-none ${
           isExpanded
-            ? `${panelWidth} translate-x-0 p-3 md:p-3 md:w-60`
+            ? `${panelWidth} translate-x-0 p-4 md:p-3 md:w-60`
             : `${panelWidth} -translate-x-full md:translate-x-0 md:w-12 p-3 md:p-2 md:items-center`
         } ${!isExpanded ? 'invisible md:visible' : ''}`}
       >

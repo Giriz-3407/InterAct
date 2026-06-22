@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Avatar } from './Avatar.FC';
 
 interface HostControlPanelProps {
-  onClose?: () => void;
   roomLink: string;
   participants: any[];
   autoDelete: boolean;
@@ -12,7 +11,6 @@ interface HostControlPanelProps {
 }
 
 export const HostControlPanel: React.FC<HostControlPanelProps> = ({
-  onClose,
   roomLink,
   participants,
   autoDelete,

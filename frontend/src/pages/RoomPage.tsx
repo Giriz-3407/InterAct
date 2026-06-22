@@ -1011,7 +1011,6 @@ export const RoomPage: React.FC = () => {
                 {activeRightTab === 'host' && isHost && (
                   <div className="flex-1 overflow-hidden">
                     <HostControlPanel
-                      onClose={() => setIsRightSidebarExpanded(false)}
                       roomLink={window.location.href}
                       participants={participants.map((p) => ({
                         id: p.socketId,

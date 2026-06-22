@@ -43,7 +43,7 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
       <aside
         className={`fixed md:static top-0 bottom-0 left-0 z-40 h-full bg-zinc-950/95 md:bg-zinc-950/40 border-r border-slate-border flex flex-col shrink-0 transition-transform md:transition-all duration-300 ease-out pl-[env(safe-area-inset-left)] md:transform-none shadow-2xl md:shadow-none ${
           isExpanded
-            ? `${panelWidth} translate-x-0 p-4 md:p-3 md:w-60`
+            ? `${panelWidth} translate-x-0 pl-5 p-4 md:p-3 md:w-60`
             : `${panelWidth} -translate-x-full md:translate-x-0 md:w-12 p-3 md:p-2 md:items-center`
         } ${!isExpanded ? 'invisible md:visible' : ''}`}
       >
@@ -59,20 +59,6 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
               <span className="text-[10px] font-mono bg-zinc-900 px-1.5 py-0.5 rounded text-zinc-400 border border-zinc-800">
                 {participants.length}
               </span>
-              {onTogglePin && (
-                <button
-                  type="button"
-                  onClick={onTogglePin}
-                  className={`p-1 rounded hover:bg-zinc-900 transition-colors cursor-pointer md:hidden ${
-                    isPinned ? 'text-indigo-400' : 'text-zinc-500 hover:text-zinc-300'
-                  }`}
-                  title={isPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
-                >
-                  <span className="material-symbols-outlined text-[16px] block">
-                    push_pin
-                  </span>
-                </button>
-              )}
               <button
                 onClick={onToggleExpand}
                 className="p-1 rounded hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"

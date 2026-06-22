@@ -655,26 +655,6 @@ export const RoomPage: React.FC = () => {
                 </span>
               </button>
 
-              {/* Screen share button — host only (Desktop only) */}
-              {isHost && (
-                <button
-                  onClick={handleShareToggle}
-                  disabled={isRequesting}
-                  className={`hidden md:flex min-w-0 flex-1 md:flex-none px-3 h-11 md:px-3.5 md:h-8 rounded-xl md:rounded-lg items-center justify-center transition-all border gap-1.5 text-xs font-bold font-geist cursor-pointer shrink-0 ${
-                    isSharing
-                      ? 'bg-rose-600 hover:bg-rose-500 text-white border-transparent'
-                      : isRequesting
-                      ? 'bg-zinc-800 border-zinc-700 text-zinc-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white border-transparent hover:opacity-90'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[20px] md:text-[18px]">
-                    {isSharing ? 'stop_screen_share' : 'screen_share'}
-                  </span>
-                  <span className="truncate">{isSharing ? 'Stop Sharing' : isRequesting ? 'Requesting...' : 'Share Screen'}</span>
-                </button>
-              )}
-
               {/* Host Toggle Shared Audio */}
               {isHost && isSharing && (
                 <>
@@ -901,18 +881,6 @@ export const RoomPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsRightSidebarPinned(!isRightSidebarPinned)}
-                    className={`p-1 rounded hover:bg-zinc-900 transition-colors cursor-pointer md:hidden ${
-                      isRightSidebarPinned ? 'text-indigo-400' : 'text-zinc-500 hover:text-zinc-300'
-                    }`}
-                    title={isRightSidebarPinned ? 'Unpin Sidebar' : 'Pin Sidebar'}
-                  >
-                    <span className="material-symbols-outlined text-[16px] block">
-                      push_pin
-                    </span>
-                  </button>
                   <button
                     onClick={() => setIsRightSidebarExpanded(false)}
                     className="p-1 rounded hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300 cursor-pointer"

@@ -440,7 +440,7 @@ export const RoomPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-bg text-on-surface font-inter flex flex-col h-screen overflow-hidden">
+    <div className="min-h-[100dvh] bg-bg text-on-surface font-inter flex flex-col h-[100dvh] overflow-hidden">
       {/* Top Navigation Bar */}
       <header className="min-h-[calc(4rem+env(safe-area-inset-top))] md:h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-slate-border bg-zinc-950/90 backdrop-blur-md flex items-center justify-between gap-2 px-3 md:px-6 z-[25] shrink-0 select-none">
         <div className="flex items-center gap-2 min-w-0">
@@ -559,7 +559,7 @@ export const RoomPage: React.FC = () => {
 
             {/* Waiting / Sharing state overlay when no video */}
             {!isViewing && (
-              <div className="text-center flex flex-col items-center justify-center gap-3 max-w-[19rem] z-10 p-5 sm:p-8 min-h-[18rem]">
+              <div className="text-center flex flex-col items-center justify-center gap-3 max-w-[19rem] z-10 p-5 sm:p-8 min-h-0 sm:min-h-[18rem]">
                 {isRequesting ? (
                   <>
                     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-indigo-500/40 border-t-indigo-500 animate-spin mb-1" />

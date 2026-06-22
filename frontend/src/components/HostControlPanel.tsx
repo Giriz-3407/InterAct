@@ -31,11 +31,7 @@ export const HostControlPanel: React.FC<HostControlPanelProps> = ({
           <h2 className="text-xs font-bold font-geist text-white uppercase tracking-wider">Host Controls</h2>
           <p className="text-[10px] text-zinc-500 font-inter mt-0.5">Room settings and moderation</p>
         </div>
-        {onClose && (
-          <button onClick={onClose} className="p-1 rounded hover:bg-zinc-900 text-zinc-400 hover:text-zinc-200 cursor-pointer">
-            <span className="material-symbols-outlined text-[18px] block">close</span>
-          </button>
-        )}
+        
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3 custom-scrollbar pb-[calc(12px+env(safe-area-inset-bottom))]">

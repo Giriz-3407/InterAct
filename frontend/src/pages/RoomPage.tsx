@@ -2,7 +2,6 @@ console.log("CURSOR_BUILD_MARKER_20260615 \u2014 SOURCE: C:\\Users\\Girish\\Desk
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar.FC';
-import { SidebarL1 } from '../components/SidebarL1';
 import { ParticipantPanel } from '../components/ParticipantPanel';
 import { HostControlPanel } from '../components/HostControlPanel';
 import { wsClient } from '../lib/websocket';
@@ -403,24 +402,7 @@ export const RoomPage: React.FC = () => {
     });
   }, []);
 
-  const handleRightPanelToggle = useCallback((tab: 'chat' | 'ai' | 'host') => {
-    if (window.innerWidth < 768) {
-      setIsLeftPanelExpanded(false);
-    }
 
-    if (!isRightSidebarExpanded) {
-      setIsRightSidebarExpanded(true);
-      setActiveRightTab(tab);
-      return;
-    }
-
-    if (activeRightTab === tab) {
-      setIsRightSidebarExpanded(false);
-      return;
-    }
-
-    setActiveRightTab(tab);
-  }, [isRightSidebarExpanded, activeRightTab]);
 
   // Name Entry Prompt Dialog overlay
   if (showNamePrompt) {
@@ -488,84 +470,18 @@ export const RoomPage: React.FC = () => {
 
           <div className="h-5 w-px bg-zinc-850 hidden md:block" />
 
-          {/* Participants Toggle Button */}
-          <button
-            onClick={handleParticipantsToggle}
-            className={`h-8 min-w-8 px-2 md:px-2.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-              isLeftPanelExpanded
-                ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
-            }`}
-            title="Toggle Participants"
-          >
-            <span className="material-symbols-outlined text-[16px]">group</span>
-            <span className="hidden md:inline">Participants</span>
-            <span className="text-[10px] px-1 bg-zinc-950 rounded text-zinc-400 font-mono leading-4">
-              {participants.length}
-            </span>
-          </button>
-
-          {/* Chat Toggle Button */}
-          <button
-            onClick={() => handleRightPanelToggle('chat')}
-            className={`h-8 min-w-8 px-2 md:px-2.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-              isRightSidebarExpanded && activeRightTab === 'chat'
-                ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
-            }`}
-            title="Toggle Chat"
-          >
-            <span className="material-symbols-outlined text-[16px]">forum</span>
-            <span className="hidden md:inline">Chat</span>
-            <span className="text-[10px] px-1 bg-zinc-950 rounded text-zinc-400 font-mono leading-4">
-              {messages.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => handleRightPanelToggle('ai')}
-            className={`h-8 min-w-8 px-2 md:px-2.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-              isRightSidebarExpanded && activeRightTab === 'ai'
-                ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
-                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
-            }`}
-            title="AI Insights"
-          >
-            <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
-            <span className="hidden md:inline">Insights</span>
-          </button>
-
-          {/* Action buttons */}
-          {isHost && (
-            <button
-              onClick={() => handleRightPanelToggle('host')}
-              className={`h-8 min-w-8 px-2 md:px-2.5 rounded-lg text-xs font-semibold font-geist border transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0 ${
-                isRightSidebarExpanded && activeRightTab === 'host'
-                  ? 'bg-indigo-950 text-indigo-400 border-indigo-900/30'
-                  : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white'
-              }`}
-              title="Toggle Host Controls"
-            >
-              <span className="material-symbols-outlined text-[16px]">settings_accessibility</span>
-              <span className="hidden md:inline">Host</span>
-            </button>
-          )}
-
           <button
             onClick={() => navigate('/dashboard')}
-            className="w-8 h-8 md:w-auto md:px-3 md:py-1.5 rounded-lg text-xs font-semibold font-geist bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/10 cursor-pointer flex items-center justify-center shrink-0"
+            className="hidden md:flex w-auto px-3 py-1.5 rounded-lg text-xs font-semibold font-geist bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/10 cursor-pointer items-center justify-center shrink-0"
             title="Leave Room"
           >
-            <span className="material-symbols-outlined text-[16px] md:hidden block">logout</span>
-            <span className="hidden md:inline">Leave Room</span>
+            <span>Leave Room</span>
           </button>
         </div>
       </header>
 
       {/* Main Workspace Frame */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Left Icon Rail */}
-        <SidebarL1 />
 
         {/* Live Participant presence panel */}
         <ParticipantPanel
@@ -579,7 +495,7 @@ export const RoomPage: React.FC = () => {
         />
 
         {/* Center Screen Sharing Canvas Area */}
-        <main className="flex-1 bg-zinc-950/20 p-2.5 sm:p-3 pb-[7rem] landscape:pb-[5.5rem] md:pb-3 flex flex-col justify-between overflow-hidden relative gap-2.5 md:gap-3 min-w-0">
+        <main className="flex-1 bg-zinc-950/20 p-2.5 sm:p-3 flex flex-col overflow-hidden relative gap-2.5 md:gap-3 min-w-0">
           {/* Error message banner */}
           {errorMessage && (
             <div className="px-4 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 font-inter flex items-center gap-2 shrink-0">
@@ -656,9 +572,16 @@ export const RoomPage: React.FC = () => {
                       <span className="material-symbols-outlined text-[26px] sm:text-[28px] text-indigo-400">screen_share</span>
                     </div>
                     <h3 className="text-xs sm:text-sm font-bold font-geist text-zinc-300">You are sharing your screen</h3>
-                    <p className="text-[10px] sm:text-xs text-zinc-500 font-inter leading-relaxed max-w-[280px]">
-                      Participants in this room can see your screen. Use the Stop button to end sharing.
+                    <p className="text-[10px] sm:text-xs text-zinc-500 font-inter leading-relaxed max-w-[280px] mb-1">
+                      Participants in this room can see your screen.
                     </p>
+                    <button
+                      onClick={handleShareToggle}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold font-geist bg-rose-600 hover:bg-rose-500 text-white hover:opacity-90 shadow-lg shadow-rose-600/25 transition-all cursor-pointer flex items-center gap-1.5 min-h-9"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">stop_screen_share</span>
+                      Stop Sharing
+                    </button>
                   </>
                 ) : (
                   <>
@@ -709,9 +632,9 @@ export const RoomPage: React.FC = () => {
             )}
           </div>
 
-          {/* Floating RTC controls bar */}
-          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 py-3 flex items-center justify-center pointer-events-none pb-[calc(12px+env(safe-area-inset-bottom))] pl-[calc(12px+env(safe-area-inset-left))] pr-[calc(12px+env(safe-area-inset-right))] md:static md:bg-transparent md:border-t-0 md:p-0 md:z-10 md:shrink-0 md:flex md:justify-center landscape:py-2">
-            <div className="glass-panel pointer-events-auto w-full max-w-[30rem] md:w-auto md:max-w-full px-2.5 py-2 rounded-2xl md:rounded-xl flex items-center gap-2 shadow-2xl justify-center overflow-hidden md:flex-nowrap">
+          {/* RTC controls bar */}
+          <div className="w-full flex items-center justify-center shrink-0 z-10">
+            <div className="glass-panel w-full max-w-[30rem] md:w-auto md:max-w-full px-2.5 py-2 rounded-2xl md:rounded-xl flex items-center gap-2 shadow-2xl justify-center overflow-hidden md:flex-nowrap">
               {/* Microphone toggle — all participants */}
               <button
                 onClick={() => {
@@ -732,12 +655,12 @@ export const RoomPage: React.FC = () => {
                 </span>
               </button>
 
-              {/* Screen share button — host only */}
+              {/* Screen share button — host only (Desktop only) */}
               {isHost && (
                 <button
                   onClick={handleShareToggle}
                   disabled={isRequesting}
-                  className={`min-w-0 flex-1 md:flex-none px-3 h-11 md:px-3.5 md:h-8 rounded-xl md:rounded-lg flex items-center justify-center transition-all border gap-1.5 text-xs font-bold font-geist cursor-pointer shrink-0 ${
+                  className={`hidden md:flex min-w-0 flex-1 md:flex-none px-3 h-11 md:px-3.5 md:h-8 rounded-xl md:rounded-lg items-center justify-center transition-all border gap-1.5 text-xs font-bold font-geist cursor-pointer shrink-0 ${
                     isSharing
                       ? 'bg-rose-600 hover:bg-rose-500 text-white border-transparent'
                       : isRequesting
@@ -814,6 +737,93 @@ export const RoomPage: React.FC = () => {
                 </>
               )}
 
+              {/* Mobile-only toggle buttons */}
+              {/* Participants list toggle */}
+              <button
+                onClick={() => {
+                  setIsLeftPanelExpanded(!isLeftPanelExpanded);
+                  setIsRightSidebarExpanded(false);
+                }}
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all border cursor-pointer shrink-0 md:hidden ${
+                  isLeftPanelExpanded
+                    ? 'bg-indigo-600/20 border-indigo-500/30 text-[#c0c1ff]'
+                    : 'bg-zinc-900 border-zinc-850 text-zinc-350 hover:bg-zinc-800'
+                }`}
+                title="Participants"
+              >
+                <span className="material-symbols-outlined text-[20px]">group</span>
+              </button>
+
+              {/* Chat toggle */}
+              <button
+                onClick={() => {
+                  setIsLeftPanelExpanded(false);
+                  if (isRightSidebarExpanded && activeRightTab === 'chat') {
+                    setIsRightSidebarExpanded(false);
+                  } else {
+                    setIsRightSidebarExpanded(true);
+                    setActiveRightTab('chat');
+                  }
+                }}
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all border cursor-pointer shrink-0 md:hidden relative ${
+                  isRightSidebarExpanded && activeRightTab === 'chat'
+                    ? 'bg-indigo-600/20 border-indigo-500/30 text-[#c0c1ff]'
+                    : 'bg-zinc-900 border-zinc-850 text-zinc-350 hover:bg-zinc-800'
+                }`}
+                title="Chat"
+              >
+                <span className="material-symbols-outlined text-[20px]">forum</span>
+                {messages.length > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1 bg-indigo-600 text-zinc-950 text-[8px] font-bold font-mono rounded-full scale-90">
+                    {messages.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Insights toggle */}
+              <button
+                onClick={() => {
+                  setIsLeftPanelExpanded(false);
+                  if (isRightSidebarExpanded && activeRightTab === 'ai') {
+                    setIsRightSidebarExpanded(false);
+                  } else {
+                    setIsRightSidebarExpanded(true);
+                    setActiveRightTab('ai');
+                  }
+                }}
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all border cursor-pointer shrink-0 md:hidden ${
+                  isRightSidebarExpanded && activeRightTab === 'ai'
+                    ? 'bg-indigo-600/20 border-indigo-500/30 text-[#c0c1ff]'
+                    : 'bg-zinc-900 border-zinc-850 text-zinc-350 hover:bg-zinc-800'
+                }`}
+                title="AI Insights"
+              >
+                <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
+              </button>
+
+              {/* Host Controls toggle */}
+              {isHost && (
+                <button
+                  onClick={() => {
+                    setIsLeftPanelExpanded(false);
+                    if (isRightSidebarExpanded && activeRightTab === 'host') {
+                      setIsRightSidebarExpanded(false);
+                    } else {
+                      setIsRightSidebarExpanded(true);
+                      setActiveRightTab('host');
+                    }
+                  }}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all border cursor-pointer shrink-0 md:hidden ${
+                    isRightSidebarExpanded && activeRightTab === 'host'
+                      ? 'bg-indigo-600/20 border-indigo-500/30 text-[#c0c1ff]'
+                      : 'bg-zinc-900 border-zinc-850 text-zinc-350 hover:bg-zinc-800'
+                  }`}
+                  title="Host Controls"
+                >
+                  <span className="material-symbols-outlined text-[20px]">settings_accessibility</span>
+                </button>
+              )}
+
               <div className="w-px h-5 bg-zinc-800/80 shrink-0" />
 
               <button
@@ -837,7 +847,7 @@ export const RoomPage: React.FC = () => {
         {/* Right Chat and AI Panel */}
         <aside className={`border-l border-slate-border bg-zinc-950/95 md:bg-zinc-950/40 flex flex-col h-[100dvh] md:h-full shrink-0 transition-transform md:transition-all duration-300 ease-out fixed md:static top-0 bottom-0 right-0 z-40 pr-[env(safe-area-inset-right)] shadow-2xl md:shadow-none ${
           isRightSidebarExpanded
-            ? 'w-[min(100vw,24rem)] max-w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right))] md:max-w-none md:w-80 translate-x-0'
+            ? 'w-[min(100vw,24rem)] max-w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right))] md:max-w-none md:w-96 translate-x-0'
             : 'w-[min(100vw,24rem)] max-w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right))] md:max-w-none translate-x-full md:translate-x-0 md:w-12'
         } ${!isRightSidebarExpanded ? 'invisible md:visible' : ''}`}>
           {isRightSidebarExpanded ? (

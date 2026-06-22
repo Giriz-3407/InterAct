@@ -53,9 +53,9 @@ export const RoomPage: React.FC = () => {
 
   // Layout & Sidebar collapse/tab states
   const [isLeftPanelExpanded, setIsLeftPanelExpanded] = useState(window.innerWidth >= 768);
-  const [isLeftPanelPinned, setIsLeftPanelPinned] = useState(false);
+  const [isLeftPanelPinned] = useState(false);
   const [isRightSidebarExpanded, setIsRightSidebarExpanded] = useState(window.innerWidth >= 768);
-  const [isRightSidebarPinned, setIsRightSidebarPinned] = useState(false);
+  const [isRightSidebarPinned] = useState(false);
   const [activeRightTab, setActiveRightTab] = useState<'chat' | 'ai' | 'host'>('chat');
 
   // Check if current user is host
@@ -490,8 +490,6 @@ export const RoomPage: React.FC = () => {
           currentUserId={currentSocketId}
           isExpanded={isLeftPanelExpanded}
           onToggleExpand={handleParticipantsToggle}
-          isPinned={isLeftPanelPinned}
-          onTogglePin={() => setIsLeftPanelPinned(!isLeftPanelPinned)}
         />
 
         {/* Center Screen Sharing Canvas Area */}

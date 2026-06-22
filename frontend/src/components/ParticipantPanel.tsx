@@ -16,8 +16,6 @@ interface ParticipantPanelProps {
   currentUserId?: string;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  isPinned?: boolean;
-  onTogglePin?: () => void;
 }
 
 export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
@@ -26,8 +24,6 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
   currentUserId,
   isExpanded,
   onToggleExpand,
-  isPinned = false,
-  onTogglePin,
 }) => {
   const panelWidth =
     'w-[min(100vw,24rem)] max-w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right))] md:max-w-none';

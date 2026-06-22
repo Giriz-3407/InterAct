@@ -27,6 +27,7 @@ interface MessageItem {
   sender: string;
   message: string;
   timestamp: string;
+  type?: string;
 }
 
 export const RoomPage: React.FC = () => {
@@ -322,7 +323,8 @@ export const RoomPage: React.FC = () => {
         {
           sender: data.sender,
           message: data.message,
-          timestamp: data.timestamp
+          timestamp: data.timestamp,
+          type: data.type
         }
       ]);
     });
@@ -381,11 +383,6 @@ export const RoomPage: React.FC = () => {
 
     wsClient.send('chat_message', { message: trimmed });
     setChatInput('');
-
-    // Auto-close chat drawer on mobile after sending a message if not pinned
-    if (window.innerWidth < 768 && !isRightSidebarPinned) {
-      setIsRightSidebarExpanded(false);
-    }
   };
 
   const handleShareToggle = useCallback(async () => {
@@ -910,6 +907,15 @@ export const RoomPage: React.FC = () => {
                         </div>
                       ) : (
                         messages.map((m, idx) => {
+                          if (m.type === 'system_rename') {
+                            return (
+                              <div key={idx} className="flex justify-center py-1.5">
+                                <span className="text-[11px] text-zinc-500 italic font-inter text-center leading-relaxed px-3 py-1 rounded-full bg-zinc-900/40 border border-zinc-800/50">
+                                  {m.message}
+                                </span>
+                              </div>
+                            );
+                          }
                           const isMe = m.sender === displayName;
                           const formatTime = (isoString: string) => {
                             try {

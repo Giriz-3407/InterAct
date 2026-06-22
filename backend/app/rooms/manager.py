@@ -46,6 +46,9 @@ class RoomManager:
                 "auto_delete_when_empty": True,
                 "host_last_seen_at": None,
                 "pending_deletion_at": None,
+                "empty_since": None,
+                "pending_empty_deletion_at": None,
+                "client_names": {},
                 
                 # Keep these for compatibility if frontend/WebRTC references them
                 "hostId": None,
@@ -97,6 +100,16 @@ class RoomManager:
             else:
                 role = "viewer"
 
+            # Detect display name change for this client
+            old_name = room["client_names"].get(client_id)
+            if old_name and old_name != display_name:
+                room["_rename_info"] = {"old_name": old_name, "new_name": display_name}
+            room["client_names"][client_id] = display_name
+
+            # Cancel any pending empty-room deletion when anyone rejoins
+            room["empty_since"] = None
+            room["pending_empty_deletion_at"] = None
+
             participant = {
                 "socketId": socket_id,
                 "clientId": client_id,
@@ -141,12 +154,13 @@ class RoomManager:
                     room["host_last_seen_at"] = now
                     room["pending_deletion_at"] = now + 86400  # 24 hours
 
-            # Mode 1: Auto-delete when empty = ENABLED
+            # When room becomes empty, start 30-second grace period before deletion
             if len(room["participants"]) == 0:
                 if room.get("auto_delete_when_empty", True):
-                    if code in self._rooms:
-                        del self._rooms[code]
-                    return None
+                    now = time.time()
+                    room["empty_since"] = now
+                    room["pending_empty_deletion_at"] = now + 30
+                    logger.info(f"Room {code} is now empty. 30s grace period started.")
 
             return room
 
@@ -177,9 +191,10 @@ class RoomManager:
                     
                     if len(room["participants"]) == 0:
                         if room.get("auto_delete_when_empty", True):
-                            if code in self._rooms:
-                                del self._rooms[code]
-                            affected.append((code, None))
+                            now = time.time()
+                            room["empty_since"] = now
+                            room["pending_empty_deletion_at"] = now + 30
+                            affected.append((code, room))
                         else:
                             affected.append((code, room))
                     else:
@@ -242,7 +257,9 @@ class RoomManager:
                     for code, room in self._rooms.items():
                         if room.get("auto_delete_when_empty", True):
                             if len(room["participants"]) == 0:
-                                to_delete.append(code)
+                                pending_deletion = room.get("pending_empty_deletion_at")
+                                if pending_deletion and now > pending_deletion:
+                                    to_delete.append(code)
                         else:
                             pending_deletion_at = room.get("pending_deletion_at")
                             if pending_deletion_at and now > pending_deletion_at:

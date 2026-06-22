@@ -20,6 +20,7 @@ class MessageResponse(BaseModel):
     sender: str
     message: str
     timestamp: str
+    type: str = "user"
 
 @router.post("", response_model=CreateRoomResponse, status_code=status.HTTP_201_CREATED)
 async def create_room():
@@ -73,7 +74,8 @@ async def get_room_messages(roomCode: str):
                 roomCode=doc["roomCode"],
                 sender=doc["sender"],
                 message=doc["message"],
-                timestamp=doc["timestamp"]
+                timestamp=doc["timestamp"],
+                type=doc.get("type", "user")
             ))
         return messages
     except Exception as e:

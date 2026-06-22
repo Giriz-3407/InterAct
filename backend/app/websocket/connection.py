@@ -123,6 +123,37 @@ class ConnectionManager:
                 await self._send_error(socket_id, "Room not found or inactive")
                 return
 
+            # Detect and broadcast display name change
+            rename_info = room.pop("_rename_info", None)
+            if rename_info:
+                old_name = rename_info["old_name"]
+                new_name = rename_info["new_name"]
+                from datetime import datetime
+                from app.database.mongodb import get_database
+                try:
+                    db = get_database()
+                    ts = datetime.utcnow().isoformat() + "Z"
+                    system_msg = f"{old_name} is now {new_name}"
+                    await db["messages"].insert_one({
+                        "roomCode": room_code,
+                        "sender": "",
+                        "message": system_msg,
+                        "timestamp": ts,
+                        "type": "system_rename"
+                    })
+                    await self.broadcast_to_room(
+                        room_code,
+                        {
+                            "event": "chat_message",
+                            "sender": "",
+                            "message": system_msg,
+                            "timestamp": ts,
+                            "type": "system_rename"
+                        }
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to save/broadcast rename system message: {e}")
+
             self.socket_room_map[socket_id] = room_code
             self.socket_name_map[socket_id] = display_name
             

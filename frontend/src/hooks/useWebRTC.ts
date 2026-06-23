@@ -6,16 +6,7 @@ import {
   VOICE_NEGOTIATION_IDLE,
   type VoiceNegotiationState,
 } from '../lib/voiceNegotiationDiag';
-import {
-  diagStage1_syncMicCalled,
-  diagStage2_micAcquired,
-  diagStage3_attachCalled,
-  diagStage3_replaceTrackResult,
-  diagStage4_sdp,
-  diagStage5_pcState,
-  diagStage6_hostOnTrack,
-  diagReset,
-} from './useViewerMicDiag';
+
 
 const STUN_CONFIG: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -196,6 +187,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   const createPeerConnection = useCallback((peerId: string): RTCPeerConnection => {
     const existing = pcsRef.current.get(peerId);
     if (existing) {
+      console.warn(`[WEBRTC_GUARD] Replacing existing peer connection for ${peerId}`);
       existing.close();
     }
 
@@ -222,27 +214,18 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       const track = e.track;
       const stream = e.streams?.[0] ?? new MediaStream([track]);
 
-      console.log(`[DIAG:HostOnTrack] Invocation for peer: ${peerId}`);
-      console.log(`[DIAG:HostOnTrack] track.id: ${track.id}`);
-      console.log(`[DIAG:HostOnTrack] kind: ${track.kind}`);
-      console.log(`[DIAG:HostOnTrack] streams.length: ${e.streams ? e.streams.length : 0}`);
-      console.log(`[DIAG:HostOnTrack] transceiver.mid: ${e.transceiver?.mid ?? 'undefined'}`);
-
       console.log(`[WebRTC] Received track: id=${track.id}, kind=${track.kind}, streamId=${stream.id}, from=${peerId}`);
 
       if (isHost) {
         // Host receiving track from a viewer — this is a viewer's microphone
         if (track.kind === 'audio') {
           console.log(`[WebRTC] Host received viewer mic track from ${peerId}`);
-          console.log(`[VOICE_TRACE] ontrack HOST audio: peerId=${peerId}, streamId=${stream.id}, trackId=${track.id}, trackKind=${track.kind}, streamsLen=${e.streams?.length ?? 0}, remoteMicStreams.size BEFORE=${remoteMicStreams.size}`);
-          diagStage6_hostOnTrack(track, e.streams, e.transceiver, peerId);
           viewerMicTracksRef.current.set(peerId, { track, stream });
 
           // Host local playback — hear the viewer
           setRemoteMicStreams((prev) => {
             const next = new Map(prev);
             next.set(stream.id, stream);
-            console.log(`[VOICE_TRACE] setRemoteMicStreams HOST: streamId=${stream.id}, size BEFORE=${prev.size}, AFTER=${next.size}`);
             return next;
           });
 
@@ -258,7 +241,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
           // Relay this viewer's mic to all other viewers
           const otherViewers = viewerIds.filter((id) => id && id !== currentSocketId && id !== peerId);
-          console.log(`[TRANSCEIVER_GROWTH] ontrack relay → sendOfferToViewerRef for ${otherViewers.length} other viewer(s)`);
           for (const otherViewerId of otherViewers) {
             sendOfferToViewerRef.current?.(otherViewerId).catch((err) =>
               console.error(`[WebRTC] Failed to relay mic to ${otherViewerId}:`, err)
@@ -278,11 +260,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           } else {
             // Microphone audio (host's own mic or relayed viewer mic)
             console.log(`[WebRTC] Set remote mic stream: ${stream.id}`);
-            console.log(`[VOICE_TRACE] ontrack VIEWER audio: streamId=${stream.id}, trackId=${track.id}, remoteMicStreams.size BEFORE=${remoteMicStreams.size}`);
             setRemoteMicStreams((prev) => {
               const next = new Map(prev);
               next.set(stream.id, stream);
-              console.log(`[VOICE_TRACE] setRemoteMicStreams VIEWER: streamId=${stream.id}, size BEFORE=${prev.size}, AFTER=${next.size}`);
               return next;
             });
 
@@ -309,9 +289,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     pc.oniceconnectionstatechange = () => {
       const state = pc.iceConnectionState;
       console.log(`[WebRTC] ICE state for peer ${peerId}:`, state);
-      if (state === 'connected' || state === 'completed' || state === 'failed') {
-        diagStage5_pcState(pc);
-      }
       if (state === 'failed' || state === 'closed') {
         pcsRef.current.delete(peerId);
         if (isHost) {
@@ -333,11 +310,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   // targetViewerId: when syncing for a specific viewer, exclude that viewer's own
   // relayed mic track (don't echo their mic back to them)
   const syncTracks = useCallback((pc: RTCPeerConnection, targetViewerId?: string) => {
-    const beforeCount = pc.getTransceivers().length;
-    const beforeAudioCount = getAudioTransceivers(pc).length;
-    const error = new Error();
-    const callerStack = error.stack?.split('\n').slice(2, 6).join(' → ') ?? 'unknown';
-    console.log(`[TRANSCEIVER_GROWTH] syncTracks ENTER: targetViewerId=${targetViewerId}, currentTransceivers=${beforeCount}, currentAudioTransceivers=${beforeAudioCount}, caller=${callerStack}`);
 
     const activeTracks: { track: MediaStreamTrack; stream: MediaStream }[] = [];
 
@@ -366,6 +338,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
     // 1. Remove senders that are no longer active
     senders.forEach((sender) => {
+      if (sender.track && sender.track.readyState === 'ended') {
+        console.warn(`[WEBRTC_GUARD] Sender track ended: id=${sender.track.id}, kind=${sender.track.kind}`);
+      }
       if (sender.track) {
         const isActive = activeTracks.some((t) => t.track.id === sender.track?.id);
         if (!isActive) {
@@ -403,46 +378,41 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           !t.sender.track &&
           (t.direction === 'recvonly' || t.currentDirection === 'recvonly')
       );
-      console.log(`[TRANSCEIVER_GROWTH] syncTracks recvonly check: totalRecvSlots=${recvSlots.length}, occupiedRecvSlots=${recvSlots.filter(t => t.receiver.track).length}`);
 
+      if (recvSlots.length > 1) {
+        console.warn(`[WEBRTC_GUARD] Unexpected: ${recvSlots.length} recvonly audio slots for viewer mic (expected ≤1)`);
+      }
       const hasRecvSlot = recvSlots.length > 0;
       if (!hasRecvSlot) {
         try {
           pc.addTransceiver('audio', { direction: 'recvonly' });
           const afterCount = pc.getTransceivers().length;
-          console.log(`[TRANSCEIVER_GROWTH] syncTracks ADDED recvonly: count BEFORE=${beforeCount}, AFTER=${afterCount}, delta=${afterCount - beforeCount}, caller=${callerStack}`);
-          console.log(`[WebRTC] Added recvonly audio transceiver for viewer mic slot`);
           if (afterCount > 10) {
-            console.warn(`[TRANSCEIVER_GROWTH_WARNING] Audio transceiver count=${afterCount} exceeds 10. Uncontrolled growth detected.`);
+            console.warn(`[WEBRTC_GUARD] Audio transceiver count=${afterCount} exceeds 10. Unexpected growth detected.`);
           }
+          console.log(`[WebRTC] Added recvonly audio transceiver for viewer mic slot`);
         } catch (err) {
           console.warn('[WebRTC] Error adding recvonly transceiver:', err);
         }
-      } else {
-        console.log(`[TRANSCEIVER_GROWTH] syncTracks: reusing existing recvonly slot (count=${recvSlots.length})`);
       }
     }
   }, [isHost]);
 
   // ─── HOST: offer helper for a single viewer ───────────────────────────────
   const sendOfferToViewer = useCallback(async (viewerId: string) => {
-    const transceiversBefore = pcsRef.current.get(viewerId)?.getTransceivers().length ?? 0;
-    const audioBefore = pcsRef.current.get(viewerId) ? getAudioTransceivers(pcsRef.current.get(viewerId)!).length : 0;
-    console.log(`[VOICE_TRACE] sendOfferToViewer: target=${viewerId}`);
-    console.log(`[TRANSCEIVER_GROWTH] sendOfferToViewer ENTER: target=${viewerId}, peerTransceivers=${transceiversBefore}, audioTransceivers=${audioBefore}`);
     let pc = pcsRef.current.get(viewerId);
     if (!pc) {
       pc = createPeerConnection(viewerId);
+    }
+    if (pc.connectionState === 'closed') {
+      console.warn(`[WEBRTC_GUARD] Cannot negotiate: connection to ${viewerId} is closed`);
+      pcsRef.current.delete(viewerId);
+      return;
     }
 
     syncTracks(pc, viewerId);
 
     const offer = await pc.createOffer();
-    const audioTransceivers = getAudioTransceivers(pc);
-    const audioMLines = (offer.sdp?.match(/m=audio/g) || []).length;
-    const transceiversAfter = pc.getTransceivers().length;
-    console.log(`[VOICE_TRACE] sendOfferToViewer: target=${viewerId}, transceivers=${transceiversAfter}, audioTransceivers=${audioTransceivers.length}, audioMLines=${audioMLines}`);
-    console.log(`[TRANSCEIVER_GROWTH] sendOfferToViewER AFTER offer: target=${viewerId}, transceivers=${transceiversAfter}, audioTransceivers=${audioTransceivers.length}, delta=${transceiversAfter - transceiversBefore}`);
     await pc.setLocalDescription(offer);
 
     wsClient.send('webrtc_offer', { targetId: viewerId, offer: pc.localDescription });
@@ -455,13 +425,22 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     sendOfferToViewerRef.current = sendOfferToViewer;
   }, [sendOfferToViewer]);
 
-  // ─── HOST: sync tracks with all connected viewers ─────────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NEGOTIATION FLOW — Central dispatch
+  //   syncAllViewers → sendOfferToViewer (per viewer) → offer/answer cycle
+  //
+  // Entry points (all converge here):
+  //   1. Host Mic Enable     — syncMic → syncAllViewersRef.current()
+  //   2. Viewer Mic Enable   — syncMic → requestViewerMicPublish
+  //                           → audio_publish_request → sendOfferToViewer
+  //   3. Screen Share Start  — startSharing → syncAllViewers
+  //   4. Screen Share Stop   — stopSharing  → syncAllViewers
+  //   5. Viewer Join (late)  — late-joiner effect → sendOfferToViewer
+  //   6. Viewer Leave        — viewer-cleanup effect → syncAllViewers
+  // ═══════════════════════════════════════════════════════════════════════════
   const syncAllViewers = useCallback(async () => {
     if (!isHost) return;
     const currentViewers = viewerIds.filter((id) => id && id !== currentSocketId);
-    const error = new Error();
-    const callerStack = error.stack?.split('\n').slice(2, 6).join(' → ') ?? 'unknown';
-    console.log(`[TRANSCEIVER_GROWTH] syncAllViewers called: viewers=${JSON.stringify(currentViewers)}, caller=${callerStack}`);
     console.log(`[WebRTC] Syncing tracks for ${currentViewers.length} viewer(s)`);
     for (const viewerId of currentViewers) {
       try {
@@ -490,7 +469,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     wsClient.send('host_stop_share', {});
 
     // Sync tracks (will remove screen tracks and renegotiate)
-    console.log(`[TRANSCEIVER_GROWTH] stopSharing → syncAllViewers()`);
     syncAllViewers();
   }, [syncAllViewers]);
 
@@ -508,7 +486,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
         video: { frameRate: { ideal: 30, max: 60 } },
         audio: true,
       };
-      console.log('[WEBRTC_AUDIT] getDisplayMedia constraints used by Host:', constraints);
       displayStream = await navigator.mediaDevices.getDisplayMedia(constraints);
       displayStreamRef.current = displayStream;
     } catch {
@@ -529,7 +506,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     displayStream.getVideoTracks()[0].onended = () => stopSharing();
 
     // Sync tracks with all viewers and renegotiate
-    console.log(`[TRANSCEIVER_GROWTH] startSharing → syncAllViewers()`);
     await syncAllViewers();
   }, [isHost, syncAllViewers, stopSharing]);
 
@@ -563,7 +539,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
         if (viewerMicTracksRef.current.has(id)) {
           viewerMicTracksRef.current.delete(id);
           // Renegotiate with remaining viewers to remove the departed viewer's mic
-          console.log(`[TRANSCEIVER_GROWTH] viewer-cleanup → syncAllViewers()`);
           syncAllViewers();
         }
       }
@@ -572,7 +547,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
   // ─── Viewer: request host offer so mic attaches before createAnswer ─────────
   const requestViewerMicPublish = useCallback(() => {
-    console.log(`[VOICE_TRACE] audio_publish_request: sender=${currentSocketId}, target=${hostSocketId}`);
     if (!hostSocketId) {
       console.warn('[WebRTC] Cannot publish mic: host socket ID unknown');
       return;
@@ -586,51 +560,38 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   // Works for BOTH host and viewer
   useEffect(() => {
     const syncMic = async () => {
-      console.log(`[VOICE_TRACE] syncMic ENTER: host=${isHost}, micMuted=${micMuted}, hasExistingStream=${!!micStreamRef.current}`);
-      diagStage1_syncMicCalled(micMuted, isHost);
       if (!micMuted) {
         if (!micStreamRef.current) {
           try {
             console.log('[WebRTC] Requesting microphone stream...');
-            if (!isHost) diagReset();
             const micStreamObj = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const firstTrack = micStreamObj.getAudioTracks()[0];
-            console.log(`[VOICE_TRACE] getUserMedia SUCCESS: track id=${firstTrack?.id}, track label=${firstTrack?.label}, track enabled=${firstTrack?.enabled}, track readyState=${firstTrack?.readyState}`);
             micStreamRef.current = micStreamObj;
             micStreamObj.getAudioTracks().forEach((t) => (t.enabled = true));
             setMicStream(micStreamObj);
-            if (!isHost) diagStage2_micAcquired(true, firstTrack ?? null);
 
             if (isHost) {
               const viewers = viewerIds.filter((id) => id && id !== currentSocketId);
-              console.log(`[VOICE_TRACE] syncMic HOST: viewers=${JSON.stringify(viewers)}, awaiting answers from ${viewers.length} viewer(s)`);
-              console.log(`[TRANSCEIVER_GROWTH] syncMic (first acq) → syncAllViewersRef.current()`);
               pendingHostAnswersRef.current = new Set(viewers);
               await syncAllViewersRef.current();
               if (viewers.length === 0) {
                 confirmVoiceConnected('host_no_viewers');
               }
             } else {
-              console.log(`[VOICE_TRACE] syncMic VIEWER: calling requestViewerMicPublish()`);
               // Viewer: always negotiate via host offer → attach → answer
               requestViewerMicPublish();
             }
           } catch (err) {
-            console.error(`[VOICE_TRACE] getUserMedia FAILED:`, err);
-            if (!isHost) diagStage2_micAcquired(false, null, err);
+            console.error('[WebRTC] getUserMedia failed:', err);
             setMicWarning('Microphone access denied.');
             cancelVoiceNegotiation();
           }
         } else {
-          console.log(`[VOICE_TRACE] syncMic: re-using existing micStream, re-enabling tracks`);
           micStreamRef.current.getAudioTracks().forEach((track) => {
             track.enabled = true;
           });
 
           if (isHost) {
             const viewers = viewerIds.filter((id) => id && id !== currentSocketId);
-            console.log(`[VOICE_TRACE] syncMic HOST (reuse): viewers=${JSON.stringify(viewers)}`);
-            console.log(`[TRANSCEIVER_GROWTH] syncMic (reuse) → syncAllViewersRef.current()`);
             pendingHostAnswersRef.current = new Set(viewers);
             await syncAllViewersRef.current();
             if (viewers.length === 0) {
@@ -638,14 +599,12 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
             }
           } else {
             // Re-unmute: renegotiate so upload m-line is sendonly (not just track.enabled)
-            console.log(`[VOICE_TRACE] syncMic VIEWER (reuse): calling requestViewerMicPublish()`);
             requestViewerMicPublish();
           }
         }
         wsClient.send('mic_status_update', { micMuted: false });
         console.log('[WebRTC] Mic enabled, sent mic_status_update (false)');
       } else {
-        console.log(`[VOICE_TRACE] syncMic: MUTING - cancelVoiceNegotiation, disabling tracks`);
         cancelVoiceNegotiation();
         if (micStreamRef.current) {
           micStreamRef.current.getAudioTracks().forEach((track) => {
@@ -657,7 +616,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       }
     };
 
-    console.log(`[VOICE_TRACE] syncMic effect triggered`);
     syncMic();
   // viewerIds removed to prevent renegotiation on UI re-renders.
   // syncAllViewers removed via ref pattern — syncAllViewersRef.current() always has latest.
@@ -669,23 +627,13 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   // (per RFC 8829 §5.10), so we cannot match by direction. We select by position instead.
   async function attachViewerMicToPC(pc: RTCPeerConnection, micStreamObj: MediaStream) {
     const micTrack = micStreamObj.getAudioTracks()[0];
-    if (!micTrack) {
-      console.log(`[VOICE_TRACE] attachViewerMicToPC: no mic track available`);
-      diagStage3_attachCalled(pc, null);
-      return;
-    }
+    if (!micTrack) return;
 
     const micSlot = selectViewerMicPublishSlot(pc);
-    const senderTrackBefore = micSlot?.sender?.track?.id ?? 'null';
-    const transceiverDir = micSlot?.direction ?? 'none';
-
-    console.log(`[VOICE_TRACE] attachViewerMicToPC: selected transceiver index=${pc.getTransceivers().indexOf(micSlot!)}, direction=${transceiverDir}, sender.track.id BEFORE=${senderTrackBefore}`);
 
     if (micSlot) {
       micSlot.direction = 'sendonly';
     }
-
-    diagStage3_attachCalled(pc, micTrack);
 
     if (!micSlot) {
       console.warn('[WebRTC] No audio transceiver available for viewer mic');
@@ -694,7 +642,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
     if (micSlot.sender.track?.id === micTrack.id) {
       console.log('[WebRTC] Viewer mic already on correct transceiver');
-      diagStage3_replaceTrackResult(true, micTrack.id);
       return;
     }
 
@@ -703,12 +650,8 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     }
     try {
       await micSlot.sender.replaceTrack(micTrack);
-      const senderTrackAfter = micSlot.sender.track?.id ?? 'null';
-      console.log(`[VOICE_TRACE] attachViewerMicToPC: replaceTrack SUCCESS. sender.track.id AFTER=${senderTrackAfter}, direction=${micSlot.direction}`);
-      diagStage3_replaceTrackResult(true, senderTrackAfter);
     } catch (err) {
       console.warn('[WebRTC] Failed to replaceTrack on mic slot transceiver:', err);
-      diagStage3_replaceTrackResult(false, null, err);
     }
   }
 
@@ -730,8 +673,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
       // Viewer: receives an offer from the host
       console.log(`[WebRTC] Viewer received offer from host ${senderId}`);
-      const audioSectionsInOffer = (offer?.sdp?.match(/m=audio/g) || []).length;
-      console.log(`[VOICE_TRACE] webrtc_offer handler: from=${senderId}, audioSectionsInOffer=${audioSectionsInOffer}`);
       voiceNegotiationLog('offer_received', voiceNegotiationStartedAtRef.current);
       let pc = pcsRef.current.get(senderId);
       if (!pc) {
@@ -739,10 +680,8 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       }
 
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      if (!isHost) diagStage4_sdp('offer', offer.sdp);
 
       const publishingMic = !!(micStreamRef.current && !micMuted);
-      console.log(`[VOICE_TRACE] webrtc_offer handler: publishingMic=${publishingMic}`);
 
       // If viewer has an active mic, attach it to the mic-slot transceiver before answering
       if (publishingMic) {
@@ -750,17 +689,10 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       }
 
       const answer = await pc.createAnswer();
-      const audioSectionsInAnswer = (answer?.sdp?.match(/m=audio/g) || []).length;
-      console.log(`[VOICE_TRACE] createAnswer: audioSections=${audioSectionsInAnswer}`);
       await pc.setLocalDescription(answer);
-      if (!isHost) {
-        diagStage4_sdp('answer', answer.sdp);
-        diagStage5_pcState(pc);
-      }
 
       wsClient.send('webrtc_answer', { targetId: senderId, answer: pc.localDescription });
       voiceNegotiationLog('answer_sent', voiceNegotiationStartedAtRef.current);
-      console.log(`[VOICE_TRACE] answer_sent: to=${senderId}, publishingMic=${publishingMic}`);
       if (publishingMic) {
         confirmVoiceConnected('viewer_answer_sent');
       }
@@ -779,8 +711,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       }
 
       console.log(`[WebRTC] Host applying answer from viewer ${senderId}`);
-      const audioSectionsInAnswer = (answer?.sdp?.match(/m=audio/g) || []).length;
-      console.log(`[VOICE_TRACE] webrtc_answer handler: from=${senderId}, audioSections=${audioSectionsInAnswer}`);
       await pc.setRemoteDescription(new RTCSessionDescription(answer));
       voiceNegotiationLog('answer_received', voiceNegotiationStartedAtRef.current);
 
@@ -789,18 +719,10 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
         pendingHostAnswersRef.current.has(senderId)
       ) {
         pendingHostAnswersRef.current.delete(senderId);
-        console.log(`[VOICE_TRACE] webrtc_answer: pending answers remaining=${pendingHostAnswersRef.current.size}`);
         if (pendingHostAnswersRef.current.size === 0) {
           confirmVoiceConnected('host_all_answers');
         }
       }
-
-      console.log(`[DIAG:HostTransceivers] --- Transceiver Dump for Peer ${senderId} ---`);
-      const transceivers = pc.getTransceivers();
-      transceivers.forEach((t, i) => {
-        console.log(`[DIAG:HostTransceivers] Index ${i} | mid: ${t.mid} | direction: ${t.direction} | currentDirection: ${t.currentDirection} | sender.track.id: ${t.sender.track?.id ?? 'null'} | receiver.track.id: ${t.receiver.track?.id ?? 'null'}`);
-      });
-      console.log(`[DIAG:HostTransceivers] ----------------------------------------------`);
     });
 
     // BOTH: ICE candidate
@@ -832,8 +754,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       const { participantId } = data;
       if (!participantId) return;
 
-      console.log(`[VOICE_TRACE] audio_publish_request RECEIVED by host: from=${participantId}`);
-      console.log(`[TRANSCEIVER_GROWTH] audio_publish_request handler → sendOfferToViewer(${participantId})`);
       console.log(`[WebRTC] Host received audio_publish_request from ${participantId}`);
       try {
         await sendOfferToViewer(participantId);
@@ -866,7 +786,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     if (!mediaActive) return;
 
     console.log(`[WebRTC] Late joiner(s) detected, sending offers to: ${unconnected.join(', ')}`);
-    console.log(`[TRANSCEIVER_GROWTH] late-joiner effect → sendOfferToViewer for each of ${unconnected.length} viewer(s)`);
     unconnected.forEach((viewerId) => {
       sendOfferToViewer(viewerId).catch((err) =>
         console.error(`[WebRTC] Failed to send offer to late-joiner ${viewerId}:`, err)

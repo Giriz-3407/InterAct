@@ -11,7 +11,6 @@ import { useCursorPresence } from '../hooks/useCursorPresence';
 import { isMobileDevice } from '../lib/mobile';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
 import { WebRTCAuditPanel } from '../components/WebRTCAuditPanel';
-import { diagStage7_hostPlayback, diagPrintSummary } from '../hooks/useViewerMicDiag';
 import { DiagnosticsPanel } from '../components/DiagnosticsPanel';
 import { VoiceNegotiationToast } from '../components/VoiceNegotiationToast';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
@@ -790,7 +789,10 @@ export const RoomPage: React.FC = () => {
     () => participants.filter(p => p.role !== 'host').map(p => p.socketId),
     [participants]
   );
-  const hostSocketId = participants.find(p => p.role === 'host')?.socketId || '';
+  const hostSocketId = useMemo(
+    () => participants.find(p => p.role === 'host')?.socketId || '',
+    [participants]
+  );
 
   // WebRTC
   const {
@@ -841,17 +843,13 @@ export const RoomPage: React.FC = () => {
   const remoteMicAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
 
   const attachRemoteMicStream = useCallback((el: HTMLAudioElement, stream: MediaStream) => {
-    console.log(`[VOICE_TRACE] attachRemoteMicStream: streamId=${stream.id}, elExists=${!!el}, currentSrcObject=${!!el.srcObject}`);
     if (el.srcObject !== stream) {
       el.srcObject = stream;
-      console.log(`[VOICE_TRACE] attachRemoteMicStream: srcObject ASSIGNED for stream=${stream.id}`);
     }
     el.muted = false;
     el.volume = 1.0;
-    void el.play().then(() => {
-      console.log(`[VOICE_TRACE] attachRemoteMicStream: play() SUCCESS for stream=${stream.id}`);
-    }).catch(err => {
-      console.warn(`[VOICE_TRACE] attachRemoteMicStream: play() FAILED for stream=${stream.id}`, err);
+    void el.play().catch(err => {
+      console.warn(`[WebRTC] Audio play failed for stream ${stream.id}:`, err);
     });
   }, []);
 
@@ -882,26 +880,13 @@ export const RoomPage: React.FC = () => {
   useEffect(() => {
     remoteMicStreams.forEach((stream, streamId) => {
       const el = remoteMicAudioRefs.current.get(streamId);
-      console.log(`[VOICE_TRACE] remoteMicStreams useEffect: streamId=${streamId}, el found=${!!el}, map.size before=${remoteMicAudioRefs.current.size}`);
       if (el) attachRemoteMicStream(el, stream);
-      if (el) {
-        console.log(`[VOICE_TRACE] AudioPlayback: streamId=${streamId}, paused=${el.paused}, muted=${el.muted}, volume=${el.volume}, readyState=${el.readyState}, currentTime=${el.currentTime}`);
-      }
-      if (isHost) {
-        setTimeout(() => {
-          const audioEl = remoteMicAudioRefs.current.get(streamId) ?? null;
-          diagStage7_hostPlayback(streamId, audioEl);
-          diagPrintSummary();
-        }, 500);
-      }
     });
     remoteMicAudioRefs.current.forEach((_, streamId) => {
       if (!remoteMicStreams.has(streamId)) {
-        console.log(`[VOICE_TRACE] remoteMicStreams: CLEANUP removing streamId=${streamId}`);
         remoteMicAudioRefs.current.delete(streamId);
       }
     });
-    console.log(`[VOICE_TRACE] remoteMicStreams useEffect END: map.size after=${remoteMicAudioRefs.current.size}`);
   }, [remoteMicStreams, isHost, attachRemoteMicStream]);
 
   // Message history
@@ -1011,7 +996,6 @@ export const RoomPage: React.FC = () => {
   }, []);
 
   const handleToggleMic = useCallback(() => {
-    console.log(`[VOICE_TRACE] handleToggleMic fired. isMuted=${isMuted}`);
     if (isMuted) beginVoiceNegotiation();
     setIsMuted(p => !p);
   }, [isMuted, beginVoiceNegotiation]);

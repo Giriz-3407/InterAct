@@ -455,12 +455,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     sendOfferToViewerRef.current = sendOfferToViewer;
   }, [sendOfferToViewer]);
 
-  // Stable ref for syncAllViewers (used in syncMic effect which must not re-run on viewerIds changes)
-  const syncAllViewersRef = useRef(syncAllViewers);
-  useEffect(() => {
-    syncAllViewersRef.current = syncAllViewers;
-  }, [syncAllViewers]);
-
   // ─── HOST: sync tracks with all connected viewers ─────────────────────────
   const syncAllViewers = useCallback(async () => {
     if (!isHost) return;
@@ -477,6 +471,12 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       }
     }
   }, [isHost, viewerIds, currentSocketId, sendOfferToViewer]);
+
+  // Stable ref for syncAllViewers (used in syncMic effect which must not re-run on viewerIds changes)
+  const syncAllViewersRef = useRef(syncAllViewers);
+  useEffect(() => {
+    syncAllViewersRef.current = syncAllViewers;
+  }, [syncAllViewers]);
 
   // ─── HOST: Stop sharing ────────────────────────────────────────────────────
   const stopSharing = useCallback(() => {

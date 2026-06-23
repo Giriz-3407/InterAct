@@ -295,3 +295,43 @@ body {
   border-top: 1px solid #1e1e21;
   margin: 0;
 }
+
+/* ───────────────────────────────────────────────────
+   DASHBOARD DESIGN SYSTEM
+─────────────────────────────────────────────────── */
+
+/* Base card used throughout the dashboard */
+.db-card {
+  background: #111113;
+  border: 1px solid #1e1e21;
+  border-radius: 16px;
+  transition: border-color 0.2s ease;
+}
+.db-card:hover {
+  border-color: #27272a;
+}
+
+/* Primary action card — Create Room */
+.db-action-primary {
+  background: #111113;
+  border: 1px solid rgba(192, 193, 255, 0.18);
+  box-shadow: 0 0 0 1px rgba(192, 193, 255, 0.04) inset;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.db-action-primary:hover {
+  border-color: rgba(192, 193, 255, 0.32);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(192, 193, 255, 0.06) inset;
+}
+
+/* Secondary action card — Join Room */
+.db-action-secondary {
+  background: #0f0f11;
+  border: 1px solid #1e1e21;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.db-action-secondary:hover {
+  border-color: #27272a;
+  transform: translateY(-2px);
+}
+

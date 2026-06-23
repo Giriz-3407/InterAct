@@ -11,7 +11,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional
 
-logger = logging.getLogger("omnisync.rooms")
+logger = logging.getLogger("interact.rooms")
 
 class RoomManager:
     def __init__(self):

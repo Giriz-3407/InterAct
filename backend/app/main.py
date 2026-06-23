@@ -4,10 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("omnisync")
+logger = logging.getLogger("interact")
 
 app = FastAPI(
-    title="OmniSync API",
+    title="InterAct API",
     description="Real-time Collaborative Screen Sharing Platform Backend API",
     version="1.0.0",
 )
@@ -44,7 +44,7 @@ app.include_router(rooms_router)
 
 @app.on_event("startup")
 async def startup_event():
-    logger.info("Initializing OmniSync backend modules...")
+    logger.info("Initializing InterAct backend modules...")
     await connect_to_mongo()
     import asyncio
     from app.rooms.manager import room_manager
@@ -52,7 +52,7 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    logger.info("Shutting down OmniSync backend modules...")
+    logger.info("Shutting down InterAct backend modules...")
     await close_mongo_connection()
 
 @app.websocket("/ws")
@@ -71,4 +71,4 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "app": "omnisync", "version": "1.0.0"}
+    return {"status": "ok", "app": "interact", "version": "1.0.0"}

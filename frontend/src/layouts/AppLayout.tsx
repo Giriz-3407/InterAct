@@ -48,17 +48,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, context }) => {
       {isExpanded && (
         <div
           onClick={handleToggle}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-25 md:hidden transition-all duration-300"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-25 md:hidden transition-opacity duration-300"
         />
       )}
 
-      {/* Unified Collapsible Navigation Sidebar */}
       <Sidebar context={context} isExpanded={isExpanded} onToggle={handleToggle} />
-      
+
       {/* Main Content Area */}
-      <div className={`w-full min-h-screen flex flex-col transition-all duration-300 ease-in-out min-w-0 ${
-        isExpanded ? 'pl-0 md:pl-64' : 'pl-0 md:pl-16'
-      }`}>
+      <div className="flex-1 min-w-0 flex flex-col">
         {children}
       </div>
     </div>

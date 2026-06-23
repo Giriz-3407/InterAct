@@ -5,7 +5,7 @@ import asyncio
 from fastapi import WebSocket, WebSocketDisconnect
 from app.rooms.manager import room_manager
 
-logger = logging.getLogger("omnisync.websocket")
+logger = logging.getLogger("interact.websocket")
 
 class ConnectionManager:
     def __init__(self):

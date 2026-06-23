@@ -1,4 +1,4 @@
-# OmniSync Project Rules
+# InterAct Project Rules
 
 ## Project Goal
 

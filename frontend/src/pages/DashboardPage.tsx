@@ -152,7 +152,7 @@ export const DashboardPage: React.FC = () => {
           {/* Welcome / Workspace Header */}
           <section className="bg-gradient-to-r from-indigo-950/20 to-zinc-950/20 border border-zinc-850/80 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
             <div>
-              <h2 className="text-sm sm:text-base font-bold font-geist text-white tracking-tight">Collaboration Workspace</h2>
+              <h2 className="text-sm sm:text-base font-bold font-geist text-white tracking-tight">InterAct Workspace</h2>
               <p className="text-[11px] sm:text-xs text-zinc-400 font-inter mt-1 leading-normal">
                 Create temporary rooms, share screens, and collaborate with your team instantly.
               </p>

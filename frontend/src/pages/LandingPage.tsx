@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,10 +13,7 @@ export const LandingPage: React.FC = () => {
       {/* Navbar */}
       <nav className="sticky top-0 w-full h-14 border-b border-slate-border bg-bg/85 backdrop-blur-md flex items-center justify-between px-6 md:px-12 z-20">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#8083ff] to-[#d0bcff] flex items-center justify-center text-zinc-950 font-bold font-geist">
-            <span className="material-symbols-outlined text-[18px]">sync</span>
-          </div>
-          <span className="font-geist font-bold text-sm tracking-tight text-white uppercase">OmniSync</span>
+          <img src={interactLogo} alt="InterAct" className="h-6 w-auto object-contain" />
         </div>
         
         <div className="hidden md:flex items-center gap-8 text-xs font-semibold font-geist text-zinc-400">
@@ -36,7 +34,7 @@ export const LandingPage: React.FC = () => {
       <section className="relative flex flex-col items-center justify-center text-center px-6 pt-20 pb-16 md:pt-32 md:pb-28 max-w-4xl mx-auto z-10">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-3xs font-semibold font-geist bg-indigo-500/10 border border-indigo-500/20 text-[#c0c1ff] mb-6 tracking-wide uppercase">
           <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
-          OmniSync Collaboration Platform v1.0
+          InterAct Collaboration Platform v1.0
         </div>
         
         <h1 className="text-4xl md:text-5xl font-black font-geist text-white tracking-tight leading-[1.1] mb-6">
@@ -77,7 +75,7 @@ export const LandingPage: React.FC = () => {
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
               </div>
-              <span className="text-3xs font-mono text-zinc-500">omnisync-workspace-instance-01</span>
+              <span className="text-3xs font-mono text-zinc-500">interact-workspace-instance-01</span>
               <span className="w-4" />
             </div>
             
@@ -169,7 +167,7 @@ export const LandingPage: React.FC = () => {
       {/* Footer */}
       <footer className="mt-auto py-8 border-t border-slate-border text-center bg-zinc-950/20">
         <p className="text-xs text-zinc-650 font-inter">
-          &copy; 2026 OmniSync Collaboration. Built for high-speed alignment.
+          &copy; 2026 InterAct Collaboration. Built for high-speed alignment.
         </p>
       </footer>
     </div>

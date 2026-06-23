@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Load env variables (useful in standalone scripts/testing)
 load_dotenv()
 
-logger = logging.getLogger("omnisync.database")
+logger = logging.getLogger("interact.database")
 
 # Centralized MongoDB Client references
 client: AsyncIOMotorClient = None
@@ -29,7 +29,7 @@ async def connect_to_mongo():
     global client, database
     
     mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-    database_name = os.getenv("DATABASE_NAME", "omnisync")
+    database_name = os.getenv("DATABASE_NAME", "interact")
     
     logger.info(f"Connecting to MongoDB Atlas at {mongodb_uri.split('@')[-1]}...") # Safe logging: hides auth credentials
     try:

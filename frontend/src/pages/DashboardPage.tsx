@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
 import { JoinRoomModal } from '../components/JoinRoomModal';
-import { MOCK_ROOMS, MOCK_ACTIVITIES, MOCK_PAST_SESSIONS } from '../data/mockData';
+import { MOCK_ROOMS, MOCK_PAST_SESSIONS } from '../data/mockData';
 import { apiClient } from '../lib/axios';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
 
@@ -38,7 +38,6 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sub, icon, accent = '
    LIVE ROOM CARD
 ───────────────────────────────────────────────────────────── */
 interface LiveRoomCardProps {
-  id: string;
   name: string;
   hostName: string;
   participantCount: number;
@@ -63,7 +62,7 @@ const WaveformBarsSmall: React.FC = () => (
   </div>
 );
 
-const LiveRoomCard: React.FC<LiveRoomCardProps> = ({ id, name, hostName, participantCount, duration, onJoin }) => (
+const LiveRoomCard: React.FC<LiveRoomCardProps> = ({ name, hostName, participantCount, duration, onJoin }) => (
   <div className="db-card p-4 flex flex-col gap-3 group">
     {/* Header */}
     <div className="flex items-start justify-between gap-2">
@@ -482,7 +481,6 @@ export const DashboardPage: React.FC = () => {
                     {MOCK_ROOMS.map(room => (
                       <LiveRoomCard
                         key={room.id}
-                        id={room.id}
                         name={room.name}
                         hostName={room.hostName}
                         participantCount={room.participants.length}

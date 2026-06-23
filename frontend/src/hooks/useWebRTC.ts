@@ -393,6 +393,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     });
 
     // 3. Host: ensure a recvonly audio transceiver exists for receiving viewer mic
+    // Note: we identify the upload slot by its role (recvonly + no sender track), NOT by
+    // whether receiver.track is null. A slot that already carries a viewer's mic track is
+    // still the correct slot — we must reuse it, not create a duplicate.
     if (isHost) {
       const transceivers = pc.getTransceivers();
       const recvSlots = transceivers.filter(
@@ -400,22 +403,23 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           !t.sender.track &&
           (t.direction === 'recvonly' || t.currentDirection === 'recvonly')
       );
-      const emptyRecvSlots = recvSlots.filter((t) => !t.receiver.track);
-      const occupiedRecvSlots = recvSlots.filter((t) => t.receiver.track);
-      console.log(`[TRANSCEIVER_GROWTH] syncTracks recvonly check: totalRecvSlots=${recvSlots.length}, emptyRecvSlots=${emptyRecvSlots.length}, occupiedRecvSlots=${occupiedRecvSlots.length}`);
+      console.log(`[TRANSCEIVER_GROWTH] syncTracks recvonly check: totalRecvSlots=${recvSlots.length}, occupiedRecvSlots=${recvSlots.filter(t => t.receiver.track).length}`);
 
-      const hasRecvSlot = emptyRecvSlots.length > 0;
+      const hasRecvSlot = recvSlots.length > 0;
       if (!hasRecvSlot) {
         try {
           pc.addTransceiver('audio', { direction: 'recvonly' });
           const afterCount = pc.getTransceivers().length;
           console.log(`[TRANSCEIVER_GROWTH] syncTracks ADDED recvonly: count BEFORE=${beforeCount}, AFTER=${afterCount}, delta=${afterCount - beforeCount}, caller=${callerStack}`);
           console.log(`[WebRTC] Added recvonly audio transceiver for viewer mic slot`);
+          if (afterCount > 10) {
+            console.warn(`[TRANSCEIVER_GROWTH_WARNING] Audio transceiver count=${afterCount} exceeds 10. Uncontrolled growth detected.`);
+          }
         } catch (err) {
           console.warn('[WebRTC] Error adding recvonly transceiver:', err);
         }
       } else {
-        console.log(`[TRANSCEIVER_GROWTH] syncTracks: reusing existing empty recvonly slot (mid=${emptyRecvSlots[0]?.mid ?? 'unknown'})`);
+        console.log(`[TRANSCEIVER_GROWTH] syncTracks: reusing existing recvonly slot (count=${recvSlots.length})`);
       }
     }
   }, [isHost]);
@@ -450,6 +454,12 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   useEffect(() => {
     sendOfferToViewerRef.current = sendOfferToViewer;
   }, [sendOfferToViewer]);
+
+  // Stable ref for syncAllViewers (used in syncMic effect which must not re-run on viewerIds changes)
+  const syncAllViewersRef = useRef(syncAllViewers);
+  useEffect(() => {
+    syncAllViewersRef.current = syncAllViewers;
+  }, [syncAllViewers]);
 
   // ─── HOST: sync tracks with all connected viewers ─────────────────────────
   const syncAllViewers = useCallback(async () => {
@@ -594,9 +604,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
             if (isHost) {
               const viewers = viewerIds.filter((id) => id && id !== currentSocketId);
               console.log(`[VOICE_TRACE] syncMic HOST: viewers=${JSON.stringify(viewers)}, awaiting answers from ${viewers.length} viewer(s)`);
-              console.log(`[TRANSCEIVER_GROWTH] syncMic (first acq) → syncAllViewers()`);
+              console.log(`[TRANSCEIVER_GROWTH] syncMic (first acq) → syncAllViewersRef.current()`);
               pendingHostAnswersRef.current = new Set(viewers);
-              await syncAllViewers();
+              await syncAllViewersRef.current();
               if (viewers.length === 0) {
                 confirmVoiceConnected('host_no_viewers');
               }
@@ -620,9 +630,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           if (isHost) {
             const viewers = viewerIds.filter((id) => id && id !== currentSocketId);
             console.log(`[VOICE_TRACE] syncMic HOST (reuse): viewers=${JSON.stringify(viewers)}`);
-            console.log(`[TRANSCEIVER_GROWTH] syncMic (reuse) → syncAllViewers()`);
+            console.log(`[TRANSCEIVER_GROWTH] syncMic (reuse) → syncAllViewersRef.current()`);
             pendingHostAnswersRef.current = new Set(viewers);
-            await syncAllViewers();
+            await syncAllViewersRef.current();
             if (viewers.length === 0) {
               confirmVoiceConnected('host_no_viewers');
             }
@@ -649,7 +659,9 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
     console.log(`[VOICE_TRACE] syncMic effect triggered`);
     syncMic();
-  }, [micMuted, isHost, syncAllViewers, requestViewerMicPublish, viewerIds, currentSocketId, confirmVoiceConnected, cancelVoiceNegotiation]);
+  // viewerIds removed to prevent renegotiation on UI re-renders.
+  // syncAllViewers removed via ref pattern — syncAllViewersRef.current() always has latest.
+  }, [micMuted, isHost, requestViewerMicPublish, currentSocketId, confirmVoiceConnected, cancelVoiceNegotiation]);
 
   // ─── Helper: attach viewer mic track to the host's recvonly mic-slot transceiver ──
   // The host adds the recvonly slot as the LAST audio transceiver in syncTracks.

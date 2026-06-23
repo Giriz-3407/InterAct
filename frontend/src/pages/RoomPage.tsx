@@ -1,5 +1,5 @@
 console.log("CURSOR_BUILD_MARKER_20260615 — SOURCE: C:\\Users\\Girish\\Desktop\\InterAct\\frontend");
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar.FC';
 import { ParticipantPanel } from '../components/ParticipantPanel';
@@ -786,7 +786,10 @@ export const RoomPage: React.FC = () => {
     if (!isHost && activeRightTab === 'host') setActiveRightTab('chat');
   }, [isHost, activeRightTab]);
 
-  const viewerIds = participants.filter(p => p.role !== 'host').map(p => p.socketId);
+  const viewerIds = useMemo(
+    () => participants.filter(p => p.role !== 'host').map(p => p.socketId),
+    [participants]
+  );
   const hostSocketId = participants.find(p => p.role === 'host')?.socketId || '';
 
   // WebRTC

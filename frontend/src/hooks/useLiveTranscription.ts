@@ -175,7 +175,7 @@ export const useLiveTranscription = ({
         }
       };
 
-      ws.onerror = (err) => {
+      ws.onerror = () => {
         diag('ws_error', 'WebSocket error encountered');
         setError('Audio upload connection error.');
       };

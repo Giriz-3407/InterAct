@@ -49,7 +49,7 @@ class DeepgramTranscriptionSession:
         )
         
         logger.info(f"Connecting to Deepgram STT for participant {self.display_name} ({self.socket_id}) in room {self.room_code}")
-        self.dg_ws = await websockets.connect(url, extra_headers=headers)
+        self.dg_ws = await websockets.connect(url, additional_headers=headers)
         self.is_active = True
         logger.info(f"Connected to Deepgram STT successfully for {self.display_name}")
 

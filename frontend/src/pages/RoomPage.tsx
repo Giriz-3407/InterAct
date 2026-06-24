@@ -14,6 +14,7 @@ import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
 import { WebRTCAuditPanel } from '../components/WebRTCAuditPanel';
 import { DiagnosticsPanel } from '../components/DiagnosticsPanel';
 import { VoiceNegotiationToast } from '../components/VoiceNegotiationToast';
+import { SRDiagPanel } from '../components/SRDiagPanel';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
 
 interface Participant {
@@ -972,6 +973,8 @@ export const RoomPage: React.FC = () => {
     start: startSpeech,
     stop: stopSpeech,
     resume: resumeSpeech,
+    diagLogs,
+    clearDiagLogs,
   } = useSpeechRecognition({
     onTranscriptUpdate: (text, isFinal) => {
       if (!isMutedRef.current) {
@@ -1577,6 +1580,7 @@ export const RoomPage: React.FC = () => {
       {searchParams.get('diag') === '1' && (
         <DiagnosticsPanel isHost={isHost} roomId={roomId || ''} getPeerConnectionStates={getPeerConnectionStates} />
       )}
+      <SRDiagPanel logs={diagLogs} onClear={clearDiagLogs} />
       <VoiceNegotiationToast state={voiceNegotiation} />
     </div>
   );

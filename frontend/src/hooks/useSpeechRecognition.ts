@@ -4,22 +4,37 @@ interface UseSpeechRecognitionProps {
   onTranscriptUpdate: (text: string, isFinal: boolean) => void;
 }
 
+export interface DiagEntry {
+  name: string;
+  ts: number;
+  elapsed: string;
+  extra?: string;
+}
+
 export const useSpeechRecognition = ({ onTranscriptUpdate }: UseSpeechRecognitionProps) => {
   const [isSupported, setIsSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [diagLogs, setDiagLogs] = useState<DiagEntry[]>([]);
 
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef(false);
   const onTranscriptUpdateRef = useRef(onTranscriptUpdate);
   onTranscriptUpdateRef.current = onTranscriptUpdate;
 
+  const startTimeRef = useRef(0);
+
   const diag = useCallback((name: string, extra?: string) => {
     const elapsed = startTimeRef.current ? `+${(Date.now() - startTimeRef.current).toFixed(0)}ms` : 'N/A';
+    const entry: DiagEntry = { name, ts: Date.now(), elapsed, extra };
+    setDiagLogs(prev => [...prev.slice(-199), entry]);
     console.log(`[SR DIAG] ${name} | ts=${Date.now()} | elapsed=${elapsed}${extra ? ` | ${extra}` : ''}`);
   }, []);
-  const startTimeRef = useRef(0);
+
+  const clearDiagLogs = useCallback(() => {
+    setDiagLogs([]);
+  }, []);
 
   // Simple mobile detection
   const isMobile = useCallback(() => {
@@ -199,5 +214,7 @@ export const useSpeechRecognition = ({ onTranscriptUpdate }: UseSpeechRecognitio
     start,
     stop,
     resume,
+    diagLogs,
+    clearDiagLogs,
   };
 };

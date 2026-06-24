@@ -7,7 +7,7 @@ import { HostControlPanel } from '../components/HostControlPanel';
 import { wsClient } from '../lib/websocket';
 import { apiClient } from '../lib/axios';
 import { useWebRTC } from '../hooks/useWebRTC';
-import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { useLiveTranscription } from '../hooks/useLiveTranscription';
 import { useCursorPresence } from '../hooks/useCursorPresence';
 import { isMobileDevice } from '../lib/mobile';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
@@ -519,7 +519,6 @@ interface RightDrawerProps {
   isTranscriptionActive: boolean;
   isTranscriptionSupported: boolean;
   roomTranscripts: { id: string; username: string; text: string; timestamp: string; user_id: string }[];
-  isSpeechPaused: boolean;
   onTabChange: (tab: 'chat' | 'transcript' | 'ai' | 'host') => void;
   onClose: () => void;
   onChatInputChange: (v: string) => void;
@@ -528,15 +527,14 @@ interface RightDrawerProps {
   onTransferHost: (id: string) => void;
   onRemoveParticipant: (id: string) => void;
   onToggleTranscription: () => void;
-  onResumeSpeech: () => void;
 }
 
 const RightDrawer: React.FC<RightDrawerProps> = ({
   isOpen, activeTab, isHost, messages, chatInput, chatEndRef, displayName,
   autoDelete, participants, roomLink,
-  isTranscriptionActive, isTranscriptionSupported, roomTranscripts, isSpeechPaused,
+  isTranscriptionActive, isTranscriptionSupported, roomTranscripts,
   onTabChange, onClose, onChatInputChange, onSendMessage,
-  onToggleAutoDelete, onTransferHost, onRemoveParticipant, onToggleTranscription, onResumeSpeech,
+  onToggleAutoDelete, onTransferHost, onRemoveParticipant, onToggleTranscription,
 }) => {
   const formatTime = (isoString: string) => {
     try {
@@ -748,19 +746,6 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                 </div>
               )}
             </div>
-            
-            {/* Mobile pause & resume banner */}
-            {isSpeechPaused && (
-              <div className="p-3 border-t border-[#1e1e21] bg-amber-500/10 shrink-0">
-                <button
-                  onClick={onResumeSpeech}
-                  className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-bold font-geist rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[16px] block font-semibold">play_arrow</span>
-                  <span>Transcription paused. Tap to resume.</span>
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -934,9 +919,16 @@ export const RoomPage: React.FC = () => {
   const [showCopied, setShowCopied] = useState(false);
 
   // Live Speech Transcription States
+  interface CaptionItem {
+    id: string;
+    speakerName: string;
+    text: string;
+    isFinal: boolean;
+    timestamp: number;
+  }
   const [isTranscriptionActive, setIsTranscriptionActive] = useState(false);
   const [showConsentBanner, setShowConsentBanner] = useState(false);
-  const [activeCaption, setActiveCaption] = useState<{ speakerName: string; text: string } | null>(null);
+  const [activeCaptions, setActiveCaptions] = useState<CaptionItem[]>([]);
   const [roomTranscripts, setRoomTranscripts] = useState<{ id: string; username: string; text: string; timestamp: string; user_id: string }[]>([]);
   const captionTimeoutRef = useRef<any>(null);
 
@@ -966,35 +958,32 @@ export const RoomPage: React.FC = () => {
     errorMessage, audioWarning, micWarning,
     auditReports, getPeerConnectionStates,
     voiceNegotiation, beginVoiceNegotiation,
+    micStream,
   } = useWebRTC({ isHost, currentSocketId, viewerIds, micMuted: isMuted, hostSocketId, srOnly: srOnlyMode });
 
-  // Live Speech Transcription Hook
+  // Live Speech Transcription Hook (Server-Side STT)
   const {
     isSupported: isTranscriptionSupported,
-    isPaused: isSpeechPaused,
+    isListening: isSpeechListening,
     start: startSpeech,
     stop: stopSpeech,
-    resume: resumeSpeech,
     diagLogs,
     clearDiagLogs,
-  } = useSpeechRecognition({
-    onTranscriptUpdate: (text, isFinal) => {
-      if (!isMutedRef.current) {
-        wsClient.send('live_transcript', { text, isFinal });
-      }
-    }
+  } = useLiveTranscription({
+    roomCode: roomId || '',
+    socketId: currentSocketId,
+    micStream,
   });
 
-  // Start/stop recognition based on transcription status (independent of mute state).
-  // When muted, transcripts are still gated in the onTranscriptUpdate callback above,
-  // keeping the engine warm so the first words are never lost when the user unmutes.
+  // Start/stop audio streaming based on transcription status and microphone mute status.
+  // Mute Optimization: Disconnect and stop MediaRecorder immediately when muted.
   useEffect(() => {
-    if (isTranscriptionActive && isTranscriptionSupported) {
+    if (isTranscriptionActive && !isMuted) {
       startSpeech();
     } else {
       stopSpeech();
     }
-  }, [isTranscriptionActive, isTranscriptionSupported, startSpeech, stopSpeech]);
+  }, [isTranscriptionActive, isMuted, startSpeech, stopSpeech]);
 
   const isSharing = sharingState === 'sharing';
   const isViewing = sharingState === 'viewing';
@@ -1176,12 +1165,45 @@ export const RoomPage: React.FC = () => {
     };
     const unsubTranscriptionStoppedObj = wsClient.on('transcription_stopped', unsubTranscriptionStopped);
     const unsubLiveTranscript = wsClient.on('live_transcript', data => {
-      setActiveCaption({ speakerName: data.senderName, text: data.text });
+      // Update the captions overlay with rolling subtitles
+      setActiveCaptions(prev => {
+        const index = prev.findIndex(item => item.id === `interim-${data.senderId}`);
+        let newCaptions = [...prev];
+        if (data.isFinal) {
+          if (index !== -1) {
+            newCaptions.splice(index, 1);
+          }
+          newCaptions.push({
+            id: `final-${data.senderId}-${Date.now()}`,
+            speakerName: data.senderName,
+            text: data.text,
+            isFinal: true,
+            timestamp: Date.now()
+          });
+        } else {
+          const interimItem = {
+            id: `interim-${data.senderId}`,
+            speakerName: data.senderName,
+            text: data.text,
+            isFinal: false,
+            timestamp: Date.now()
+          };
+          if (index !== -1) {
+            newCaptions[index] = interimItem;
+          } else {
+            newCaptions.push(interimItem);
+          }
+        }
+        // Limit back-history stored in overlay state to last 5
+        return newCaptions.slice(-5);
+      });
+
       if (captionTimeoutRef.current) clearTimeout(captionTimeoutRef.current);
       captionTimeoutRef.current = setTimeout(() => {
-        setActiveCaption(null);
-      }, 3000);
+        setActiveCaptions([]);
+      }, 4000);
 
+      // Save finalized transcripts to the drawer transcript list
       if (data.isFinal) {
         setRoomTranscripts(prev => [
           ...prev,
@@ -1469,15 +1491,19 @@ export const RoomPage: React.FC = () => {
           )}
 
           {/* Live Caption Overlay */}
-          {activeCaption && (
+          {activeCaptions.length > 0 && (
             <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 pointer-events-none">
-              <div className="mx-auto flex flex-col items-center gap-1.5 px-5 py-3 rounded-2xl bg-[#09090b]/80 backdrop-blur-xl border border-indigo-500/20 shadow-2xl text-center select-none animate-fade-in">
-                <span className="text-[10px] font-bold font-geist tracking-widest text-[#c0c1ff] uppercase">
-                  {activeCaption.speakerName}
-                </span>
-                <p className="text-sm font-inter text-zinc-100 leading-relaxed drop-shadow-sm font-medium">
-                  {activeCaption.text}
-                </p>
+              <div className="mx-auto flex flex-col items-stretch gap-2 px-4 py-2.5 rounded-2xl bg-[#09090b]/85 backdrop-blur-xl border border-indigo-500/20 shadow-2xl select-none animate-fade-in">
+                {activeCaptions.slice(-2).map((caption) => (
+                  <div key={caption.id} className="flex flex-col items-start text-left border-l-2 border-indigo-500/40 pl-2.5">
+                    <span className="text-[9px] font-bold font-geist tracking-wider text-[#c0c1ff] uppercase">
+                      {caption.speakerName}
+                    </span>
+                    <p className="text-xs md:text-sm font-inter text-zinc-105 leading-relaxed drop-shadow-sm font-medium">
+                      {caption.text}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1494,18 +1520,6 @@ export const RoomPage: React.FC = () => {
             </div>
           )}
 
-          {/* Mobile Tap-to-resume banner */}
-          {isSpeechPaused && (
-            <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 w-full max-w-sm px-4">
-              <button
-                onClick={resumeSpeech}
-                className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-bold font-geist rounded-xl shadow-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <IconPlay />
-                <span>Transcription paused. Tap to resume.</span>
-              </button>
-            </div>
-          )}
 
           {/* Collaboration Dock */}
           <CollabDock
@@ -1555,7 +1569,6 @@ export const RoomPage: React.FC = () => {
           isTranscriptionActive={isTranscriptionActive}
           isTranscriptionSupported={isTranscriptionSupported}
           roomTranscripts={roomTranscripts}
-          isSpeechPaused={isSpeechPaused}
           onTabChange={setActiveRightTab}
           onClose={() => setIsChatOpen(false)}
           onChatInputChange={setChatInput}
@@ -1564,7 +1577,6 @@ export const RoomPage: React.FC = () => {
           onTransferHost={targetId => wsClient.send('transfer_host', { targetId })}
           onRemoveParticipant={targetId => wsClient.send('remove_participant', { targetId })}
           onToggleTranscription={handleToggleTranscription}
-          onResumeSpeech={resumeSpeech}
         />
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import type { DiagEntry } from '../hooks/useSpeechRecognition';
+import type { DiagEntry } from '../hooks/useLiveTranscription';
 
 interface Props {
   logs: DiagEntry[];

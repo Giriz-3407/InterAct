@@ -5,7 +5,6 @@ import { LandingPage } from '../pages/LandingPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { RoomPage } from '../pages/RoomPage';
 import { HistoryPage } from '../pages/HistoryPage';
-import { SpeechTestPage } from '../pages/SpeechTestPage';
 
 export const AppRouter: React.FC = () => {
   return (
@@ -14,7 +13,6 @@ export const AppRouter: React.FC = () => {
       <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
       <Route path={ROUTES.ROOM} element={<RoomPage />} />
       <Route path={ROUTES.HISTORY} element={<HistoryPage />} />
-      <Route path={ROUTES.SPEECH_TEST} element={<SpeechTestPage />} />
       <Route path="*" element={<Navigate to={ROUTES.LANDING} replace />} />
     </Routes>
   );

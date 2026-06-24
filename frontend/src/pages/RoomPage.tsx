@@ -957,6 +957,8 @@ export const RoomPage: React.FC = () => {
     [participants]
   );
 
+  const srOnlyMode = searchParams.get('sralone') === '1';
+
   // WebRTC
   const {
     sharingState, localStream, remoteStream, remoteMicStreams,
@@ -964,7 +966,7 @@ export const RoomPage: React.FC = () => {
     errorMessage, audioWarning, micWarning,
     auditReports, getPeerConnectionStates,
     voiceNegotiation, beginVoiceNegotiation,
-  } = useWebRTC({ isHost, currentSocketId, viewerIds, micMuted: isMuted, hostSocketId });
+  } = useWebRTC({ isHost, currentSocketId, viewerIds, micMuted: isMuted, hostSocketId, srOnly: srOnlyMode });
 
   // Live Speech Transcription Hook
   const {
@@ -1480,6 +1482,18 @@ export const RoomPage: React.FC = () => {
             </div>
           )}
 
+          {/* SR Alone Mode banner */}
+          {srOnlyMode && (
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 w-full max-w-sm px-4">
+              <div className="mx-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600/20 border border-rose-500/30 text-rose-300 text-[10px] font-bold font-geist uppercase tracking-widest">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span>SR Alone Mode — WebRTC mic disabled</span>
+              </div>
+            </div>
+          )}
+
           {/* Mobile Tap-to-resume banner */}
           {isSpeechPaused && (
             <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 w-full max-w-sm px-4">
@@ -1580,7 +1594,7 @@ export const RoomPage: React.FC = () => {
       {searchParams.get('diag') === '1' && (
         <DiagnosticsPanel isHost={isHost} roomId={roomId || ''} getPeerConnectionStates={getPeerConnectionStates} />
       )}
-      <SRDiagPanel logs={diagLogs} onClear={clearDiagLogs} />
+      <SRDiagPanel logs={diagLogs} onClear={clearDiagLogs} srOnly={srOnlyMode} />
       <VoiceNegotiationToast state={voiceNegotiation} />
     </div>
   );

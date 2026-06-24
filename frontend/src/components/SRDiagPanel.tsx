@@ -4,6 +4,7 @@ import type { DiagEntry } from '../hooks/useSpeechRecognition';
 interface Props {
   logs: DiagEntry[];
   onClear: () => void;
+  srOnly?: boolean;
 }
 
 const ICON_MIC = () => (
@@ -109,11 +110,11 @@ const MicLevelMeter = ({ level, error }: { level: number; error: string | null }
   );
 };
 
-export const SRDiagPanel = ({ logs, onClear }: Props) => {
+export const SRDiagPanel = ({ logs, onClear, srOnly = false }: Props) => {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const { level, error: micError } = useMicLevel(isOpen);
+  const { level, error: micError } = useMicLevel(isOpen && !srOnly);
 
   useEffect(() => {
     if (isOpen) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

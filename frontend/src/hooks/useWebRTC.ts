@@ -41,6 +41,8 @@ interface UseWebRTCOptions {
   micMuted: boolean;
   /** Socket ID of the current host (needed for viewer mic flow) */
   hostSocketId: string;
+  /** If true, skip all microphone acquisition (for SR-alone diagnostics) */
+  srOnly?: boolean;
 }
 
 interface UseWebRTCReturn {
@@ -63,7 +65,7 @@ interface UseWebRTCReturn {
   beginVoiceNegotiation: () => void;
 }
 
-export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSocketId }: UseWebRTCOptions): UseWebRTCReturn {
+export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSocketId, srOnly = false }: UseWebRTCOptions): UseWebRTCReturn {
   const [sharingState, setSharingState] = useState<SharingState>('idle');
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -559,6 +561,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   // ─── Synchronize microphone mute and capture mic on-demand ────────────────
   // Works for BOTH host and viewer
   useEffect(() => {
+    if (srOnly) return;
     const syncMic = async () => {
       if (!micMuted) {
         if (!micStreamRef.current) {
@@ -619,7 +622,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     syncMic();
   // viewerIds removed to prevent renegotiation on UI re-renders.
   // syncAllViewers removed via ref pattern — syncAllViewersRef.current() always has latest.
-  }, [micMuted, isHost, requestViewerMicPublish, currentSocketId, confirmVoiceConnected, cancelVoiceNegotiation]);
+  }, [micMuted, srOnly, isHost, requestViewerMicPublish, currentSocketId, confirmVoiceConnected, cancelVoiceNegotiation]);
 
   // ─── Helper: attach viewer mic track to the host's recvonly mic-slot transceiver ──
   // The host adds the recvonly slot as the LAST audio transceiver in syncTracks.

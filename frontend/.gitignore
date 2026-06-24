@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# PyInstaller
+agent/build/
+agent/dist/
+*.spec.bak
+
+# Python
+__pycache__/
+*.pyc

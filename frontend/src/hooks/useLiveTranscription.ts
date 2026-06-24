@@ -113,6 +113,7 @@ export const useLiveTranscription = ({
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     let wsUrl = apiUrl.replace(/^http:/i, 'ws:').replace(/^https:/i, 'wss:');
     wsUrl = `${wsUrl.replace(/\/$/, '')}/ws/audio?roomCode=${roomCode}&socketId=${socketId}`;
+    diag('ws_url', wsUrl);
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -166,7 +167,7 @@ export const useLiveTranscription = ({
       };
 
       ws.onclose = (event) => {
-        diag('ws_closed', `code=${event.code} reason=${event.reason || 'none'}`);
+        diag('ws_closed', `code=${event.code} reason=${event.reason || 'none'} wasClean=${event.wasClean}`);
         setIsListening(false);
         wsRef.current = null;
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {

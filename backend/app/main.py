@@ -73,6 +73,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.websocket("/ws/audio")
 async def websocket_audio_endpoint(websocket: WebSocket, roomCode: str, socketId: str):
+    logger.info(f"[WS AUDIO] Entry — roomCode={roomCode} socketId={socketId}")
     from app.rooms.manager import room_manager
     from app.services.transcription.deepgram_service import DeepgramTranscriptionSession
     import asyncio
@@ -80,26 +81,30 @@ async def websocket_audio_endpoint(websocket: WebSocket, roomCode: str, socketId
     room_code = roomCode.upper()
     room = await room_manager.get_room(room_code)
     if not room:
-        logger.warning(f"Rejecting audio WebSocket: room {room_code} not found")
+        logger.warning(f"[WS AUDIO] Rejecting: room {room_code} not found")
         await websocket.close(code=4004)
+        logger.info(f"[WS AUDIO] Sent close(4004) for room {room_code}")
         return
         
     participant = next((p for p in room["participants"] if p["socketId"] == socketId), None)
     if not participant:
-        logger.warning(f"Rejecting audio WebSocket: participant {socketId} not in room {room_code}")
+        logger.warning(f"[WS AUDIO] Rejecting: participant {socketId} not in room {room_code}")
         await websocket.close(code=4003)
+        logger.info(f"[WS AUDIO] Sent close(4003) for socketId {socketId}")
         return
         
     display_name = participant.get("displayName", "Unknown")
     
     deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
     if not deepgram_api_key:
-        logger.error("DEEPGRAM_API_KEY environment variable is not set")
+        logger.error("[WS AUDIO] Rejecting: DEEPGRAM_API_KEY not set")
         await websocket.close(code=4005)
+        logger.info("[WS AUDIO] Sent close(4005)")
         return
-        
+    
+    logger.info(f"[WS AUDIO] All checks passed — accepting websocket for {socketId} ({display_name}) in {room_code}")
     await websocket.accept()
-    logger.info(f"Audio WebSocket accepted for client {socketId} ({display_name}) in room {room_code}")
+    logger.info(f"[WS AUDIO] Accepted for client {socketId} ({display_name}) in room {room_code}")
     
     async def handle_dg_transcript(text: str, is_final: bool):
         # Broadcast to room via connection manager

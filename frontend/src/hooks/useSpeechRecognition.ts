@@ -67,8 +67,20 @@ export const useSpeechRecognition = ({ onTranscriptUpdate }: UseSpeechRecognitio
       diag('onstart');
     };
 
+    rec.onsoundstart = () => {
+      diag('onsoundstart');
+    };
+
+    rec.onsoundend = () => {
+      diag('onsoundend');
+    };
+
     rec.onaudiostart = () => {
       diag('onaudiostart');
+    };
+
+    rec.onaudioend = () => {
+      diag('onaudioend');
     };
 
     rec.onspeechstart = () => {
@@ -158,6 +170,8 @@ export const useSpeechRecognition = ({ onTranscriptUpdate }: UseSpeechRecognitio
 
     startTimeRef.current = Date.now();
     try {
+      diag('rec.config',
+        `continuous=${rec.continuous} interimResults=${rec.interimResults} lang=${rec.lang} maxAlternatives=${rec.maxAlternatives ?? 'not-set'}`);
       rec.start();
       setIsListening(true);
       isListeningRef.current = true;

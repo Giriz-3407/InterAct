@@ -37,10 +37,12 @@ app.add_middleware(
 
 from app.database.mongodb import connect_to_mongo, close_mongo_connection
 from app.api.rooms import router as rooms_router
+from app.api.transcripts import router as transcripts_router
 from app.websocket.connection import connection_manager
 from fastapi import WebSocket, WebSocketDisconnect
 
 app.include_router(rooms_router)
+app.include_router(transcripts_router)
 
 @app.on_event("startup")
 async def startup_event():

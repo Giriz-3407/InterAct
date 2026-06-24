@@ -1,11 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLayout } from '../layouts/AppLayout';
 import { TopBar } from '../components/TopBar';
 import { StatCard } from '../components/StatCard';
 import { SessionCard } from '../components/SessionCard';
 import { MOCK_PAST_SESSIONS } from '../data/mockData';
+import { TranscriptPanel } from '../components/TranscriptPanel';
+import type { PastSession } from '../types';
+import { apiClient } from '../lib/axios';
 
 export const HistoryPage: React.FC = () => {
+  const [selectedSession, setSelectedSession] = useState<PastSession | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [sessions, setSessions] = useState<PastSession[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    apiClient
+      .get<PastSession[]>('/api/transcripts/sessions')
+      .then((data) => {
+        setSessions(data || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch sessions', err);
+        // Fallback to mock data if API fails
+        setSessions(MOCK_PAST_SESSIONS);
+        setLoading(false);
+      });
+  }, []);
+
+  const handleTranscriptClick = (sessionId: string) => {
+    const sessionObj = sessions.find((s) => s.id === sessionId);
+    if (sessionObj) {
+      setSelectedSession(sessionObj);
+      setIsPanelOpen(true);
+    }
+  };
+
   return (
     <AppLayout context="history">
       <TopBar title="Activity Hub" showSearch={true} searchPlaceholder="Search transcripts, recordings..." />
@@ -31,7 +63,7 @@ export const HistoryPage: React.FC = () => {
           
           <div className="flex gap-2">
             <button className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-semibold font-geist text-zinc-300 hover:bg-zinc-800 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+              <span className="material-symbols-outlined text-[16px] block">calendar_today</span>
               <span>Last 30 Days</span>
             </button>
             <button className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-xs font-semibold font-geist hover:opacity-95 shadow-lg shadow-indigo-500/10">
@@ -65,18 +97,26 @@ export const HistoryPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-3">
-            {MOCK_PAST_SESSIONS.map((session, idx) => (
-              <SessionCard
-                key={session.id}
-                roomName={session.roomName}
-                dateString={session.dateString}
-                durationString={session.durationString}
-                participantsCount={session.participantsCount}
-                hostName={session.hostName}
-                status={session.status}
-                isHighlighted={idx === 0}
-              />
-            ))}
+            {loading ? (
+              <div className="text-zinc-500 text-xs text-center py-6 animate-pulse">Loading sessions...</div>
+            ) : sessions.length === 0 ? (
+              <div className="text-zinc-500 text-xs text-center py-6">No past sessions found.</div>
+            ) : (
+              sessions.map((session, idx) => (
+                <SessionCard
+                  key={session.id}
+                  id={session.id}
+                  roomName={session.roomName}
+                  dateString={session.dateString}
+                  durationString={session.durationString}
+                  participantsCount={session.participantsCount}
+                  hostName={session.hostName}
+                  status={session.status}
+                  isHighlighted={idx === 0}
+                  onTranscriptClick={handleTranscriptClick}
+                />
+              ))
+            )}
           </div>
 
           <button className="self-center mt-6 px-5 py-2 rounded-full text-xs font-semibold font-geist bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200">
@@ -84,6 +124,12 @@ export const HistoryPage: React.FC = () => {
           </button>
         </section>
       </main>
+
+      <TranscriptPanel
+        isOpen={isPanelOpen}
+        session={selectedSession}
+        onClose={() => setIsPanelOpen(false)}
+      />
     </AppLayout>
   );
 };

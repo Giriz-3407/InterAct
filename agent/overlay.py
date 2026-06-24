@@ -22,6 +22,7 @@ from PySide6.QtGui import (
     QPainter,
     QPainterPath,
     QRadialGradient,
+    QLinearGradient,
     QGuiApplication,
     QFont,
     QFontMetrics,
@@ -226,6 +227,9 @@ class LaserPointerOverlay(QWidget):
         self._annotations: dict[str, dict[str, AnnotationEntry]] = {}
         self._spotlight_participant_id: Optional[str] = None
 
+        # ── Cached InterAct Logo Cursor Path ──────────────────────────────
+        self._cursor_path = self._init_cursor_path()
+
         # ── Window flags & attributes ────────────────────────────────────
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint          # no title bar / border
@@ -265,6 +269,65 @@ class LaserPointerOverlay(QWidget):
         self._mouse_bridge.mouse_dragged.connect(self._on_global_mouse_move)
         self._mouse_bridge.mouse_up.connect(self._on_global_mouse_up)
         self._global_mouse_tracker = GlobalMouseTracker(self._mouse_bridge)
+
+    def _init_cursor_path(self) -> QPainterPath:
+        """Create the custom QPainterPath representing the InterAct logo cursor."""
+        path = QPainterPath()
+        s = 0.40  # scale factor for a clean 25px cursor width
+
+        path.moveTo((130.857 - 84.9859) * s, (99.5792 - 64.1122) * s)
+        path.cubicTo(
+            (125.329 - 84.9859) * s, (100.271 - 64.1122) * s,
+            (123.353 - 84.9859) * s, (100.63 - 64.1122) * s,
+            (121.748 - 84.9859) * s, (102.18 - 64.1122) * s,
+        )
+        path.cubicTo(
+            (120.143 - 84.9859) * s, (103.73 - 64.1122) * s,
+            (119.714 - 84.9859) * s, (105.693 - 64.1122) * s,
+            (118.83 - 84.9859) * s, (111.194 - 64.1122) * s,
+        )
+        path.cubicTo(
+            (117.946 - 84.9859) * s, (116.694 - 64.1122) * s,
+            (117.462 - 84.9859) * s, (121.807 - 64.1122) * s,
+            (112.294 - 84.9859) * s, (124.474 - 64.1122) * s,
+        )
+        path.cubicTo(
+            (107.126 - 84.9859) * s, (127.142 - 64.1122) * s,
+            (102.496 - 84.9859) * s, (121.545 - 64.1122) * s,
+            (100.619 - 84.9859) * s, (116.389 - 64.1122) * s,
+        )
+        path.cubicTo(
+            (98.7421 - 84.9859) * s, (111.232 - 64.1122) * s,
+            (84.7765 - 84.9859) * s, (75.9305 - 64.1122) * s,
+            (84.7765 - 84.9859) * s, (75.9305 - 64.1122) * s,
+        )
+        path.cubicTo(
+            (84.7765 - 84.9859) * s, (75.9305 - 64.1122) * s,
+            (80.9772 - 84.9859) * s, (67.9834 - 64.1122) * s,
+            0.0, 0.0,
+        )
+        path.cubicTo(
+            (88.9946 - 84.9859) * s, (60.241 - 64.1122) * s,
+            (96.8035 - 84.9859) * s, (64.3162 - 64.1122) * s,
+            (96.8035 - 84.9859) * s, (64.3162 - 64.1122) * s,
+        )
+        path.cubicTo(
+            (96.8035 - 84.9859) * s, (64.3162 - 64.1122) * s,
+            (131.596 - 84.9859) * s, (79.5053 - 64.1122) * s,
+            (136.684 - 84.9859) * s, (81.5613 - 64.1122) * s,
+        )
+        path.cubicTo(
+            (141.772 - 84.9859) * s, (83.6173 - 64.1122) * s,
+            (147.203 - 84.9859) * s, (88.4397 - 64.1122) * s,
+            (144.357 - 84.9859) * s, (93.5115 - 64.1122) * s,
+        )
+        path.cubicTo(
+            (141.511 - 84.9859) * s, (98.5833 - 64.1122) * s,
+            (136.384 - 84.9859) * s, (98.8878 - 64.1122) * s,
+            (130.857 - 84.9859) * s, (99.5792 - 64.1122) * s,
+        )
+        path.closeSubpath()
+        return path
 
     def _on_spike_annotation_mode_toggled(self) -> None:
         self._spike_annotation_mode_active = not self._spike_annotation_mode_active
@@ -516,10 +579,11 @@ class LaserPointerOverlay(QWidget):
             ripple.tick += 1
             if ripple.tick <= self._RIPPLE_MAX_TICKS:
                 progress = ripple.tick / self._RIPPLE_MAX_TICKS
-                # Linear or ease-out expansion for radius
-                ripple.radius = progress * self._RIPPLE_MAX_RADIUS
-                # Fade out opacity
-                ripple.opacity = 1.0 - progress
+                # Quadratic ease-out expansion for radius (fast at first, then slows down)
+                ease_out = 1.0 - (1.0 - progress) ** 2
+                ripple.radius = ease_out * self._RIPPLE_MAX_RADIUS
+                # Fade out opacity smoothly with an ease-in profile
+                ripple.opacity = 1.0 - (progress ** 1.5)
                 active_ripples.append(ripple)
 
         self._ripples = active_ripples
@@ -694,10 +758,16 @@ class LaserPointerOverlay(QWidget):
         """Draw one laser pointer cursor at widget-local coordinates (x, y)."""
         base_color = QColor(cursor.color)
 
-        # ── 1. Outer soft glow ───────────────────────────────────────────
-        glow_gradient = QRadialGradient(x, y, self._GLOW_RADIUS)
+        # Save painter state
+        painter.save()
+        painter.translate(x, y)
+
+        # ── 1. Outer soft glow (radial gradient centered near the cursor body) ───────────────────
+        # Bounding box of scaled path is approx [0, 25] in x, [0, 25] in y.
+        # We center the glow at (10, 10) with 14px radius (max 10-12px blur-equivalent size).
+        glow_gradient = QRadialGradient(10, 10, 14)
         glow_color_center = QColor(base_color)
-        glow_color_center.setAlpha(90)
+        glow_color_center.setAlpha(40)  # low opacity, very subtle
         glow_color_edge = QColor(base_color)
         glow_color_edge.setAlpha(0)
         glow_gradient.setColorAt(0.0, glow_color_center)
@@ -705,56 +775,25 @@ class LaserPointerOverlay(QWidget):
 
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(glow_gradient)
-        painter.drawEllipse(
-            QRectF(
-                x - self._GLOW_RADIUS,
-                y - self._GLOW_RADIUS,
-                self._GLOW_RADIUS * 2,
-                self._GLOW_RADIUS * 2,
-            )
-        )
+        painter.drawEllipse(QRectF(-4, -4, 28, 28))  # Centered at (10, 10) with radius 14
 
-        # ── 2. White border circle ───────────────────────────────────────
-        painter.setBrush(QColor(255, 255, 255, 230))
-        painter.drawEllipse(
-            QRectF(
-                x - self._BORDER_RADIUS,
-                y - self._BORDER_RADIUS,
-                self._BORDER_RADIUS * 2,
-                self._BORDER_RADIUS * 2,
-            )
-        )
+        # ── 2. Cursor body (QLinearGradient tinted per participant) ─────────────────────────────
+        body_gradient = QLinearGradient(0, 0, 25, 25)
+        # Gradient starts bright at the tip, fades to a slightly deeper shade at the tail
+        body_gradient.setColorAt(0.0, base_color)
+        body_gradient.setColorAt(1.0, base_color.darker(115))
 
-        # ── 3. Solid colour core ─────────────────────────────────────────
-        painter.setBrush(base_color)
-        painter.drawEllipse(
-            QRectF(
-                x - self._CORE_RADIUS,
-                y - self._CORE_RADIUS,
-                self._CORE_RADIUS * 2,
-                self._CORE_RADIUS * 2,
-            )
-        )
+        # Stroke with a thin white outline for vector crispness
+        border_pen = QPen(QColor(255, 255, 255, 200), 1.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
 
-        # ── 4. Specular highlight ────────────────────────────────────────
-        highlight_gradient = QRadialGradient(
-            x - self._CORE_RADIUS * 0.3,
-            y - self._CORE_RADIUS * 0.3,
-            self._HIGHLIGHT_RADIUS,
-        )
-        highlight_gradient.setColorAt(0.0, QColor(255, 255, 255, 220))
-        highlight_gradient.setColorAt(1.0, QColor(255, 255, 255, 0))
-        painter.setBrush(highlight_gradient)
-        painter.drawEllipse(
-            QRectF(
-                x - self._CORE_RADIUS * 0.3 - self._HIGHLIGHT_RADIUS,
-                y - self._CORE_RADIUS * 0.3 - self._HIGHLIGHT_RADIUS,
-                self._HIGHLIGHT_RADIUS * 2,
-                self._HIGHLIGHT_RADIUS * 2,
-            )
-        )
+        painter.setBrush(body_gradient)
+        painter.setPen(border_pen)
+        painter.drawPath(self._cursor_path)
 
-        # ── 5. Participant name label ────────────────────────────────────
+        # Restore painter state before label
+        painter.restore()
+
+        # ── 3. Participant name label ────────────────────────────────────
         self._draw_label(painter, x, y, cursor.name, base_color)
 
     def _draw_label(
@@ -765,7 +804,7 @@ class LaserPointerOverlay(QWidget):
         name: str,
         accent: QColor,
     ) -> None:
-        """Draw a pill-shaped name label above the cursor."""
+        """Draw a glassmorphic pill-shaped name label above the cursor."""
         font = QFont("Segoe UI", self._LABEL_FONT_SIZE)
         font.setWeight(QFont.Weight.Medium)
         painter.setFont(font)
@@ -780,39 +819,56 @@ class LaserPointerOverlay(QWidget):
         text_w = text_rect.width()
         text_h = fm.height()
 
-        pill_w = text_w + self._LABEL_PADDING_X * 2
-        pill_h = text_h + self._LABEL_PADDING_Y * 2
+        # Modern pill layout dimensions:
+        # dot size: 6px
+        # padding left: 8px
+        # dot/text gap: 6px
+        # padding right: 10px
+        # padding top/bottom: 4px
+        dot_size = 6
+        dot_gap = 6
+        pill_w = 8 + dot_size + dot_gap + text_w + 10
+        pill_h = text_h + 8
+
         pill_x = x + self._LABEL_OFFSET_X
         pill_y = y + self._LABEL_OFFSET_Y - pill_h
         margin = 8
         pill_x = max(margin, min(pill_x, self.width() - pill_w - margin))
         pill_y = max(margin, min(pill_y, self.height() - pill_h - margin))
 
-        # Pill background — uses accent colour at 85% opacity
-        bg_color = QColor(18, 18, 22, 225)
+        # Pill background — slick dark elevated surface/glassmorphism
+        bg_color = QColor(15, 15, 18, 220)
         painter.setBrush(bg_color)
+
         border_color = QColor(accent)
-        border_color.setAlpha(230)
-        painter.setPen(QPen(border_color, 1.2))
+        border_color.setAlpha(180)  # elegant participant-tinted border
+        painter.setPen(QPen(border_color, 1.0))
+        
         painter.drawRoundedRect(
             QRectF(pill_x, pill_y, pill_w, pill_h),
             pill_h / 2,
             pill_h / 2,
         )
-        stripe_color = QColor(accent)
-        stripe_color.setAlpha(245)
-        painter.setBrush(stripe_color)
+
+        # Draw participant identity status dot
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawRoundedRect(
-            QRectF(pill_x + 4, pill_y + 4, 4, pill_h - 8),
-            2,
-            2,
-        )
+        dot_color = QColor(accent)
+        dot_color.setAlpha(255)
+        painter.setBrush(dot_color)
+        
+        dot_y = pill_y + (pill_h - dot_size) / 2
+        painter.drawEllipse(QRectF(pill_x + 8, dot_y, dot_size, dot_size))
 
         # Label text — white
         painter.setPen(QColor(255, 255, 255, 255))
+        text_rect_f = QRectF(
+            pill_x + 8 + dot_size + dot_gap,
+            pill_y,
+            text_w,
+            pill_h
+        )
         painter.drawText(
-            QRectF(pill_x + 4, pill_y, pill_w, pill_h),
-            Qt.AlignmentFlag.AlignCenter,
+            text_rect_f,
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
             display_name,
         )

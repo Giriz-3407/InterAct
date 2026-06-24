@@ -4,6 +4,7 @@ import { AppLayout } from '../layouts/AppLayout';
 import { JoinRoomModal } from '../components/JoinRoomModal';
 import { MOCK_ROOMS, MOCK_PAST_SESSIONS } from '../data/mockData';
 import { apiClient } from '../lib/axios';
+import type { PastSession } from '../types';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
 
 /* ─────────────────────────────────────────────────────────────
@@ -242,8 +243,21 @@ export const DashboardPage: React.FC = () => {
   const [apiError, setApiError] = useState('');
   const [selectedRoomCode, setSelectedRoomCode] = useState('');
   const [jumpBackRooms, setJumpBackRooms] = useState<{ roomCode: string; active: boolean; participantCount: number }[]>([]);
+  const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
 
   const totalActiveRooms = MOCK_ROOMS.length;
+
+  useEffect(() => {
+    apiClient
+      .get<PastSession[]>('/api/transcripts/sessions')
+      .then((data) => {
+        setPastSessions(data || []);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch dashboard sessions', err);
+        setPastSessions(MOCK_PAST_SESSIONS);
+      });
+  }, []);
 
   useEffect(() => {
     const fetchJumpBackRooms = async () => {
@@ -509,9 +523,9 @@ export const DashboardPage: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  /* Mock recent rooms */
+                  /* Recent rooms from DB */
                   <div className="flex flex-col gap-2">
-                    {MOCK_PAST_SESSIONS.slice(0, 3).map(session => (
+                    {pastSessions.slice(0, 3).map(session => (
                       <div key={session.id}
                         className="flex items-center justify-between p-3 rounded-xl border border-[#1e1e21] bg-[#111113]">
                         <div className="flex items-center gap-3">

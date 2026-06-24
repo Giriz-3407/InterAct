@@ -3,6 +3,7 @@ import { Badge } from './Badge';
 import { AvatarStack } from './AvatarStack';
 
 interface SessionCardProps {
+  id: string;
   roomName: string;
   dateString: string;
   durationString: string;
@@ -10,9 +11,11 @@ interface SessionCardProps {
   hostName: string;
   status: 'completed' | 'ended';
   isHighlighted?: boolean;
+  onTranscriptClick?: (id: string) => void;
 }
 
 export const SessionCard: React.FC<SessionCardProps> = ({
+  id,
   roomName,
   dateString,
   durationString,
@@ -20,6 +23,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({
   hostName,
   status,
   isHighlighted = false,
+  onTranscriptClick,
 }) => {
   // Generate dummy participant list for stack
   const dummyUsers = Array.from({ length: participantsCount }, (_, idx) => ({
@@ -61,7 +65,10 @@ export const SessionCard: React.FC<SessionCardProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="px-3 py-1.5 text-xs font-medium font-geist bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg border border-zinc-800">
+          <button
+            onClick={() => onTranscriptClick?.(id)}
+            className="px-3 py-1.5 text-xs font-medium font-geist bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg border border-zinc-800 cursor-pointer transition-colors"
+          >
             Transcript
           </button>
           <button className="px-3 py-1.5 text-xs font-medium font-geist bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg border border-zinc-800 flex items-center gap-1">

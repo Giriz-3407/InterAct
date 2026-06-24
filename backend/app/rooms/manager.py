@@ -38,6 +38,7 @@ class RoomManager:
             code = self._generate_room_code()
             room = {
                 "roomCode": code,
+                "session_id": f"sess_{code.lower()}_{int(time.time())}",
                 "owner_client_id": None,
                 "owner_name": None,
                 "participants": [],
@@ -250,7 +251,7 @@ class RoomManager:
         logger.info("Room expiry cleanup background task started.")
         while True:
             try:
-                await asyncio.sleep(60)  # Check every 60 seconds
+                await asyncio.sleep(5)  # Check every 5 seconds for faster local dev updates
                 async with self._lock:
                     now = time.time()
                     to_delete = []
@@ -267,9 +268,47 @@ class RoomManager:
                     for code in to_delete:
                         logger.info(f"Room {code} has expired. Deleting room.")
                         if code in self._rooms:
+                            room_obj = self._rooms[code]
+                            await self.save_room_session(room_obj)
                             del self._rooms[code]
             except Exception as e:
                 logger.error(f"Error in RoomManager cleanup loop: {e}")
+
+    async def save_room_session(self, room: dict):
+        """
+        Save the metadata of a finished room to the 'sessions' database collection.
+        """
+        try:
+            from app.database.mongodb import get_database
+            from datetime import datetime
+            
+            db = get_database()
+            duration_sec = int(time.time() - room["createdAt"])
+            
+            if duration_sec < 60:
+                duration_str = f"{duration_sec}s"
+            elif duration_sec < 3600:
+                duration_str = f"{duration_sec // 60}m {duration_sec % 60}s"
+            else:
+                duration_str = f"{duration_sec // 3600}h {(duration_sec % 3600) // 60}m"
+                
+            now_dt = datetime.now()
+            date_str = now_dt.strftime("%b %d, %Y • %I:%M %p")
+            
+            session_doc = {
+                "id": room.get("session_id", room["roomCode"]),
+                "roomName": f"Room {room['roomCode']}",
+                "dateString": date_str,
+                "durationString": duration_str,
+                "participantsCount": len(room.get("client_names", {})),
+                "hostName": room.get("owner_name") or "Unknown",
+                "status": "completed",
+                "createdAt": datetime.utcnow()
+            }
+            await db["sessions"].insert_one(session_doc)
+            logger.info(f"Saved room session {room['roomCode']} to sessions collection.")
+        except Exception as e:
+            logger.error(f"Failed to save room session: {e}")
 
 # Centralized singleton instance
 room_manager = RoomManager()

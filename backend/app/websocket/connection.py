@@ -170,7 +170,8 @@ class ConnectionManager:
                     "participants": room["participants"],
                     "autoDelete": room.get("auto_delete_when_empty", True),
                     "ownerClientId": room.get("owner_client_id"),
-                    "ownerName": room.get("owner_name")
+                    "ownerName": room.get("owner_name"),
+                    "transcriptionActive": room.get("transcription_active", False)
                 }
                 await ws.send_text(json.dumps(join_confirmation))
 
@@ -215,7 +216,8 @@ class ConnectionManager:
             
             try:
                 db = get_database()
-                timestamp = datetime.utcnow().isoformat() + "Z"
+                timestamp_dt = datetime.utcnow()
+                timestamp = timestamp_dt.isoformat() + "Z"
                 doc = {
                     "roomCode": room_code,
                     "sender": display_name,
@@ -223,6 +225,23 @@ class ConnectionManager:
                     "timestamp": timestamp
                 }
                 await db["messages"].insert_one(doc)
+                
+                # Save to transcripts collection
+                room = await room_manager.get_room(room_code)
+                if room:
+                    session_id = room.get("session_id", room_code)
+                    transcript_doc = {
+                        "room_id": room_code,
+                        "session_id": session_id,
+                        "user_id": socket_id,
+                        "username": display_name,
+                        "text": message_text,
+                        "timestamp": timestamp_dt,
+                        "speaker_id": socket_id,
+                        "speaker_color": None,
+                        "metadata": {}
+                    }
+                    await db["transcripts"].insert_one(transcript_doc)
                 
                 await self.broadcast_to_room(
                     room_code,
@@ -236,6 +255,112 @@ class ConnectionManager:
             except Exception as e:
                 logger.error(f"Failed to save/broadcast chat message: {e}")
                 await self._send_error(socket_id, "Failed to send message")
+
+        elif event == "start_transcription":
+            room_code = self.socket_room_map.get(socket_id)
+            if not room_code:
+                await self._send_error(socket_id, "Not associated with a room")
+                return
+            
+            room = await room_manager.get_room(room_code)
+            if not room:
+                await self._send_error(socket_id, "Room not found")
+                return
+            
+            # Host check
+            if room.get("hostId") != socket_id:
+                await self._send_error(socket_id, "Only the host can start transcription")
+                return
+            
+            # Set state
+            room["transcription_active"] = True
+            
+            # Broadcast start to everyone
+            await self.broadcast_to_room(
+                room_code,
+                {
+                    "event": "transcription_started",
+                    "startedBy": room.get("owner_name") or "Host"
+                }
+            )
+            logger.info(f"Transcription started in room {room_code} by host {socket_id}")
+
+        elif event == "stop_transcription":
+            room_code = self.socket_room_map.get(socket_id)
+            if not room_code:
+                await self._send_error(socket_id, "Not associated with a room")
+                return
+            
+            room = await room_manager.get_room(room_code)
+            if not room:
+                await self._send_error(socket_id, "Room not found")
+                return
+            
+            # Host check
+            if room.get("hostId") != socket_id:
+                await self._send_error(socket_id, "Only the host can stop transcription")
+                return
+            
+            # Set state
+            room["transcription_active"] = False
+            
+            # Broadcast stop to everyone
+            await self.broadcast_to_room(
+                room_code,
+                {
+                    "event": "transcription_stopped"
+                }
+            )
+            logger.info(f"Transcription stopped in room {room_code} by host {socket_id}")
+
+        elif event == "live_transcript":
+            text = data.get("text", "").strip()
+            is_final = data.get("isFinal", False)
+            if not text:
+                return
+            
+            room_code = self.socket_room_map.get(socket_id)
+            display_name = self.socket_name_map.get(socket_id)
+            if not room_code or not display_name:
+                await self._send_error(socket_id, "Not associated with a room")
+                return
+            
+            # Broadcast the live transcript event to all clients in the room
+            await self.broadcast_to_room(
+                room_code,
+                {
+                    "event": "live_transcript",
+                    "senderId": socket_id,
+                    "senderName": display_name,
+                    "text": text,
+                    "isFinal": is_final
+                }
+            )
+
+            # Persist to database ONLY if is_final is True
+            if is_final:
+                from datetime import datetime
+                from app.database.mongodb import get_database
+                try:
+                    db = get_database()
+                    room = await room_manager.get_room(room_code)
+                    session_id = room.get("session_id", room_code) if room else room_code
+                    
+                    transcript_doc = {
+                        "room_id": room_code,
+                        "session_id": session_id,
+                        "user_id": socket_id,
+                        "username": display_name,
+                        "text": text,
+                        "timestamp": datetime.utcnow(),
+                        "source": "speech",
+                        "speaker_id": socket_id,
+                        "speaker_color": None,
+                        "metadata": {}
+                    }
+                    await db["transcripts"].insert_one(transcript_doc)
+                except Exception as e:
+                    logger.error(f"Failed to persist speech transcript: {e}")
 
         elif event in ("webrtc_offer", "webrtc_answer", "ice_candidate"):
             # --- WebRTC signaling relay ---

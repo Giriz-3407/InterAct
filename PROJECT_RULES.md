@@ -86,36 +86,6 @@ Unless explicitly requested.
 
 ---
 
-## Design Source of Truth
-
-The folder:
-
-stitch_omnisync_collaborative_workspace/
-
-is the design source of truth.
-
-Before making UI decisions, inspect:
-
-* code.html
-* DESIGN.md
-* screen.png
-
-inside all subfolders.
-
-Use these files for:
-
-* Visual hierarchy
-* Navigation
-* Layout structure
-* Component organization
-* UX flows
-
-Do not generate generic dashboard layouts.
-
-Recreate the Stitch-generated experience using reusable React components.
-
----
-
 ## Frontend Rules
 
 Use:

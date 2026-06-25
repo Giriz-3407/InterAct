@@ -2,43 +2,6 @@
 
 Read PROJECT_RULES.md before making any changes.
 
-## Objective
-
-Initialize the OmniSync project.
-
-The repository contains:
-
-stitch_omnisync_collaborative_workspace/
-
-This folder is the design source of truth.
-
-Before creating any files:
-
-Inspect all available:
-
-* code.html
-* DESIGN.md
-* screen.png
-
-files inside:
-
-* workspace_dashboard
-* room_history_activity
-* room_collaboration_workspace
-* landing_page
-* kinetic_sync
-* host_control
-
-Use them as references for:
-
-* Layouts
-* Navigation
-* UX
-* Components
-* Information hierarchy
-
-Do not generate generic dashboards.
-
 ---
 
 ## Create Project Structure
@@ -47,7 +10,6 @@ Create:
 
 project-root/
 ├── PROJECT_RULES.md
-├── stitch_omnisync_collaborative_workspace/
 ├── frontend/
 └── backend/
 

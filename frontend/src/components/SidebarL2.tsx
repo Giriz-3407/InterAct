@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { DesktopAgentStatus } from './DesktopAgentStatus';
 
 interface SidebarL2Props {
   context: 'dashboard' | 'history';
@@ -52,6 +53,9 @@ export const SidebarL2: React.FC<SidebarL2Props> = ({ context }) => {
 
         {/* Storage Meter */}
         <div className="mt-auto border-t border-slate-border pt-4">
+          <div className="mb-4">
+            <DesktopAgentStatus />
+          </div>
           <div className="flex justify-between text-xs font-mono text-zinc-500 mb-1">
             <span>Storage Used</span>
             <span>82%</span>
@@ -108,11 +112,15 @@ export const SidebarL2: React.FC<SidebarL2Props> = ({ context }) => {
 
       <button 
         onClick={() => window.dispatchEvent(new CustomEvent('trigger-create-room'))}
-        className="w-full py-2.5 rounded-lg text-sm font-semibold font-geist bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:opacity-95 shadow-lg shadow-indigo-500/10 transition-all flex items-center justify-center gap-2"
+        className="w-full py-2.5 rounded-lg text-sm font-semibold font-geist bg-gradient-to-r from-indigo-500 to-violet-500 text-white hover:opacity-95 shadow-lg shadow-indigo-500/10 transition-all flex items-center justify-center gap-2 mb-4"
       >
         <span className="material-symbols-outlined text-[18px]">add</span>
         <span>New Room</span>
       </button>
+
+      <div className="mt-auto">
+        <DesktopAgentStatus />
+      </div>
     </aside>
   );
 };

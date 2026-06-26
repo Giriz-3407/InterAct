@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { DesktopAgentStatus } from './DesktopAgentStatus';
 
 interface SidebarL2Props {
   context: 'dashboard' | 'history';
@@ -53,9 +52,6 @@ export const SidebarL2: React.FC<SidebarL2Props> = ({ context }) => {
 
         {/* Storage Meter */}
         <div className="mt-auto border-t border-slate-border pt-4">
-          <div className="mb-4">
-            <DesktopAgentStatus />
-          </div>
           <div className="flex justify-between text-xs font-mono text-zinc-500 mb-1">
             <span>Storage Used</span>
             <span>82%</span>
@@ -118,9 +114,7 @@ export const SidebarL2: React.FC<SidebarL2Props> = ({ context }) => {
         <span>New Room</span>
       </button>
 
-      <div className="mt-auto">
-        <DesktopAgentStatus />
-      </div>
+      {/* Removed duplicate connection indicator */}
     </aside>
   );
 };

@@ -43,7 +43,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, context }) => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-bg flex font-inter text-on-surface overflow-x-hidden w-full relative">
+    <div className="h-screen bg-bg flex font-inter text-on-surface overflow-hidden w-full relative">
       {/* Sidebar backdrop overlay on mobile */}
       {isExpanded && (
         <div

@@ -7,6 +7,7 @@ import { RoomPage } from '../pages/RoomPage';
 import { HistoryPage } from '../pages/HistoryPage';
 import { LoginPage } from '../pages/LoginPage';
 import { SignupPage } from '../pages/SignupPage';
+import { SettingsPage } from '../pages/SettingsPage';
 import { ProtectedRoute } from './ProtectedRoute';
 import { GuestRoute } from './GuestRoute';
 
@@ -24,6 +25,7 @@ export const AppRouter: React.FC = () => {
       <Route path={ROUTES.DASHBOARD} element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path={ROUTES.ROOM} element={<ProtectedRoute><RoomPage /></ProtectedRoute>} />
       <Route path={ROUTES.HISTORY} element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+      <Route path={ROUTES.SETTINGS} element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to={ROUTES.LANDING} replace />} />

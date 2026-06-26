@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import interactIcon from '../assets/branding/interact-icon-dark-mode.svg';
 import { useAuth } from '../context/AuthContext';
 
@@ -59,7 +59,7 @@ const NAV_ITEMS = [
     soon: true,
   },
   {
-    to: '/dashboard',
+    to: '/settings',
     label: 'Settings',
     icon: (
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
@@ -67,7 +67,6 @@ const NAV_ITEMS = [
         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
     ),
-    soon: true,
   },
 ];
 
@@ -190,15 +189,15 @@ const DesktopSidebar: React.FC<SidebarProps> = ({ isExpanded, onToggle }) => {
       <div className="border-t border-[#1e1e21] p-3 flex-shrink-0 bg-[#09090b]">
         {isExpanded ? (
           <div className="flex items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8.5 h-8.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[#c0c1ff] font-geist font-bold text-xs flex items-center justify-center shrink-0">
+            <Link to="/settings?tab=profile" className="flex items-center gap-2 min-w-0 group/profile decoration-none">
+              <div className="w-8.5 h-8.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[#c0c1ff] font-geist font-bold text-xs flex items-center justify-center shrink-0 group-hover/profile:border-[#c0c1ff]/50 transition-colors">
                 {getInitials(user?.fullName)}
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-xs font-semibold text-zinc-100 truncate font-geist">{user?.fullName}</span>
+                <span className="text-xs font-semibold text-zinc-100 truncate font-geist group-hover/profile:text-white transition-colors">{user?.fullName}</span>
                 <span className="text-[10px] text-zinc-500 truncate font-inter">{user?.email}</span>
               </div>
-            </div>
+            </Link>
             <button
               onClick={logout}
               className="p-1.5 rounded-md text-zinc-500 hover:text-red-400 hover:bg-[#1a1a1d] transition-colors cursor-pointer shrink-0"
@@ -213,9 +212,9 @@ const DesktopSidebar: React.FC<SidebarProps> = ({ isExpanded, onToggle }) => {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2.5">
-            <div className="w-8.5 h-8.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[#c0c1ff] font-geist font-bold text-xs flex items-center justify-center shrink-0" title={`${user?.fullName} (${user?.email})`}>
+            <Link to="/settings?tab=profile" className="w-8.5 h-8.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[#c0c1ff] font-geist font-bold text-xs flex items-center justify-center shrink-0 hover:border-[#c0c1ff]/50 transition-colors" title={`${user?.fullName} (${user?.email})`}>
               {getInitials(user?.fullName)}
-            </div>
+            </Link>
             <button
               onClick={logout}
               className="p-1.5 rounded-md text-zinc-500 hover:text-red-400 hover:bg-[#1a1a1d] transition-colors cursor-pointer"
@@ -280,15 +279,15 @@ const MobileSidebar: React.FC<SidebarProps> = ({ isExpanded, onToggle }) => {
       {/* User Profile + Logout */}
       <div className="border-t border-[#1e1e21] p-4 flex-shrink-0 bg-[#09090b]">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[#c0c1ff] font-geist font-bold text-sm flex items-center justify-center shrink-0">
+          <Link to="/settings?tab=profile" className="flex items-center gap-2.5 min-w-0 group/profile decoration-none">
+            <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[#c0c1ff] font-geist font-bold text-sm flex items-center justify-center shrink-0 group-hover/profile:border-[#c0c1ff]/50 transition-colors">
               {getInitials(user?.fullName)}
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-semibold text-zinc-100 truncate font-geist">{user?.fullName}</span>
+              <span className="text-sm font-semibold text-zinc-100 truncate font-geist group-hover/profile:text-white transition-colors">{user?.fullName}</span>
               <span className="text-xs text-zinc-500 truncate font-inter">{user?.email}</span>
             </div>
-          </div>
+          </Link>
           <button
             onClick={logout}
             className="p-2 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-[#1a1a1d] transition-colors cursor-pointer shrink-0"

@@ -6,6 +6,8 @@ import { MOCK_ROOMS, MOCK_PAST_SESSIONS } from '../data/mockData';
 import { apiClient } from '../lib/axios';
 import type { PastSession } from '../types';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
+import { useAuth } from '../context/AuthContext';
+import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
 
 /* ─────────────────────────────────────────────────────────────
    STAT CARD
@@ -207,6 +209,7 @@ const DashHeader: React.FC<DashHeaderProps> = ({ onCreateRoom, onToggleSidebar, 
 
       {/* Right: search + CTA */}
       <div className="flex items-center gap-2 sm:gap-3">
+        <AgentStatusIndicator />
         {/* Command-palette search */}
         <button
           className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111113] border border-[#1e1e21] text-zinc-500 hover:border-[#27272a] hover:text-zinc-300 transition-all cursor-pointer text-xs font-geist"
@@ -238,8 +241,9 @@ const DashHeader: React.FC<DashHeaderProps> = ({ onCreateRoom, onToggleSidebar, 
 ───────────────────────────────────────────────────────────── */
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'join'>('create');
+  const [modalMode, setModalMode] = useState<'create' | 'join'>('join');
   const [apiError, setApiError] = useState('');
   const [selectedRoomCode, setSelectedRoomCode] = useState('');
   const [jumpBackRooms, setJumpBackRooms] = useState<{ roomCode: string; active: boolean; participantCount: number }[]>([]);
@@ -278,11 +282,26 @@ export const DashboardPage: React.FC = () => {
     fetchJumpBackRooms();
   }, []);
 
+  const handleDirectCreateRoom = async () => {
+    setApiError('');
+    try {
+      const data = await apiClient.post<{ roomCode: string }>('/api/rooms', {});
+      if (data?.roomCode && user?.fullName) {
+        navigate(`/room/${data.roomCode}?name=${encodeURIComponent(user.fullName)}`);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setApiError('Server error. Please try again.');
+    }
+  };
+
   useEffect(() => {
-    const handleTriggerCreate = () => { setModalMode('create'); setModalOpen(true); };
+    const handleTriggerCreate = () => {
+      handleDirectCreateRoom();
+    };
     window.addEventListener('trigger-create-room', handleTriggerCreate);
     return () => window.removeEventListener('trigger-create-room', handleTriggerCreate);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (apiError) {
@@ -291,27 +310,32 @@ export const DashboardPage: React.FC = () => {
     }
   }, [apiError]);
 
-  const handleModalSubmit = async (displayName: string, roomCode?: string) => {
+  const handleModalSubmit = async (_displayName: string, roomCode?: string) => {
     setApiError('');
+    if (!roomCode) return;
     try {
-      if (modalMode === 'create') {
-        const data = await apiClient.post<{ roomCode: string }>('/api/rooms', {});
-        if (data?.roomCode) navigate(`/room/${data.roomCode}?name=${encodeURIComponent(displayName)}`);
+      const roomData = await apiClient.get<{ roomCode: string; active: boolean }>(`/api/rooms/${roomCode}`);
+      if (roomData?.active && user?.fullName) {
+        navigate(`/room/${roomCode}?name=${encodeURIComponent(user.fullName)}`);
       } else {
-        if (!roomCode) return;
-        try {
-          const roomData = await apiClient.get<{ roomCode: string; active: boolean }>(`/api/rooms/${roomCode}`);
-          if (roomData?.active) {
-            navigate(`/room/${roomCode}?name=${encodeURIComponent(displayName)}`);
-          } else { setApiError('Room is inactive.'); setModalOpen(false); }
-        } catch { setApiError('Room not found. Please verify the code.'); setModalOpen(false); }
+        setApiError('Room is inactive.');
+        setModalOpen(false);
       }
-    } catch (err: any) { console.error(err); setApiError('Server error. Please try again.'); setModalOpen(false); }
+    } catch {
+      setApiError('Room not found. Please verify the code.');
+      setModalOpen(false);
+    }
   };
 
-  const handleCreateTrigger = () => { setSelectedRoomCode(''); setModalMode('create'); setModalOpen(true); };
+  const handleCreateTrigger = () => {
+    handleDirectCreateRoom();
+  };
   const handleJoinTrigger = () => { setSelectedRoomCode(''); setModalMode('join'); setModalOpen(true); };
-  const handleJumpBackIn = (roomCode: string) => { setSelectedRoomCode(roomCode); setModalMode('join'); setModalOpen(true); };
+  const handleJumpBackIn = (roomCode: string) => {
+    if (user?.fullName) {
+      navigate(`/room/${roomCode}?name=${encodeURIComponent(user.fullName)}`);
+    }
+  };
 
   return (
     <AppLayout context="dashboard">

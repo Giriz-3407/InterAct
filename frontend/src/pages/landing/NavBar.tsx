@@ -5,8 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 
 const NAV_LINKS = [
   { label: 'Features',     href: '#features' },
-  { label: 'Use Cases',    href: '#use-cases' },
   { label: 'How It Works', href: '#how-it-works' },
+  { label: 'Use Cases',    href: '#use-cases' },
   { label: 'Docs',         href: '#' },
 ];
 

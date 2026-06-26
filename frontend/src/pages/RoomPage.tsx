@@ -9,13 +9,13 @@ import { apiClient } from '../lib/axios';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useLiveTranscription } from '../hooks/useLiveTranscription';
 import { useCursorPresence } from '../hooks/useCursorPresence';
-import { isMobileDevice } from '../lib/mobile';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
 import { WebRTCAuditPanel } from '../components/WebRTCAuditPanel';
 import { DiagnosticsPanel } from '../components/DiagnosticsPanel';
 import { VoiceNegotiationToast } from '../components/VoiceNegotiationToast';
 import { SRDiagPanel } from '../components/SRDiagPanel';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
+import { useAuth } from '../context/AuthContext';
 
 interface Participant {
   socketId: string;
@@ -185,12 +185,13 @@ interface RoomTopBarProps {
   isSharing: boolean;
   isViewing: boolean;
   displayName: string;
+  isHost: boolean;
   onLeave: () => void;
   onShare: () => void;
 }
 
 const RoomTopBar: React.FC<RoomTopBarProps> = ({
-  roomId, participantCount, isSharing, isViewing, onLeave, onShare,
+  roomId, participantCount, isSharing, isViewing, isHost, onLeave, onShare,
 }) => (
   <header className="h-14 pt-[env(safe-area-inset-top)] bg-[#09090b]/95 backdrop-blur-md border-b border-[#1e1e21] flex items-center justify-between px-3 sm:px-5 z-20 shrink-0 select-none">
     {/* Left */}
@@ -224,6 +225,7 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
 
     {/* Right */}
     <div className="flex items-center gap-2">
+      {isHost && <AgentStatusIndicator />}
       <button
         onClick={onShare}
         className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#1e1e21] bg-[#111113] text-zinc-400 hover:text-zinc-100 hover:border-[#27272a] transition-all text-xs font-geist cursor-pointer"
@@ -889,10 +891,9 @@ export const RoomPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  const { user } = useAuth();
   const nameParam = searchParams.get('name') || '';
-  const [displayName, setDisplayName] = useState(nameParam);
-  const [nameInput, setNameInput] = useState('');
-  const [showNamePrompt, setShowNamePrompt] = useState(!nameParam);
+  const displayName = user?.fullName || nameParam || '';
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [currentSocketId, setCurrentSocketId] = useState<string>('');
@@ -1225,12 +1226,7 @@ export const RoomPage: React.FC = () => {
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   // Handlers
-  const handleNameSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nameInput.trim()) return;
-    setDisplayName(nameInput.trim());
-    setShowNamePrompt(false);
-  };
+
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1295,43 +1291,7 @@ export const RoomPage: React.FC = () => {
     if (window.innerWidth < 768) setIsPeopleOpen(false);
   }, []);
 
-  // ── NAME PROMPT ──
-  if (showNamePrompt) {
-    return (
-      <div className="min-h-screen bg-[#09090b] text-zinc-100 flex items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-[#111113] border border-[#1e1e21] rounded-2xl p-6 shadow-2xl flex flex-col gap-5">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <img src={interactLogo} alt="InterAct" className="h-5 w-auto" />
-            </div>
-            <h2 className="text-lg font-black font-geist text-white tracking-tight mt-3 mb-1">
-              Join Room <span className="text-[#c0c1ff] font-mono">{roomId}</span>
-            </h2>
-            <p className="text-sm text-zinc-500 font-inter">Choose a display name to enter this collaboration session.</p>
-          </div>
-          <form onSubmit={handleNameSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold font-geist text-zinc-500 uppercase tracking-wider">Display Name</label>
-              <input
-                type="text"
-                placeholder="e.g. Girish"
-                value={nameInput}
-                onChange={e => setNameInput(e.target.value)}
-                className="px-3 py-2.5 bg-[#0d0d10] border border-[#1e1e21] rounded-xl text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#c0c1ff]/40 transition-colors font-inter"
-                autoFocus
-              />
-            </div>
-            <button
-              type="submit"
-              className="lp-btn-primary w-full h-11 text-sm"
-            >
-              Join Collaboration Session
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
+
 
   // ── MAIN ROOM LAYOUT ──
   return (
@@ -1344,6 +1304,7 @@ export const RoomPage: React.FC = () => {
         isSharing={isSharing}
         isViewing={isViewing}
         displayName={displayName}
+        isHost={isHost}
         onLeave={() => navigate('/dashboard')}
         onShare={handleShareRoom}
       />
@@ -1477,12 +1438,7 @@ export const RoomPage: React.FC = () => {
             </div>
           )}
 
-          {/* AgentStatusIndicator — host desktop only, hidden from users */}
-          {isHost && !isMobileDevice && (
-            <div className="absolute top-3 right-3 z-20">
-              <AgentStatusIndicator />
-            </div>
-          )}
+          {/* Removed duplicate connection indicator */}
 
           {/* Live Caption Overlay */}
           {activeCaptions.length > 0 && (

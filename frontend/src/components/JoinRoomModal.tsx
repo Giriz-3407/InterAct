@@ -18,26 +18,19 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
 }) => {
   const { user } = useAuth();
   const [roomCode, setRoomCode] = useState(initialRoomCode);
-  const [displayName, setDisplayName] = useState(user?.fullName || '');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setRoomCode(initialRoomCode);
-      setDisplayName(user?.fullName || '');
       setError('');
     }
-  }, [isOpen, initialRoomCode, user]);
+  }, [isOpen, initialRoomCode]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!displayName.trim()) {
-      setError('Display Name is required.');
-      return;
-    }
 
     if (mode === 'join') {
       if (!roomCode.trim()) {
@@ -51,7 +44,7 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
     }
 
     setError('');
-    onSubmit(displayName.trim(), mode === 'join' ? roomCode.trim().toUpperCase() : undefined);
+    onSubmit(user?.fullName || '', mode === 'join' ? roomCode.trim().toUpperCase() : undefined);
   };
 
   return (
@@ -71,8 +64,8 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
           </h2>
           <p className="text-xs text-zinc-500 mt-1 font-inter">
             {mode === 'create' 
-              ? 'Enter a display name to host a new session' 
-              : 'Enter display name and unique room code'}
+              ? 'Ready to host a new collaboration session.' 
+              : 'Enter the unique 6-character room code to join.'}
           </p>
         </div>
 
@@ -96,17 +89,6 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
               />
             </div>
           )}
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] text-zinc-400 font-geist uppercase tracking-wider">Display Name</label>
-            <input
-              type="text"
-              placeholder="Your Name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="px-3 py-2 bg-zinc-900 border border-zinc-850 rounded-lg text-xs text-zinc-200 placeholder-zinc-650 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all font-inter"
-            />
-          </div>
 
           <div className="flex gap-2.5 mt-2">
             <button

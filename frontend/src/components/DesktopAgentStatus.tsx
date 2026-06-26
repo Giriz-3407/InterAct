@@ -9,7 +9,7 @@ interface DesktopAgentStatusProps {
 export const DesktopAgentStatus: React.FC<DesktopAgentStatusProps> = ({
   isSidebarExpanded = true,
 }) => {
-  const { isSupported, isDetected, agentInfo } = useDesktopAgent();
+  const { isSupported, status, agentInfo, isOutdated, isLoading } = useDesktopAgent();
 
   if (!isSupported) {
     return null;
@@ -17,6 +17,36 @@ export const DesktopAgentStatus: React.FC<DesktopAgentStatusProps> = ({
 
   const githubRepo = import.meta.env.VITE_GITHUB_REPO || 'Giriz-3407/InterAct-Agent';
   const downloadUrl = `https://github.com/${githubRepo}/releases/latest`;
+
+  // Determine dot color
+  let dotColor = 'bg-zinc-500';
+  if (status === 'connected') {
+    dotColor = 'bg-emerald-500';
+  } else if (status === 'connecting') {
+    dotColor = 'bg-amber-400';
+  } else if (status === 'incompatible') {
+    dotColor = 'bg-amber-500';
+  } else if (status === 'disconnected') {
+    dotColor = 'bg-rose-500';
+  }
+
+  // Determine primary text
+  let statusText = 'Desktop Agent not detected';
+  if (status === 'connected') {
+    statusText = isOutdated && agentInfo 
+      ? `Desktop Agent Connected v${agentInfo.version}`
+      : 'Desktop Agent Connected';
+  } else if (status === 'connecting') {
+    statusText = 'Desktop Agent Connecting...';
+  } else if (status === 'incompatible') {
+    statusText = agentInfo 
+      ? `Desktop Agent Incompatible v${agentInfo.version}`
+      : 'Desktop Agent Incompatible';
+  }
+
+  // Determine active ping animation
+  const showPing = status === 'connected' || status === 'connecting';
+  const pingColor = status === 'connected' ? 'bg-emerald-400' : 'bg-amber-400';
 
   return createPortal(
     <div
@@ -26,24 +56,20 @@ export const DesktopAgentStatus: React.FC<DesktopAgentStatusProps> = ({
     >
       <div className="flex items-center gap-2.5">
         <div className="relative flex h-2 w-2">
-          {isDetected && (
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          {showPing && (
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${pingColor}`}></span>
           )}
-          <span className={`relative inline-flex rounded-full h-2 w-2 ${isDetected ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
+          <span className={`relative inline-flex rounded-full h-2 w-2 ${dotColor}`}></span>
         </div>
         <div className="flex flex-col min-w-0">
           <span className="text-xs font-semibold text-zinc-200 font-geist">
-            {isDetected ? 'Desktop Agent Connected' : 'Desktop Agent not detected'}
+            {statusText}
           </span>
-          {isDetected && agentInfo && (
-            <span className="text-[10px] text-zinc-500 font-mono">
-              v{agentInfo.agent_version}
-            </span>
-          )}
         </div>
       </div>
       
-      {!isDetected && (
+      {/* Download prompt: shown only when not detected */}
+      {(status === 'disconnected' || status === 'connecting') && !isLoading && (
         <a
           href={downloadUrl}
           target="_blank"
@@ -54,8 +80,21 @@ export const DesktopAgentStatus: React.FC<DesktopAgentStatusProps> = ({
           Download Desktop Agent
         </a>
       )}
+
+      {/* Update prompt: shown when connected but outdated or incompatible */}
+      {(isOutdated || status === 'incompatible') && (
+        <a
+          href={downloadUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="py-2 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 hover:text-amber-200 text-[10px] font-bold font-geist text-center border border-amber-500/30 hover:border-amber-500/50 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider"
+        >
+          <span className="material-symbols-outlined text-[14px]">update</span>
+          Update Available
+        </a>
+      )}
     </div>,
     document.body
   );
 };
-
+export default DesktopAgentStatus;

@@ -1,22 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { isMobileDevice } from '../lib/mobile';
-import { desktopAgent } from '../lib/desktopAgent';
-import type { ConnectionStatus } from '../lib/desktopAgent';
+import { useDesktopAgent } from '../hooks/useDesktopAgent';
 
 export const AgentStatusIndicator: React.FC = () => {
-  const [status, setStatus] = useState<ConnectionStatus>(desktopAgent.getStatus());
-  const [agentVersion, setAgentVersion] = useState<string | null>(null);
+  const { isSupported, status, agentInfo, isOutdated } = useDesktopAgent();
 
-  useEffect(() => {
-    const unsubscribe = desktopAgent.onStatusChange((newStatus) => {
-      setStatus(newStatus);
-      const info = desktopAgent.getAgentInfo();
-      setAgentVersion(info ? info.version : null);
-    });
-    return unsubscribe;
-  }, []);
-
-  if (isMobileDevice) return null;
+  if (isMobileDevice || !isSupported) return null;
 
   let dotColor = 'bg-zinc-500';
   let label = 'Agent Offline';
@@ -28,7 +17,7 @@ export const AgentStatusIndicator: React.FC = () => {
   switch (status) {
     case 'connected':
       dotColor = 'bg-emerald-500';
-      label = `Agent Connected${agentVersion ? ` v${agentVersion}` : ''}`;
+      label = isOutdated && agentInfo ? `Agent Connected v${agentInfo.version}` : 'Agent Connected';
       pulseClass = 'animate-pulse';
       borderClass = 'border-emerald-500/20';
       textClass = 'text-emerald-400';
@@ -72,4 +61,5 @@ export const AgentStatusIndicator: React.FC = () => {
     </div>
   );
 };
+
 export default AgentStatusIndicator;

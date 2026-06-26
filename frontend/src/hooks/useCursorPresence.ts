@@ -168,13 +168,12 @@ export function useCursorPresence({
   }, [captureDisplaySurface]);
 
   // ── Desktop agent connection — host only, never on mobile ─────────────────
-  // Connect when this browser becomes the host; disconnect on role change or unmount.
+  // Connect when this browser becomes the host; keep connection persistent.
   // Viewers never reach this branch (isHost stays false for them).
   useEffect(() => {
     if (!isHost) return;
     if (isMobileDevice) return;
     desktopAgent.connect();
-    return () => desktopAgent.disconnect();
   }, [isHost]);
 
   useEffect(() => {

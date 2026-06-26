@@ -33,11 +33,11 @@ export function isDesktopOS(): boolean {
   return isDesktop;
 }
 
-const githubRepo = import.meta.env.VITE_GITHUB_REPO || 'Giriz-3407/InterAct-Agent';
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-async function fetchLatestReleaseVersion(repo: string): Promise<string | null> {
-  const cacheKey = `latest_agent_version_${repo}`;
-  const cacheTimeKey = `latest_agent_version_time_${repo}`;
+async function fetchLatestReleaseVersion(): Promise<string | null> {
+  const cacheKey = 'latest_agent_version_backend';
+  const cacheTimeKey = 'latest_agent_version_backend_time';
   const cachedVersion = localStorage.getItem(cacheKey);
   const cachedTime = localStorage.getItem(cacheTimeKey);
   
@@ -47,19 +47,19 @@ async function fetchLatestReleaseVersion(repo: string): Promise<string | null> {
   }
 
   try {
-    const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`);
+    const response = await fetch(`${apiUrl}/api/version/latest`);
     if (!response.ok) {
       throw new Error(`Failed to fetch latest release: ${response.statusText}`);
     }
     const data = await response.json();
-    const version = data.tag_name ? data.tag_name.replace(/^v/, '') : null;
+    const version = data.version ? data.version.replace(/^v/, '') : null;
     if (version) {
       localStorage.setItem(cacheKey, version);
       localStorage.setItem(cacheTimeKey, String(Date.now()));
     }
     return version;
   } catch (error) {
-    console.error('Error fetching latest release version:', error);
+    console.error('Error fetching latest version from backend:', error);
     return cachedVersion || null;
   }
 }
@@ -137,7 +137,7 @@ export function useDesktopAgent() {
     let isMounted = true;
 
     async function checkVersion() {
-      const latest = await fetchLatestReleaseVersion(githubRepo);
+      const latest = await fetchLatestReleaseVersion();
       if (!isMounted) return;
       setLatestVersion(latest);
       if (latest && agentInfo?.version) {

@@ -15,8 +15,8 @@ export const DesktopAgentStatus: React.FC<DesktopAgentStatusProps> = ({
     return null;
   }
 
-  const githubRepo = import.meta.env.VITE_GITHUB_REPO || 'Giriz-3407/InterAct-Agent';
-  const downloadUrl = `https://github.com/${githubRepo}/releases/latest`;
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const downloadUrl = `${apiUrl}/api/download/windows`;
 
   // Determine dot color
   let dotColor = 'bg-zinc-500';

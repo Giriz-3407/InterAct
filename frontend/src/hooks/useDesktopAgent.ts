@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { desktopAgent, ConnectionStatus, AgentInfo } from '../lib/desktopAgent';
+import { desktopAgent } from '../lib/desktopAgent';
+import type { ConnectionStatus, AgentInfo } from '../lib/desktopAgent';
 
 export interface HookAgentInfo {
   version: string;

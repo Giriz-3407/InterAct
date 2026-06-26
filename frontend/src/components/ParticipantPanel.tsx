@@ -1,6 +1,7 @@
 import React from 'react';
 import { Avatar } from './Avatar.FC';
 import { Badge } from './Badge';
+import { DesktopAgentStatus } from './DesktopAgentStatus';
 
 interface Participant {
   socketId: string;
@@ -144,6 +145,10 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-zinc-800/60">
+        <DesktopAgentStatus />
       </div>
     </aside>
   </>

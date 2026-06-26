@@ -209,7 +209,7 @@ const DashHeader: React.FC<DashHeaderProps> = ({ onCreateRoom, onToggleSidebar, 
 
       {/* Right: search + CTA */}
       <div className="flex items-center gap-2 sm:gap-3">
-        <AgentStatusIndicator />
+        <AgentStatusIndicator showRefresh={true} />
         {/* Command-palette search */}
         <button
           className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111113] border border-[#1e1e21] text-zinc-500 hover:border-[#27272a] hover:text-zinc-300 transition-all cursor-pointer text-xs font-geist"

@@ -154,6 +154,31 @@ export function useDesktopAgent() {
     };
   }, [status, agentInfo?.version]);
 
+  const refresh = async () => {
+    setIsLoading(true);
+    
+    // Clear version cache
+    localStorage.removeItem('latest_agent_version_backend');
+    localStorage.removeItem('latest_agent_version_backend_time');
+    
+    try {
+      const latest = await fetchLatestReleaseVersion();
+      setLatestVersion(latest);
+      const currentAgentInfo = desktopAgent.getAgentInfo();
+      if (latest && currentAgentInfo?.version) {
+        setIsOutdated(isVersionOlder(currentAgentInfo.version, latest));
+      } else {
+        setIsOutdated(desktopAgent.getStatus() === 'incompatible');
+      }
+    } catch (err) {
+      console.error('Error refreshing latest version:', err);
+    }
+    
+    // Reconnect local agent
+    desktopAgent.disconnect();
+    desktopAgent.connect();
+  };
+
   return {
     isSupported,
     isDetected: status === 'connected' || status === 'incompatible',
@@ -162,5 +187,6 @@ export function useDesktopAgent() {
     isOutdated,
     latestVersion,
     isLoading,
+    refresh,
   };
 }

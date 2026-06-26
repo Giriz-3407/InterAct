@@ -3,14 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
 import { useAuth } from '../context/AuthContext';
 import { useDesktopAgent } from '../hooks/useDesktopAgent';
-import { User, Monitor, Sliders, Info, LogOut, Check, AlertCircle } from 'lucide-react';
+import { User, Monitor, Sliders, Info, LogOut, Check, AlertCircle, RefreshCw } from 'lucide-react';
 
 type TabType = 'profile' | 'agent' | 'preferences' | 'about';
 
 export const SettingsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, logout } = useAuth();
-  const { status, agentInfo, isOutdated, latestVersion } = useDesktopAgent();
+  const { status, agentInfo, isOutdated, latestVersion, isLoading, refresh } = useDesktopAgent();
 
   const activeTab = (searchParams.get('tab') as TabType) || 'profile';
 
@@ -251,6 +251,14 @@ export const SettingsPage: React.FC = () => {
                     
                     {/* Action buttons */}
                     <div className="flex gap-2">
+                      <button
+                        onClick={refresh}
+                        disabled={isLoading}
+                        className="px-3.5 py-2 bg-zinc-800 hover:bg-zinc-750 text-zinc-300 hover:text-white text-xs font-bold font-geist border border-zinc-700 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+                      >
+                        <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
+                        Check for Updates
+                      </button>
                       {status !== 'connected' && (
                         <a
                           href={downloadUrl}

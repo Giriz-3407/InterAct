@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface JoinRoomModalProps {
   isOpen: boolean;
@@ -15,16 +16,18 @@ export const JoinRoomModal: React.FC<JoinRoomModalProps> = ({
   onSubmit,
   initialRoomCode = '',
 }) => {
+  const { user } = useAuth();
   const [roomCode, setRoomCode] = useState(initialRoomCode);
-  const [displayName, setDisplayName] = useState('');
+  const [displayName, setDisplayName] = useState(user?.fullName || '');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setRoomCode(initialRoomCode);
+      setDisplayName(user?.fullName || '');
       setError('');
     }
-  }, [isOpen, initialRoomCode]);
+  }, [isOpen, initialRoomCode, user]);
 
   if (!isOpen) return null;
 

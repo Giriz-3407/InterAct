@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import interactLogo from '../../assets/branding/interact-icon-dark-mode.svg';
+import { useAuth } from '../../context/AuthContext';
 
 const NAV_LINKS = [
   { label: 'Features',     href: '#features' },
@@ -11,6 +12,7 @@ const NAV_LINKS = [
 
 export const NavBar: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [scrolled,    setScrolled]    = useState(false);
   const [mobileOpen,  setMobileOpen]  = useState(false);
 
@@ -62,18 +64,29 @@ export const NavBar: React.FC = () => {
 
         {/* ── Right CTAs — desktop ── */}
         <div className="hidden md:flex items-center gap-3">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="text-sm font-medium text-zinc-400 hover:text-zinc-100 transition-colors duration-150 px-3 py-1.5 cursor-pointer bg-transparent border-none"
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="lp-btn-primary text-sm"
-          >
-            Create Room
-          </button>
+          {isAuthenticated ? (
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="lp-btn-primary text-sm"
+            >
+              Go to Dashboard
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate('/login')}
+                className="text-sm font-medium text-zinc-400 hover:text-zinc-100 transition-colors duration-150 px-3 py-1.5 cursor-pointer bg-transparent border-none"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => navigate('/login')}
+                className="lp-btn-primary text-sm"
+              >
+                Create Room
+              </button>
+            </>
+          )}
         </div>
 
         {/* ── Hamburger — mobile ── */}
@@ -112,18 +125,29 @@ export const NavBar: React.FC = () => {
             </button>
           ))}
           <div className="pt-4 flex flex-col gap-2.5">
-            <button
-              onClick={() => { setMobileOpen(false); navigate('/dashboard'); }}
-              className="lp-btn-ghost w-full text-sm"
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => { setMobileOpen(false); navigate('/dashboard'); }}
-              className="lp-btn-primary w-full text-sm"
-            >
-              Create Free Room
-            </button>
+            {isAuthenticated ? (
+              <button
+                onClick={() => { setMobileOpen(false); navigate('/dashboard'); }}
+                className="lp-btn-primary w-full text-sm"
+              >
+                Go to Dashboard
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => { setMobileOpen(false); navigate('/login'); }}
+                  className="lp-btn-ghost w-full text-sm"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => { setMobileOpen(false); navigate('/login'); }}
+                  className="lp-btn-primary w-full text-sm"
+                >
+                  Create Free Room
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

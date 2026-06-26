@@ -39,6 +39,7 @@ async def connect_to_mongo():
         await database["messages"].create_index([("roomCode", 1), ("timestamp", 1)])
         await database["transcripts"].create_index([("session_id", 1), ("timestamp", 1)])
         await database["sessions"].create_index("id", unique=True)
+        await database["users"].create_index("email", unique=True)
         logger.info(f"Successfully connected to MongoDB Database: {database_name} (indexes verified)")
         
         # Seed mock transcripts & sessions for development

@@ -1,7 +1,14 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useDesktopAgent } from '../hooks/useDesktopAgent';
 
-export const DesktopAgentStatus: React.FC = () => {
+interface DesktopAgentStatusProps {
+  isSidebarExpanded?: boolean;
+}
+
+export const DesktopAgentStatus: React.FC<DesktopAgentStatusProps> = ({
+  isSidebarExpanded = true,
+}) => {
   const { isSupported, isDetected, agentInfo } = useDesktopAgent();
 
   if (!isSupported) {
@@ -10,8 +17,12 @@ export const DesktopAgentStatus: React.FC = () => {
 
   const downloadUrl = 'https://github.com/Girish/InterAct-Agent/releases/latest';
 
-  return (
-    <div className="p-3.5 rounded-xl bg-zinc-900/40 border border-zinc-850 backdrop-blur-sm flex flex-col gap-3">
+  return createPortal(
+    <div
+      className={`fixed bottom-6 left-6 w-60 p-3.5 rounded-xl bg-zinc-900/95 border border-zinc-850 shadow-2xl backdrop-blur-md flex flex-col gap-3 z-40 transition-all duration-300 ${
+        isSidebarExpanded ? 'block' : 'hidden md:block'
+      }`}
+    >
       <div className="flex items-center gap-2.5">
         <div className="relative flex h-2 w-2">
           {isDetected && (
@@ -42,6 +53,8 @@ export const DesktopAgentStatus: React.FC = () => {
           Download Desktop Agent
         </a>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };
+

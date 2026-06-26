@@ -148,7 +148,7 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
       </div>
 
       <div className="mt-4 pt-4 border-t border-zinc-800/60">
-        <DesktopAgentStatus />
+        <DesktopAgentStatus isSidebarExpanded={isExpanded} />
       </div>
     </aside>
   </>

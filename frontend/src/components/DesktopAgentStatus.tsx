@@ -15,7 +15,8 @@ export const DesktopAgentStatus: React.FC<DesktopAgentStatusProps> = ({
     return null;
   }
 
-  const downloadUrl = 'https://github.com/Girish/InterAct-Agent/releases/latest';
+  const githubRepo = import.meta.env.VITE_GITHUB_REPO || 'Giriz-3407/InterAct-Agent';
+  const downloadUrl = `https://github.com/${githubRepo}/releases/latest`;
 
   return createPortal(
     <div

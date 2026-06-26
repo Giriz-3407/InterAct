@@ -264,15 +264,20 @@ const CopyToast: React.FC<{ visible: boolean }> = ({ visible }) => (
 interface MoreMenuProps {
   isHost: boolean;
   autoDelete: boolean;
+  isTranscriptOpen: boolean;
+  isTranscriptionActive: boolean;
+  isTranscriptionSupported: boolean;
   onOpenHostPanel: () => void;
   onShareRoom: () => void;
   onToggleAutoDelete: () => void;
+  onToggleTranscript: () => void;
   onLeave: () => void;
   onClose: () => void;
 }
 
 const MoreMenu: React.FC<MoreMenuProps> = ({
-  isHost, autoDelete, onOpenHostPanel, onShareRoom, onToggleAutoDelete, onLeave, onClose,
+  isHost, autoDelete, isTranscriptOpen, isTranscriptionActive, isTranscriptionSupported,
+  onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript, onLeave, onClose,
 }) => (
   <>
     <div className="fixed inset-0 z-40" onClick={onClose} />
@@ -312,6 +317,25 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
             </div>
           </button>
         )}
+        <button
+          onClick={() => { onToggleTranscript(); onClose(); }}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors cursor-pointer text-left ${
+            isTranscriptOpen
+              ? 'text-[#c0c1ff] bg-[#c0c1ff]/5'
+              : 'text-zinc-300 hover:bg-[#1a1a1d] hover:text-white'
+          } ${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''}`}
+          disabled={!isTranscriptionSupported}
+        >
+          <span className={`${isTranscriptOpen ? 'text-[#c0c1ff]' : 'text-zinc-500'}`}>
+            <IconTranscript />
+          </span>
+          <span className="flex-1">Live Log</span>
+          {isTranscriptionActive && (
+            <span className="text-[9px] font-bold font-geist uppercase px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-[#c0c1ff]">
+              Active
+            </span>
+          )}
+        </button>
         <div className="h-px bg-[#1e1e21] mx-2 my-1" />
         <button
           onClick={onLeave}
@@ -374,9 +398,13 @@ const CollabDock: React.FC<CollabDockProps> = ({
         <MoreMenu
           isHost={isHost}
           autoDelete={autoDelete}
+          isTranscriptOpen={isTranscriptOpen}
+          isTranscriptionActive={isTranscriptionActive}
+          isTranscriptionSupported={isTranscriptionSupported}
           onOpenHostPanel={onOpenHostPanel}
           onShareRoom={onShareRoom}
           onToggleAutoDelete={onToggleAutoDelete}
+          onToggleTranscript={onToggleTranscript}
           onLeave={onLeave}
           onClose={onToggleMoreMenu}
         />
@@ -453,7 +481,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
           icon={<IconTranscript />}
           label="Live Log"
           active={isTranscriptOpen}
-          className={`${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''} ${isTranscriptionActive ? 'text-indigo-400 font-bold' : ''}`}
+          className={`hidden sm:flex ${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''} ${isTranscriptionActive ? 'text-indigo-400 font-bold' : ''}`}
         />
 
         {/* Chat */}

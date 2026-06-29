@@ -1081,17 +1081,19 @@ const FloatingChat: React.FC<FloatingChatProps> = ({
   return (
     <>
       {/* Chat Backdrop */}
-      <div
-        className={`fixed inset-0 bg-black/40 z-35 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={onClose}
-      />
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-35 animate-fade-in pointer-events-auto"
+          onClick={onClose}
+        />
+      )}
       {/* Slide-over chat panel */}
       <div
         onTouchStart={onInteraction}
         onMouseDown={onInteraction}
         onTouchEnd={onRelease}
         onMouseUp={onRelease}
-        className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none'}`}
         style={{
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -1186,17 +1188,19 @@ const FloatingParticipants: React.FC<FloatingParticipantsProps> = ({
 }) => (
   <>
     {/* Participants Backdrop */}
-    <div
-      className={`fixed inset-0 bg-black/40 z-35 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-      onClick={onClose}
-    />
+    {isOpen && (
+      <div
+        className="fixed inset-0 bg-black/40 z-35 animate-fade-in pointer-events-auto"
+        onClick={onClose}
+      />
+    )}
     {/* Slide-over participants panel */}
     <div
       onTouchStart={onInteraction}
       onMouseDown={onInteraction}
       onTouchEnd={onRelease}
       onMouseUp={onRelease}
-      className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none'}`}
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -1377,18 +1381,37 @@ export const RoomPage: React.FC = () => {
   const mainRef = useRef<HTMLDivElement | null>(null);
 
   const toggleFullscreen = useCallback(() => {
-    const el = mainRef.current;
-    if (!el) return;
-    if (!document.fullscreenElement) {
-      el.requestFullscreen().catch(err => {
-        console.warn('[Fullscreen] Request failed:', err);
-      });
+    if (isMobileViewer) {
+      const video = remoteVideoRef.current;
+      if (!video) return;
+      if (typeof (video as any).webkitEnterFullscreen === 'function') {
+        // iOS Safari iPhone native fullscreen player
+        (video as any).webkitEnterFullscreen();
+      } else if (video.requestFullscreen) {
+        if (!document.fullscreenElement) {
+          video.requestFullscreen().catch(err => {
+            console.warn('[Fullscreen] Video request failed:', err);
+          });
+        } else {
+          document.exitFullscreen().catch(err => {
+            console.warn('[Fullscreen] Exit failed:', err);
+          });
+        }
+      }
     } else {
-      document.exitFullscreen().catch(err => {
-        console.warn('[Fullscreen] Exit failed:', err);
-      });
+      const el = mainRef.current;
+      if (!el) return;
+      if (!document.fullscreenElement) {
+        el.requestFullscreen().catch(err => {
+          console.warn('[Fullscreen] Request failed:', err);
+        });
+      } else {
+        document.exitFullscreen().catch(err => {
+          console.warn('[Fullscreen] Exit failed:', err);
+        });
+      }
     }
-  }, []);
+  }, [isMobileViewer]);
 
   // Initially show controls when Mobile Presentation starts
   useEffect(() => {
@@ -1936,7 +1959,7 @@ export const RoomPage: React.FC = () => {
             <>
               {/* Floating Header */}
               <div
-                className={`absolute left-4 right-4 z-30 transition-all duration-300 ease-in-out ${isMobileControlsVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-4 pointer-events-none'}`}
+                className={`absolute left-4 right-4 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isMobileControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}
                 style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
               >
                 <FloatingHeader
@@ -1951,7 +1974,7 @@ export const RoomPage: React.FC = () => {
 
               {/* Floating Quick Controls Dock */}
               <div
-                className={`absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ease-in-out ${isMobileControlsVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+                className={`absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isMobileControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
                 style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
               >
                 <FloatingQuickControls

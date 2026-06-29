@@ -11,7 +11,9 @@ Mobile Presentation Experience extends InterAct's screen share viewer layout for
 * **FAB Quick Action Dock**: Groups all actions (Mute mic/audio, Chat toggle, Participants toggle, Fullscreen toggle, Leave room button) inside a compact floating bar at the bottom center of the viewport.
 * **Slide-over Chat Panel**: Replaces the side drawers with glassmorphic slide-over overlays that stay mounted (preserving scroll position) and slide off-screen when dismissed.
 * **Safe Area Compliance**: Integrates CSS padding and margin offsets utilizing `env(safe-area-inset-*)` variables so controls never overlap phone notches or gestures navigation areas.
-* **Fullscreen Integration**: Supports HTML5 Fullscreen on the viewport wrapper so that overlays remain functional and active when viewing in native fullscreen.
+* **Native Fullscreen Integration**: Supports HTML5 Fullscreen on the viewport wrapper so that overlays remain functional and active when viewing in native fullscreen.
+* **Native Media Player Fullscreen (Mobile)**: On mobile, the fullscreen toggle targets the `<video>` element directly (falling back to `webkitEnterFullscreen` on iOS Safari and standard video `requestFullscreen` on Android Chrome) to show the exact native fullscreen layout mobile browsers use for media players.
+* **Pointer Event Passthrough**: The absolute-positioned overlay wrappers for the header and dock are configured with `pointer-events-none` (with `pointer-events-auto` on the child cards), enabling touch gestures and taps to pass through directly to the viewport canvas beneath. Backdrops are rendered conditionally and drawers disable pointer events when closed, ensuring zero viewport blocking.
 
 ---
 
@@ -29,6 +31,8 @@ Mobile Presentation Experience extends InterAct's screen share viewer layout for
   - Added listeners for `fullscreenchange` and a 3-second auto-hide timeout.
   - Implemented ref composition (`composedViewportRef`) to retrieve the main element pointer for native Fullscreen requests.
   - Conditionally hid traditional desktop elements (`RoomTopBar`, `CollabDock`, `RightDrawer`, `ParticipantPanel`) in favor of the mobile floating subcomponents when `isMobileViewer` is active.
+  - Added pointer event passthrough styles and conditional backdrop rendering to ensure overlays never block taps to the underlying screen.
+  - Refactored `toggleFullscreen` to target the video element directly on mobile for native media player view.
 
 ---
 

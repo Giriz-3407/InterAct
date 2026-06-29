@@ -341,43 +341,43 @@ body {
 
 .room-dock-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 6px 8px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
   border: 1px solid transparent;
   color: #a1a1aa;
   background: transparent;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .room-dock-btn:hover {
-  background: #1a1a1d;
-  color: #e4e4e7;
-  border-color: #27272a;
-  transform: scale(1.04);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f4f4f5;
+  border-color: rgba(255, 255, 255, 0.03);
+}
+
+.room-dock-btn:active {
+  transform: scale(0.95);
 }
 
 .room-dock-btn.active {
-  background: rgba(192, 193, 255, 0.1);
-  border-color: rgba(192, 193, 255, 0.2);
+  background: rgba(192, 193, 255, 0.08);
+  border-color: rgba(192, 193, 255, 0.15);
   color: #c0c1ff;
 }
 
 .room-dock-btn.danger {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.12);
   color: #f87171;
 }
 
 .room-dock-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.1);
   color: #fca5a5;
 }
 
@@ -387,7 +387,31 @@ body {
   50% { transform: scaleY(1); }
 }
 
+/* Elevated visual shadows */
+.shadow-dock {
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+.shadow-panel {
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+/* Ambient Slow Pulse */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.95);
+  }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 3s infinite ease-in-out;
+}
+
 /* z-index layers for room overlay architecture */
 .z-35 { z-index: 35; }
+
 
 

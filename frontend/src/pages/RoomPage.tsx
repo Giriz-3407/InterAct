@@ -17,6 +17,28 @@ import { VoiceNegotiationToast } from '../components/VoiceNegotiationToast';
 import { SRDiagPanel } from '../components/SRDiagPanel';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
 import { useAuth } from '../context/AuthContext';
+import {
+  Mic,
+  MicOff,
+  Tv,
+  Share2,
+  MessageSquare,
+  Users,
+  MoreHorizontal,
+  LogOut,
+  Volume2,
+  VolumeX,
+  Maximize2,
+  Minimize2,
+  Sparkles,
+  FileText,
+  X,
+  Check,
+  Send,
+  Settings,
+  Monitor,
+  Trash2
+} from 'lucide-react';
 
 interface Participant {
   socketId: string;
@@ -33,127 +55,27 @@ interface MessageItem {
 }
 
 /* ─────────────────────────────────────────────────
-   SVG ICON PRIMITIVES (no Material Symbols needed)
+   SVG ICON PRIMITIVES (Mapped to Lucide React)
 ───────────────────────────────────────────────── */
-const IconMic = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-    <path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" />
-    <line x1="8" y1="23" x2="16" y2="23" />
-  </svg>
-);
-const IconMicOff = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <line x1="1" y1="1" x2="23" y2="23" />
-    <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-    <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
-    <line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
-  </svg>
-);
-const IconScreen = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <rect x="2" y="3" width="20" height="14" rx="2" />
-    <path d="M8 21h8M12 17v4" />
-  </svg>
-);
-const IconScreenStop = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3" />
-    <path d="M8 21h8M12 17v4" /><line x1="22" y1="3" x2="11" y2="14" />
-  </svg>
-);
-const IconChat = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-);
-const IconPeople = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-const IconMore = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <circle cx="12" cy="5" r="1" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="currentColor" />
-    <circle cx="12" cy="19" r="1" fill="currentColor" />
-  </svg>
-);
-const IconLeave = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-);
-const IconVolumeUp = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
-  </svg>
-);
-const IconVolumeOff = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-    <line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" />
-  </svg>
-);
-const IconShare = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-  </svg>
-);
-const IconFullscreenEnter = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
-  </svg>
-);
-const IconFullscreenExit = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 14h6v6m10-6h-6v6M4 10h6V4m10 6h-6V4" />
-  </svg>
-);
-const IconAI = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-    <path d="M12 2L14.5 9H22L16 13.5L18.5 20.5L12 16L5.5 20.5L8 13.5L2 9H9.5L12 2Z" fill="currentColor" />
-  </svg>
-);
-const IconTranscript = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-    <path d="M19 10v1a7 7 0 0 1-14 0v-1" />
-    <path d="M12 19v3" />
-    <path d="M9 22h6" />
-    <path d="m18 8 2 2-2 2" />
-  </svg>
-);
-const IconClose = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-const IconCheck = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-const IconSend = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
-  </svg>
-);
-const IconMonitor = () => (
-  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-    <rect x="2" y="3" width="20" height="14" rx="2" />
-    <path d="M8 21h8M12 17v4" />
-  </svg>
-);
-const IconSettings = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-  </svg>
-);
+const IconMic = () => <Mic size={19} />;
+const IconMicOff = () => <MicOff size={19} />;
+const IconScreen = () => <Tv size={19} />;
+const IconScreenStop = () => <Tv size={19} className="text-red-400" />;
+const IconChat = () => <MessageSquare size={19} />;
+const IconPeople = () => <Users size={19} />;
+const IconMore = () => <MoreHorizontal size={19} />;
+const IconLeave = () => <LogOut size={19} />;
+const IconVolumeUp = () => <Volume2 size={19} />;
+const IconVolumeOff = () => <VolumeX size={19} />;
+const IconShare = () => <Share2 size={13} />;
+const IconFullscreenEnter = () => <Maximize2 size={18} />;
+const IconFullscreenExit = () => <Minimize2 size={18} />;
+const IconAI = () => <Sparkles size={18} className="text-[#c0c1ff]" />;
+const IconTranscript = () => <FileText size={19} />;
+const IconClose = () => <X size={16} />;
+const IconCheck = () => <Check size={14} />;
+const IconSend = () => <Send size={16} />;
+const IconMonitor = () => <Monitor size={42} className="text-zinc-500" />;
 
 /* ─────────────────────────────────────────────────
    DOCK BUTTON
@@ -169,7 +91,7 @@ interface DockBtnProps {
   className?: string;
 }
 
-const DockBtn: React.FC<DockBtnProps> = ({ onClick, title, icon, label, active, danger, badge, className = '' }) => (
+const DockBtn: React.FC<DockBtnProps> = ({ onClick, title, icon, active, danger, badge, className = '' }) => (
   <button
     onClick={onClick}
     title={title}
@@ -178,12 +100,11 @@ const DockBtn: React.FC<DockBtnProps> = ({ onClick, title, icon, label, active, 
     <span className="relative flex items-center justify-center">
       {icon}
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-2 -right-2.5 min-w-[16px] h-4 px-0.5 rounded-full bg-[#c0c1ff] text-[#09090b] text-[8px] font-bold font-geist flex items-center justify-center leading-none">
+        <span className="absolute -top-1.5 -right-1.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-[#c0c1ff] text-[#09090b] text-[8px] font-bold font-geist flex items-center justify-center leading-none">
           {badge > 9 ? '9+' : badge}
         </span>
       )}
     </span>
-    {label && <span className="text-[10px] font-geist font-medium leading-none mt-0.5">{label}</span>}
   </button>
 );
 
@@ -204,34 +125,34 @@ interface RoomTopBarProps {
 const RoomTopBar: React.FC<RoomTopBarProps> = ({
   roomId, participantCount, isSharing, isViewing, isHost, onLeave, onShare,
 }) => (
-  <header className="h-14 pt-[env(safe-area-inset-top)] bg-[#09090b]/95 backdrop-blur-md border-b border-[#1e1e21] flex items-center justify-between px-3 sm:px-5 z-20 shrink-0 select-none">
+  <header className="mx-4 mt-3 px-4 h-12 bg-[#0e0e11]/65 backdrop-blur-md border border-white/[0.04] rounded-xl flex items-center justify-between z-20 shrink-0 select-none shadow-panel">
     {/* Left */}
     <div className="flex items-center gap-3 min-w-0">
-      <img src={interactLogo} alt="InterAct" className="h-6 w-auto flex-shrink-0" />
-      <div className="w-px h-4 bg-[#1e1e21] flex-shrink-0" />
+      <img src={interactLogo} alt="InterAct" className="h-5 w-auto flex-shrink-0" />
+      <div className="w-px h-3.5 bg-white/[0.08] flex-shrink-0" />
       <div className="flex items-center gap-2 min-w-0">
-        <span className="font-mono text-sm font-bold text-[#c0c1ff] truncate max-w-[6rem] sm:max-w-[10rem]">
+        <span className="font-mono text-sm font-bold text-[#c0c1ff]/90 tracking-wide truncate max-w-[6rem] sm:max-w-[10rem]">
           {roomId}
         </span>
         {/* Status pill */}
         {(isSharing || isViewing) ? (
           <div className="hidden sm:flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-[10px] font-bold font-geist text-red-400">LIVE</span>
+            <span className="text-[10px] font-bold font-geist tracking-wider text-red-400">LIVE</span>
           </div>
         ) : (
-          <div className="hidden sm:flex items-center gap-1.5 bg-emerald-400/8 border border-emerald-400/15 px-2 py-0.5 rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span className="text-[10px] font-geist text-emerald-400">Connected</span>
+          <div className="hidden sm:flex items-center gap-1.5 bg-emerald-500/5 border border-emerald-500/15 px-2 py-0.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-slow" />
+            <span className="text-[10px] font-semibold font-geist tracking-wide text-emerald-400">Connected</span>
           </div>
         )}
       </div>
     </div>
 
     {/* Center — participant count */}
-    <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#111113] border border-[#1e1e21]">
-      <IconPeople />
-      <span className="text-xs font-geist text-zinc-300 font-semibold">{participantCount}</span>
+    <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.02] border border-white/[0.04]">
+      <Users size={13} className="text-zinc-400" />
+      <span className="text-sm font-geist text-zinc-300 font-semibold select-none">{participantCount}</span>
     </div>
 
     {/* Right */}
@@ -239,18 +160,18 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
       {isHost && <AgentStatusIndicator />}
       <button
         onClick={onShare}
-        className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#1e1e21] bg-[#111113] text-zinc-400 hover:text-zinc-100 hover:border-[#27272a] transition-all text-xs font-geist cursor-pointer"
+        className="hidden sm:flex items-center gap-1.5 px-3 h-8 rounded-lg border border-white/[0.04] bg-white/[0.02] text-zinc-400 hover:text-zinc-150 hover:bg-white/[0.04] transition-all text-xs font-geist cursor-pointer active:scale-97"
         title="Copy room link"
       >
-        <IconShare />
+        <Share2 size={13} />
         <span>Share</span>
       </button>
       <button
         onClick={onLeave}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-semibold font-geist cursor-pointer transition-colors"
+        className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-red-650 hover:bg-red-600 text-white text-xs font-semibold font-geist cursor-pointer transition-colors active:scale-97"
         title="Leave room"
       >
-        <IconLeave />
+        <LogOut size={13} />
         <span className="hidden sm:inline">Leave</span>
       </button>
     </div>
@@ -292,34 +213,32 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
 }) => (
   <>
     <div className="fixed inset-0 z-40" onClick={onClose} />
-    <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 z-50 w-56 bg-[#111113] border border-[#1e1e21] rounded-xl shadow-2xl overflow-hidden">
+    <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 z-50 w-56 bg-[#111113] border border-[#1e1e21] rounded-xl shadow-2xl overflow-hidden animate-fade-in">
       <div className="py-1.5">
         {isHost && (
           <button
             onClick={() => { onOpenHostPanel(); onClose(); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left"
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
           >
-            <span className="text-zinc-500"><IconSettings /></span>
+            <span className="text-zinc-500"><Settings size={14} /></span>
             Host Controls
           </button>
         )}
         <button
           onClick={() => { onShareRoom(); onClose(); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left"
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
         >
-          <span className="text-zinc-500"><IconShare /></span>
+          <span className="text-zinc-500"><Share2 size={14} /></span>
           Copy Room Link
         </button>
         {isHost && (
           <button
             onClick={() => { onToggleAutoDelete(); onClose(); }}
-            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left"
+            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
           >
             <div className="flex items-center gap-3">
               <span className="text-zinc-500">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                </svg>
+                <Trash2 size={14} />
               </span>
               Auto-delete room
             </div>
@@ -330,7 +249,7 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
         )}
         <button
           onClick={() => { onToggleTranscript(); onClose(); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors cursor-pointer text-left ${
+          className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors cursor-pointer text-left font-geist font-medium ${
             isTranscriptOpen
               ? 'text-[#c0c1ff] bg-[#c0c1ff]/5'
               : 'text-zinc-300 hover:bg-[#1a1a1d] hover:text-white'
@@ -338,11 +257,11 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
           disabled={!isTranscriptionSupported}
         >
           <span className={`${isTranscriptOpen ? 'text-[#c0c1ff]' : 'text-zinc-500'}`}>
-            <IconTranscript />
+            <FileText size={14} />
           </span>
           <span className="flex-1">Live Log</span>
           {isTranscriptionActive && (
-            <span className="text-[9px] font-bold font-geist uppercase px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-[#c0c1ff]">
+            <span className="text-[9px] font-bold font-geist uppercase px-1.5 py-0.5 rounded-full bg-[#c0c1ff]/10 text-[#c0c1ff]">
               Active
             </span>
           )}
@@ -403,7 +322,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
   onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript,
 }) => (
   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-end justify-center">
-    <div className="relative">
+    <div className="relative animate-fade-in">
       {/* More menu */}
       {showMoreMenu && (
         <MoreMenu
@@ -422,7 +341,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
       )}
 
       {/* Dock pill */}
-      <div className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl bg-[#09090b]/90 backdrop-blur-xl border border-[#1e1e21] shadow-2xl">
+      <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-[#09090b]/75 backdrop-blur-xl border border-white/[0.06] shadow-dock">
         {/* Mic */}
         <DockBtn
           onClick={onToggleMic}
@@ -453,7 +372,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
               label="Audio"
               danger={viewerMuted}
             />
-            <div className="hidden min-[390px]:flex items-center gap-1.5 px-1">
+            <div className="hidden min-[390px]:flex items-center gap-1.5 px-1.5">
               <input
                 type="range" min="0" max="1" step="0.05" value={viewerVolume}
                 onChange={(e) => {
@@ -461,7 +380,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
                   onVolumeChange(vol);
                   if (vol > 0 && viewerMuted) onToggleViewerMute();
                 }}
-                className="w-14 h-1 accent-[#c0c1ff] cursor-pointer"
+                className="w-14 h-1 accent-[#c0c1ff] cursor-pointer bg-white/10 rounded-lg appearance-none"
                 style={{ WebkitAppearance: 'none', outline: 'none' }}
               />
             </div>
@@ -479,7 +398,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
           />
         )}
 
-        <div className="w-px h-6 bg-[#1e1e21] mx-0.5" />
+        <div className="w-px h-5 bg-white/[0.06] mx-1" />
 
         {/* Live Log */}
         <DockBtn
@@ -523,14 +442,13 @@ const CollabDock: React.FC<CollabDockProps> = ({
           active={showMoreMenu}
         />
 
-        <div className="w-px h-6 bg-[#1e1e21] mx-0.5" />
+        <div className="w-px h-5 bg-white/[0.06] mx-1" />
 
         {/* Leave */}
         <DockBtn
           onClick={onLeave}
           title="Leave room"
           icon={<IconLeave />}
-          label="Leave"
           danger
         />
       </div>
@@ -538,9 +456,6 @@ const CollabDock: React.FC<CollabDockProps> = ({
   </div>
 );
 
-/* ─────────────────────────────────────────────────
-   RIGHT DRAWER (Chat / AI / Host)
-───────────────────────────────────────────────── */
 interface RightDrawerProps {
   isOpen: boolean;
   activeTab: 'chat' | 'transcript' | 'ai' | 'host';
@@ -585,36 +500,38 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         <div className="fixed inset-0 bg-black/50 z-35 md:hidden" onClick={onClose} />
       )}
 
-      <aside className={`fixed top-0 right-0 bottom-0 z-40 flex flex-col bg-[#09090b]/98 backdrop-blur-xl border-l border-[#1e1e21] shadow-2xl transition-transform duration-300 ease-out ${
+      <aside className={`fixed top-0 right-0 bottom-0 z-40 flex flex-col bg-[#09090b]/98 border-l border-white/[0.06] shadow-2xl md:fixed md:top-[72px] md:right-3 md:bottom-3 md:h-[calc(100dvh-5.5rem)] md:w-[350px] md:bg-[#0e0e11]/80 md:border md:border-white/[0.05] md:backdrop-blur-xl md:rounded-xl md:shadow-panel transition-transform duration-350 ease-out ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
-      } w-[min(100vw,380px)]`}>
+      }`}>
         {/* Tab header */}
-        <div className="h-14 pt-[env(safe-area-inset-top)] border-b border-[#1e1e21] flex items-center justify-between px-3 shrink-0">
-          <div className="flex items-center gap-1">
+        <div className="h-12 border-b border-white/[0.04] flex items-center justify-between px-3 shrink-0 bg-white/[0.01]">
+          <div className="flex-1 mr-3 flex items-center gap-1 bg-white/[0.02] p-0.5 rounded-lg border border-white/[0.03]">
             {(['chat', 'transcript', 'ai', ...(isHost ? ['host'] : [])] as ('chat' | 'transcript' | 'ai' | 'host')[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => onTabChange(tab)}
-                className={`h-8 px-3 text-xs font-semibold font-geist rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`flex-1 h-8 rounded-md transition-all cursor-pointer flex items-center justify-center relative ${
                   activeTab === tab
-                    ? 'bg-[#1a1a1d] text-[#c0c1ff]'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-[#1a1a1d]/50'
+                    ? 'bg-white/[0.06] text-[#c0c1ff] shadow-[0_1px_2px_rgba(0,0,0,0.15)] border border-white/[0.02]'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.01]'
                 }`}
+                title={tab === 'ai' ? 'AI Insights' : tab === 'transcript' ? 'Live Log' : tab === 'host' ? 'Host Controls' : 'Chat'}
               >
-                {tab === 'chat' && <IconChat />}
-                {tab === 'transcript' && <IconTranscript />}
-                {tab === 'ai' && <IconAI />}
-                {tab === 'host' && <IconSettings />}
-                <span className="capitalize">{tab === 'ai' ? 'Insights' : tab === 'transcript' ? 'Live Log' : tab}</span>
-                {tab === 'chat' && messages.length > 0 && (
-                  <span className="text-[9px] font-mono bg-[#1e1e21] text-zinc-500 px-1 rounded">{messages.length}</span>
-                )}
+                <span className="relative flex items-center justify-center">
+                  {tab === 'chat' && <MessageSquare size={16} />}
+                  {tab === 'transcript' && <FileText size={16} />}
+                  {tab === 'ai' && <Sparkles size={16} />}
+                  {tab === 'host' && <Settings size={16} />}
+                  {tab === 'chat' && messages.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#c0c1ff]" />
+                  )}
+                </span>
               </button>
             ))}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-[#1a1a1d] transition-colors cursor-pointer"
+            className="p-1 rounded-md hover:bg-white/5 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer shrink-0"
           >
             <IconClose />
           </button>
@@ -625,14 +542,14 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar min-h-0">
               {messages.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3">
-                  <div className="w-12 h-12 rounded-full bg-[#1a1a1d] border border-[#27272a] flex items-center justify-center text-zinc-600">
-                    <IconChat />
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 select-none">
+                  <div className="w-10 h-10 rounded-full bg-white/[0.02] border border-white/[0.04] flex items-center justify-center text-zinc-500">
+                    <MessageSquare size={20} className="text-zinc-500" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold font-geist text-zinc-400 mb-1">No messages yet</p>
-                    <p className="text-xs text-zinc-600 font-inter leading-relaxed">
-                      Start the conversation. Everyone in this room can see your messages.
+                    <p className="text-sm font-bold font-geist text-zinc-300 mb-1">No messages yet</p>
+                    <p className="text-xs text-zinc-500 font-inter leading-normal max-w-[200px] mx-auto">
+                      Everyone in this room can see your messages here.
                     </p>
                   </div>
                 </div>
@@ -640,8 +557,8 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                 messages.map((m, idx) => {
                   if (m.type === 'system_rename') {
                     return (
-                      <div key={idx} className="flex justify-center">
-                        <span className="text-[11px] text-zinc-600 italic font-inter px-3 py-1 rounded-full bg-[#1a1a1d] border border-[#1e1e21]">
+                      <div key={idx} className="flex justify-center select-none">
+                        <span className="text-[11px] text-zinc-550 italic font-inter px-2.5 py-0.5 rounded-full bg-white/[0.02] border border-white/[0.03]">
                           {m.message}
                         </span>
                       </div>
@@ -650,13 +567,13 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                   const isMe = m.sender === displayName;
                   return (
                     <div key={idx} className="flex gap-2.5 items-start min-w-0">
-                      <Avatar name={m.sender} size="xs" color={isMe ? 'bg-indigo-600' : 'bg-zinc-700'} />
+                      <Avatar name={m.sender} size="xs" color={isMe ? 'bg-indigo-600/90' : 'bg-zinc-700/80'} />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline justify-between gap-2 mb-1">
-                          <span className="text-[11px] font-semibold font-geist text-zinc-300 truncate">{m.sender}</span>
-                          <span className="text-[9px] font-mono text-zinc-600 shrink-0">{formatTime(m.timestamp)}</span>
+                        <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                          <span className="text-xs font-semibold font-geist text-zinc-300 truncate">{m.sender}</span>
+                          <span className="text-[10px] font-mono text-zinc-650 shrink-0">{formatTime(m.timestamp)}</span>
                         </div>
-                        <p className="text-sm text-zinc-400 font-inter bg-[#111113] border border-[#1e1e21] px-3 py-2 rounded-xl rounded-tl-none break-words leading-relaxed">
+                        <p className="text-sm text-zinc-300 font-inter bg-white/[0.02] border border-white/[0.04] px-2.5 py-1.5 rounded-xl rounded-tl-none break-words leading-relaxed">
                           {m.message}
                         </p>
                       </div>
@@ -668,18 +585,18 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
             </div>
             <form
               onSubmit={onSendMessage}
-              className="p-3 pb-[calc(12px+env(safe-area-inset-bottom))] border-t border-[#1e1e21] flex gap-2 shrink-0 bg-[#09090b]/95"
+              className="p-3 border-t border-white/[0.04] flex gap-2 shrink-0 bg-transparent"
             >
               <input
                 type="text"
                 value={chatInput}
                 onChange={e => onChatInputChange(e.target.value)}
                 placeholder="Message everyone..."
-                className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-[#111113] border border-[#1e1e21] text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#c0c1ff]/40 transition-colors font-inter"
+                className="flex-1 min-w-0 px-3 py-2.5 h-9 rounded-lg bg-white/[0.02] border border-white/[0.05] text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#c0c1ff]/30 transition-colors font-inter"
               />
               <button
                 type="submit"
-                className="w-10 h-10 rounded-xl bg-[#c0c1ff] hover:bg-[#d0d1ff] text-[#09090b] flex items-center justify-center cursor-pointer transition-colors flex-shrink-0"
+                className="w-9 h-9 rounded-lg bg-[#c0c1ff] hover:bg-[#b0b1ff] active:scale-95 text-[#09090b] flex items-center justify-center cursor-pointer transition-colors flex-shrink-0"
               >
                 <IconSend />
               </button>
@@ -691,15 +608,15 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         {activeTab === 'transcript' && (
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             {/* Header controls */}
-            <div className="p-4 border-b border-[#1e1e21] bg-[#111113]/50 flex flex-col gap-3 shrink-0">
+            <div className="p-4 border-b border-white/[0.04] bg-white/[0.01] flex flex-col gap-3 shrink-0">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold font-geist text-zinc-500 uppercase tracking-widest">
+                <span className="text-xs font-bold font-geist text-zinc-500 uppercase tracking-widest">
                   Speech Logger
                 </span>
-                <span className={`text-[9px] font-bold font-geist uppercase px-2 py-0.5 rounded-full ${
+                <span className={`text-[10px] font-bold font-geist uppercase px-2 py-0.5 rounded-full ${
                   isTranscriptionActive
-                    ? 'bg-indigo-500/10 text-[#c0c1ff] animate-pulse-subtle'
-                    : 'bg-zinc-800 text-zinc-500'
+                    ? 'bg-[#c0c1ff]/10 text-[#c0c1ff] animate-pulse-slow'
+                    : 'bg-white/5 text-zinc-500'
                 }`}>
                   {isTranscriptionActive ? 'Active' : 'Off'}
                 </span>
@@ -710,25 +627,22 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                 <button
                   onClick={onToggleTranscription}
                   disabled={!isTranscriptionSupported}
-                  className={`w-full py-2 rounded-xl text-xs font-bold font-geist transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`w-full py-2 rounded-lg text-xs font-bold font-geist transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                     !isTranscriptionSupported
-                      ? 'bg-zinc-900 border border-zinc-850 text-zinc-650 cursor-not-allowed'
+                      ? 'bg-white/[0.01] border border-white/[0.03] text-zinc-650 cursor-not-allowed'
                       : isTranscriptionActive
-                        ? 'bg-rose-600/15 border border-rose-500/30 text-rose-400 hover:bg-rose-600/25'
-                        : 'bg-indigo-600/15 border border-indigo-500/30 text-[#c0c1ff] hover:bg-indigo-600/25'
+                        ? 'bg-rose-500/10 border border-rose-500/15 text-rose-400 hover:bg-rose-500/15'
+                        : 'bg-indigo-500/10 border border-[#c0c1ff]/15 text-[#c0c1ff] hover:bg-[#c0c1ff]/10'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[16px] block">
-                    {isTranscriptionActive ? 'stop_circle' : 'play_circle'}
-                  </span>
                   <span>{isTranscriptionActive ? 'Stop transcription' : 'Start transcription'}</span>
                 </button>
               ) : (
                 /* Viewer Info */
-                <p className="text-[11px] text-zinc-500 font-inter leading-relaxed">
+                <p className="text-xs text-zinc-400 font-inter leading-normal">
                   {isTranscriptionActive
-                    ? 'The host has activated room-wide transcription. Speaking in your mic will log text.'
-                    : 'Waiting for the host to start live speech transcription.'}
+                    ? 'The host has activated room-wide transcription. Speech will log captions in real-time.'
+                    : 'Waiting for the host to activate speech transcription.'}
                 </p>
               )}
 
@@ -743,15 +657,15 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
             {/* Scrollable logs */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar min-h-0">
               {roomTranscripts.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3">
-                  <div className="w-12 h-12 rounded-full bg-[#1a1a1d] border border-[#27272a] flex items-center justify-center text-zinc-600">
-                    <IconTranscript />
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 select-none">
+                  <div className="w-10 h-10 rounded-full bg-white/[0.02] border border-white/[0.04] flex items-center justify-center text-zinc-500">
+                    <FileText size={20} className="text-zinc-500" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold font-geist text-zinc-400 mb-1">
+                    <p className="text-xs font-bold font-geist text-zinc-400 mb-1">
                       {isTranscriptionActive ? 'Waiting for speech...' : 'No transcript log'}
                     </p>
-                    <p className="text-xs text-zinc-600 font-inter leading-relaxed">
+                    <p className="text-xs text-zinc-550 font-inter leading-normal max-w-[200px] mx-auto">
                       {isTranscriptionActive
                         ? 'Captions will appear here once someone starts speaking.'
                         : 'Transcripts will be captured automatically once transcription is started.'}
@@ -759,20 +673,20 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3.5">
                   {roomTranscripts.map((t, idx) => {
                     const isMe = t.username === displayName;
                     return (
                       <div key={t.id || idx} className="flex gap-2.5 items-start min-w-0">
-                        <Avatar name={t.username} size="xs" color={isMe ? 'bg-indigo-600' : 'bg-zinc-700'} />
+                        <Avatar name={t.username} size="xs" color={isMe ? 'bg-indigo-600/90' : 'bg-zinc-700/80'} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-baseline justify-between gap-2 mb-0.5">
-                            <span className="text-[11px] font-semibold font-geist text-zinc-300 truncate">{t.username}</span>
-                            <span className="text-[9px] font-mono text-zinc-600 shrink-0">
+                            <span className="text-xs font-semibold font-geist text-zinc-300 truncate">{t.username}</span>
+                            <span className="text-[10px] font-mono text-zinc-650 shrink-0">
                               {new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          <p className="text-xs text-zinc-400 font-inter bg-[#111113] border border-[#1e1e21] px-3 py-2 rounded-xl rounded-tl-none break-words leading-relaxed">
+                          <p className="text-sm text-zinc-300 font-inter bg-white/[0.02] border border-white/[0.04] px-2.5 py-1.5 rounded-xl rounded-tl-none break-words leading-relaxed">
                             {t.text}
                           </p>
                         </div>
@@ -788,23 +702,23 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         {/* AI Insights panel */}
         {activeTab === 'ai' && (
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar pb-[calc(16px+env(safe-area-inset-bottom))]">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 select-none">
               <span className="text-[#c0c1ff]"><IconAI /></span>
-              <span className="text-xs font-bold font-geist text-zinc-400 uppercase tracking-widest">AI Insights</span>
+              <span className="text-xs font-bold font-geist text-zinc-500 uppercase tracking-widest">AI Insights</span>
             </div>
-            <div className="bg-[#111113] border border-[#1e1e21] rounded-xl p-4">
-              <p className="text-[10px] font-semibold font-geist text-zinc-500 uppercase tracking-wider mb-3">Action Item</p>
+            <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
+              <p className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-widest mb-3">Action Item</p>
               <p className="text-sm text-zinc-300 leading-relaxed italic font-inter">
                 "Ensure middleware validation handles nested structs."
               </p>
-              <div className="mt-3 pt-3 border-t border-[#1a1a1d] flex items-center gap-1.5">
+              <div className="mt-3 pt-3 border-t border-white/[0.03] flex items-center gap-1.5 select-none">
                 <span className="text-emerald-400"><IconCheck /></span>
-                <span className="text-[10px] text-zinc-600 font-geist">Assigned to Alex</span>
+                <span className="text-xs text-zinc-400 font-geist">Assigned to Alex</span>
               </div>
             </div>
-            <div className="bg-[#111113] border border-[#1e1e21] rounded-xl p-4">
-              <p className="text-[10px] font-semibold font-geist text-zinc-500 uppercase tracking-wider mb-2">Session Status</p>
-              <p className="text-sm text-zinc-500 font-inter leading-relaxed">
+            <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
+              <p className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-widest mb-2">Session Status</p>
+              <p className="text-sm text-zinc-400 font-inter leading-relaxed">
                 AI is listening. Summaries and action items will appear here as the session progresses.
               </p>
             </div>
@@ -821,7 +735,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                 name: p.displayName,
                 role: p.role,
                 status: 'active' as const,
-                avatarColor: p.role === 'host' ? 'bg-indigo-600' : 'bg-zinc-700',
+                avatarColor: p.role === 'host' ? 'bg-indigo-600/90' : 'bg-zinc-700/80',
               }))}
               autoDelete={autoDelete}
               onToggleAutoDelete={onToggleAutoDelete}
@@ -849,11 +763,11 @@ interface CenterStateProps {
 const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isSharing, onStartShare, onStopShare }) => {
   if (isRequesting) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <div className="w-12 h-12 rounded-full border-2 border-[#c0c1ff]/30 border-t-[#c0c1ff] animate-spin" />
+      <div className="flex flex-col items-center justify-center gap-4 p-8 text-center select-none">
+        <div className="w-10 h-10 rounded-full border-[3px] border-[#c0c1ff]/10 border-t-[#c0c1ff] animate-spin" />
         <div>
-          <h3 className="text-base font-bold font-geist text-zinc-200 mb-1">Opening screen picker…</h3>
-          <p className="text-sm text-zinc-500 font-inter">Select a window, tab, or entire screen to share.</p>
+          <h3 className="text-base font-semibold font-geist text-zinc-300 mb-1">Opening screen picker…</h3>
+          <p className="text-sm text-zinc-550 font-inter">Select a window, tab, or entire screen to share.</p>
         </div>
       </div>
     );
@@ -861,11 +775,12 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
 
   if (isSharing) {
     return (
-      <div className="flex flex-col items-center justify-center gap-5 p-8 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center gap-6 p-8 text-center select-none">
+        <div className="relative w-16 h-16 rounded-2xl bg-red-500/[0.04] border border-red-500/10 flex items-center justify-center">
+          <div className="absolute inset-0 bg-red-500/5 blur-xl rounded-full scale-75 animate-pulse" />
           <div className="flex items-center gap-1">
             {[0, 100, 200].map(d => (
-              <div key={d} className="w-1 bg-red-400 rounded-full" style={{
+              <div key={d} className="w-1 bg-red-400/90 rounded-full" style={{
                 height: '20px', animation: `waveform 0.8s ease-in-out ${d}ms infinite`,
                 transformOrigin: 'bottom',
               }} />
@@ -873,18 +788,20 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
           </div>
         </div>
         <div>
-          <div className="flex items-center justify-center gap-1.5 mb-2">
+          <div className="flex items-center justify-center gap-1.5 mb-2.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-xs font-bold font-geist text-red-400 uppercase tracking-wider">Broadcasting</span>
+            <span className="text-[10px] font-bold font-geist text-red-400 uppercase tracking-widest">Broadcasting</span>
           </div>
-          <h3 className="text-base font-bold font-geist text-zinc-200 mb-1">You are sharing your screen</h3>
-          <p className="text-sm text-zinc-500 font-inter leading-relaxed max-w-xs">
+          <h3 className="text-lg font-bold font-geist text-white tracking-tight mb-2 bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">
+            You are sharing your screen
+          </h3>
+          <p className="text-sm text-zinc-400 font-inter leading-relaxed max-w-[240px] mx-auto">
             Participants in this room can see your screen in real time.
           </p>
         </div>
         <button
           onClick={onStopShare}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold font-geist cursor-pointer transition-colors shadow-lg shadow-red-600/20"
+          className="flex items-center gap-2 h-9 px-5 rounded-full bg-red-605 hover:bg-red-600 hover:shadow-lg hover:shadow-red-600/10 text-white text-sm font-semibold font-geist cursor-pointer transition-all active:scale-97"
         >
           <IconScreenStop />
           Stop Sharing
@@ -895,15 +812,16 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
 
   // Idle
   return (
-    <div className="flex flex-col items-center justify-center gap-6 p-8 text-center max-w-sm">
-      <div className="w-20 h-20 rounded-2xl bg-[#111113] border border-[#1e1e21] flex items-center justify-center text-zinc-600">
+    <div className="flex flex-col items-center justify-center gap-6 p-8 text-center max-w-sm select-none">
+      <div className="relative w-16 h-16 rounded-2xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-center text-zinc-500 shadow-panel">
+        <div className="absolute inset-0 bg-indigo-500/5 blur-xl rounded-full scale-75 animate-pulse-slow" />
         <IconMonitor />
       </div>
       <div>
-        <h3 className="text-lg font-black font-geist text-zinc-200 tracking-tight mb-2">
+        <h3 className="text-lg font-bold font-geist text-white tracking-tight mb-2 bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">
           {isHost ? 'Ready to share your screen' : 'Waiting for host'}
         </h3>
-        <p className="text-sm text-zinc-500 font-inter leading-relaxed">
+        <p className="text-sm text-zinc-400 font-inter leading-relaxed max-w-[260px] mx-auto">
           {isHost
             ? 'Share your screen to start broadcasting to all participants in this room.'
             : 'The host will begin sharing their screen shortly. You will see it appear here.'}
@@ -912,7 +830,7 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
       {isHost && (
         <button
           onClick={onStartShare}
-          className="lp-btn-primary text-sm h-11 px-6"
+          className="inline-flex items-center justify-center gap-2 h-9 px-5 rounded-full bg-[#c0c1ff] hover:bg-[#b0b1ff] active:scale-97 text-[#09090b] text-xs font-semibold font-geist transition-all shadow-md shadow-purple-500/5 cursor-pointer"
         >
           <IconScreen />
           Start Sharing
@@ -1870,24 +1788,24 @@ export const RoomPage: React.FC = () => {
         <main
           ref={composedViewportRef}
           id="presentation-viewport"
-          className="flex-1 relative flex flex-col overflow-hidden bg-[#0a0a0c] min-w-0"
+          className="flex-1 relative flex flex-col overflow-hidden bg-[#0c0c0e] border border-white/[0.03] rounded-xl min-w-0 md:my-3 md:mx-3 shadow-panel"
         >
           {/* Active indicator pills */}
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none">
             {laserModeActive && (
-              <div className="bg-[#09090b]/90 border border-[#1e1e21] text-zinc-100 px-3 py-1.5 rounded-full text-[11px] font-semibold flex items-center gap-2 backdrop-blur">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Laser Active
               </div>
             )}
             {spotlightActive && (
-              <div className="bg-[#09090b]/90 border border-[#1e1e21] text-zinc-100 px-3 py-1.5 rounded-full text-[11px] font-semibold flex items-center gap-2 backdrop-blur">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                 Spotlight Active
               </div>
             )}
             {showLaserPointerNotice && (
-              <div className="bg-[#09090b]/90 border border-[#1e1e21] text-zinc-400 px-3 py-1.5 rounded-full text-[11px] font-inter flex items-center gap-2 backdrop-blur">
+              <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-400 px-3 py-1.5 rounded-full text-[10px] font-inter flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
                 Laser pointer available only when sharing an entire screen
               </div>
             )}
@@ -1917,8 +1835,8 @@ export const RoomPage: React.FC = () => {
 
           {/* Presenter pill */}
           {isSharing && (
-            <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09090b]/90 border border-[#1e1e21] backdrop-blur z-20">
-              <Avatar name={displayName} size="xs" color="bg-indigo-600" />
+            <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
+              <Avatar name={displayName} size="xs" color="bg-indigo-600/90" />
               <div className="flex flex-col min-w-0">
                 <span className="text-[10px] font-semibold font-inter text-zinc-200 truncate">{displayName} is sharing</span>
                 <span className="text-[9px] font-mono text-zinc-500">LIVE · Screen</span>
@@ -1929,8 +1847,8 @@ export const RoomPage: React.FC = () => {
 
           {/* Viewer status pill */}
           {isViewing && (
-            <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09090b]/90 border border-[#1e1e21] backdrop-blur z-20">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#c0c1ff] animate-pulse" />
+            <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#c0c1ff] animate-pulse-slow" />
               <span className="text-[10px] font-semibold font-inter text-zinc-200">Receiving live stream</span>
             </div>
           )}

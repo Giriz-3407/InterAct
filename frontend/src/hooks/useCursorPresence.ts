@@ -230,6 +230,18 @@ export function useCursorPresence({
   const currentAnnotationId = useRef<string | null>(null);
   const currentAnnotationType = useRef<'rect' | 'arrow'>('rect');
 
+  // Touch gesture state (Mobile Presentation Mode)
+  const touchStartInfo = useRef<{
+    time: number;
+    startX: number;
+    startY: number;
+    isSingleTouch: boolean;
+    hasMovedBeyondThreshold: boolean;
+  } | null>(null);
+
+  const TAP_MAX_DURATION = 250; // ms
+  const TAP_MOVE_THRESHOLD = 10; // px
+
 
 
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -321,20 +333,24 @@ export function useCursorPresence({
     wsClient.send('cursor_hide', {});
   }, []);
 
-  const getNormalizedPoint = useCallback((e: MouseEvent): { x: number; y: number } | null => {
+  const getNormalizedCoords = useCallback((clientX: number, clientY: number): { x: number; y: number } | null => {
     if (!viewportEl) return null;
     if (videoBounds.width <= 0 || videoBounds.height <= 0) return null;
 
     const rect = viewportEl.getBoundingClientRect();
-    const mouseXRel = e.clientX - rect.left;
-    const mouseYRel = e.clientY - rect.top;
+    const xRel = clientX - rect.left;
+    const yRel = clientY - rect.top;
 
-    const normX = (mouseXRel - videoBounds.left) / videoBounds.width;
-    const normY = (mouseYRel - videoBounds.top) / videoBounds.height;
+    const normX = (xRel - videoBounds.left) / videoBounds.width;
+    const normY = (yRel - videoBounds.top) / videoBounds.height;
 
     if (normX < 0 || normX > 1 || normY < 0 || normY > 1) return null;
     return { x: normX, y: normY };
   }, [viewportEl, videoBounds.left, videoBounds.top, videoBounds.width, videoBounds.height]);
+
+  const getNormalizedPoint = useCallback((e: MouseEvent): { x: number; y: number } | null => {
+    return getNormalizedCoords(e.clientX, e.clientY);
+  }, [getNormalizedCoords]);
 
   // ---------------------------------------------------------------------------
   // Keyboard listeners — track LEFT CTRL state
@@ -640,6 +656,130 @@ export function useCursorPresence({
     viewportEl.addEventListener('mousedown', onMouseDown);
     return () => viewportEl.removeEventListener('mousedown', onMouseDown);
   }, [isScreenVisible, viewportEl, getNormalizedPoint, sendClick, localParticipantId]);
+
+  // ---------------------------------------------------------------------------
+  // Touch event listeners on the viewport element — Mobile Presentation Mode
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!isScreenVisible || !viewportEl) return;
+    if (isHost) return; // Host inputs are handled globally by Desktop Agent
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) {
+        // Not a single-touch gesture (could be multi-touch, pinch, zoom, etc.)
+        touchStartInfo.current = null;
+        sendHide();
+        return;
+      }
+
+      const touch = e.touches[0];
+      touchStartInfo.current = {
+        time: Date.now(),
+        startX: touch.clientX,
+        startY: touch.clientY,
+        isSingleTouch: true,
+        hasMovedBeyondThreshold: false,
+      };
+
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+
+      // Show cursor immediately at start position
+      const point = getNormalizedCoords(touch.clientX, touch.clientY);
+      if (point) {
+        sendMove(point.x, point.y);
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const startInfo = touchStartInfo.current;
+      if (!startInfo || !startInfo.isSingleTouch) return;
+
+      if (e.touches.length !== 1) {
+        // Gesture became multi-touch, cancel it
+        touchStartInfo.current = null;
+        sendHide();
+        return;
+      }
+
+      const touch = e.touches[0];
+      const dx = touch.clientX - startInfo.startX;
+      const dy = touch.clientY - startInfo.startY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > TAP_MOVE_THRESHOLD) {
+        startInfo.hasMovedBeyondThreshold = true;
+      }
+
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+
+      // Drag: continuously move virtual cursor
+      const now = Date.now();
+      if (now - lastSentAt.current >= THROTTLE_MS) {
+        lastSentAt.current = now;
+        const point = getNormalizedCoords(touch.clientX, touch.clientY);
+        if (point) {
+          sendMove(point.x, point.y);
+        }
+      }
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      const startInfo = touchStartInfo.current;
+      if (!startInfo || !startInfo.isSingleTouch) return;
+
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+
+      const duration = Date.now() - startInfo.time;
+      const touch = e.changedTouches[0];
+
+      if (touch) {
+        const dx = touch.clientX - startInfo.startX;
+        const dy = touch.clientY - startInfo.startY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        const isTap = duration < TAP_MAX_DURATION && distance < TAP_MOVE_THRESHOLD && !startInfo.hasMovedBeyondThreshold;
+
+        if (isTap) {
+          const point = getNormalizedCoords(touch.clientX, touch.clientY);
+          if (point) {
+            sendClick(point.x, point.y);
+          }
+        }
+      }
+
+      // Always hide cursor on touch release
+      sendHide();
+      touchStartInfo.current = null;
+    };
+
+    const onTouchCancel = (e: TouchEvent) => {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+      sendHide();
+      touchStartInfo.current = null;
+    };
+
+    // Register options with passive: false to allow calling preventDefault()
+    viewportEl.addEventListener('touchstart', onTouchStart, { passive: false });
+    viewportEl.addEventListener('touchmove', onTouchMove, { passive: false });
+    viewportEl.addEventListener('touchend', onTouchEnd, { passive: false });
+    viewportEl.addEventListener('touchcancel', onTouchCancel, { passive: false });
+
+    return () => {
+      viewportEl.removeEventListener('touchstart', onTouchStart);
+      viewportEl.removeEventListener('touchmove', onTouchMove);
+      viewportEl.removeEventListener('touchend', onTouchEnd);
+      viewportEl.removeEventListener('touchcancel', onTouchCancel);
+    };
+  }, [isScreenVisible, viewportEl, isHost, getNormalizedCoords, sendMove, sendClick, sendHide]);
+
 
   // ---------------------------------------------------------------------------
   // Inbound WebSocket subscriptions

@@ -13,7 +13,10 @@ Mobile Presentation Experience extends InterAct's screen share viewer layout for
 * **Safe Area Compliance**: Integrates CSS padding and margin offsets utilizing `env(safe-area-inset-*)` variables so controls never overlap phone notches or gestures navigation areas.
 * **Native Fullscreen Integration**: Supports HTML5 Fullscreen on the viewport wrapper so that overlays remain functional and active when viewing in native fullscreen.
 * **Native Media Player Fullscreen (Mobile)**: On mobile, the fullscreen toggle targets the `<video>` element directly (falling back to `webkitEnterFullscreen` on iOS Safari and standard video `requestFullscreen` on Android Chrome) to show the exact native fullscreen layout mobile browsers use for media players.
-* **Pointer Event Passthrough**: The absolute-positioned overlay wrappers for the header and dock are configured with `pointer-events-none` (with `pointer-events-auto` on the child cards), enabling touch gestures and taps to pass through directly to the viewport canvas beneath. Backdrops are rendered conditionally and drawers disable pointer events when closed, ensuring zero viewport blocking.
+* **Pointer Event Passthrough & Propagation Isolation**: 
+  - The absolute-positioned overlay wrappers for the header and dock are configured with `pointer-events-none` (with `pointer-events-auto` on the child cards), enabling touch gestures and taps to pass through directly to the viewport canvas beneath.
+  - Backdrops are rendered conditionally and drawers disable pointer events when closed, ensuring zero viewport blocking.
+  - **Propagation Isolation**: Registered `e.stopPropagation()` inside the overlay container's `onTouchStart`, `onTouchEnd`, `onMouseDown`, and `onMouseUp` event handlers. This stops touch interactions inside buttons and slide-over drawers from bubbling up to the viewport container `<main>`, preventing `useCursorPresence` from executing `e.preventDefault()`. As a result, native emulation clicks on mobile buttons trigger flawlessly.
 
 ---
 
@@ -33,6 +36,7 @@ Mobile Presentation Experience extends InterAct's screen share viewer layout for
   - Conditionally hid traditional desktop elements (`RoomTopBar`, `CollabDock`, `RightDrawer`, `ParticipantPanel`) in favor of the mobile floating subcomponents when `isMobileViewer` is active.
   - Added pointer event passthrough styles and conditional backdrop rendering to ensure overlays never block taps to the underlying screen.
   - Refactored `toggleFullscreen` to target the video element directly on mobile for native media player view.
+  - Isolated touch propagation on all overlay containers (`FloatingHeader`, `FloatingQuickControls`, `FloatingChat`, `FloatingParticipants`) so that button clicks are not blocked by the parent viewport's `preventDefault()`.
 
 ---
 

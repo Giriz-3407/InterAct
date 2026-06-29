@@ -938,10 +938,22 @@ const FloatingHeader: React.FC<FloatingHeaderProps> = ({
   roomId, participantCount, showCopied, onShare, onInteraction, onRelease
 }) => (
   <div
-    onTouchStart={onInteraction}
-    onMouseDown={onInteraction}
-    onTouchEnd={onRelease}
-    onMouseUp={onRelease}
+    onTouchStart={(e) => {
+      e.stopPropagation();
+      onInteraction();
+    }}
+    onMouseDown={(e) => {
+      e.stopPropagation();
+      onInteraction();
+    }}
+    onTouchEnd={(e) => {
+      e.stopPropagation();
+      onRelease();
+    }}
+    onMouseUp={(e) => {
+      e.stopPropagation();
+      onRelease();
+    }}
     className="flex items-center justify-between px-4 py-2.5 w-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 rounded-2xl shadow-lg pointer-events-auto"
     onClick={(e) => e.stopPropagation()}
   >
@@ -985,10 +997,22 @@ const FloatingQuickControls: React.FC<FloatingQuickControlsProps> = ({
   onInteraction, onRelease
 }) => (
   <div
-    onTouchStart={onInteraction}
-    onMouseDown={onInteraction}
-    onTouchEnd={onRelease}
-    onMouseUp={onRelease}
+    onTouchStart={(e) => {
+      e.stopPropagation();
+      onInteraction();
+    }}
+    onMouseDown={(e) => {
+      e.stopPropagation();
+      onInteraction();
+    }}
+    onTouchEnd={(e) => {
+      e.stopPropagation();
+      onRelease();
+    }}
+    onMouseUp={(e) => {
+      e.stopPropagation();
+      onRelease();
+    }}
     className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto"
     onClick={(e) => e.stopPropagation()}
   >
@@ -1089,10 +1113,22 @@ const FloatingChat: React.FC<FloatingChatProps> = ({
       )}
       {/* Slide-over chat panel */}
       <div
-        onTouchStart={onInteraction}
-        onMouseDown={onInteraction}
-        onTouchEnd={onRelease}
-        onMouseUp={onRelease}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+          onInteraction();
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          onInteraction();
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+          onRelease();
+        }}
+        onMouseUp={(e) => {
+          e.stopPropagation();
+          onRelease();
+        }}
         className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none'}`}
         style={{
           paddingTop: 'env(safe-area-inset-top, 0px)',
@@ -1196,10 +1232,22 @@ const FloatingParticipants: React.FC<FloatingParticipantsProps> = ({
     )}
     {/* Slide-over participants panel */}
     <div
-      onTouchStart={onInteraction}
-      onMouseDown={onInteraction}
-      onTouchEnd={onRelease}
-      onMouseUp={onRelease}
+      onTouchStart={(e) => {
+        e.stopPropagation();
+        onInteraction();
+      }}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        onInteraction();
+      }}
+      onTouchEnd={(e) => {
+        e.stopPropagation();
+        onRelease();
+      }}
+      onMouseUp={(e) => {
+        e.stopPropagation();
+        onRelease();
+      }}
       className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none'}`}
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',

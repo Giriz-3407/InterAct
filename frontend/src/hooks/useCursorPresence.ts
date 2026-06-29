@@ -40,6 +40,7 @@ interface UseCursorPresenceOptions {
    */
   isHost: boolean;
   localParticipantId?: string;
+  onViewerInteraction?: () => void;
 }
 
 interface UseCursorPresenceReturn {
@@ -92,6 +93,7 @@ export function useCursorPresence({
   participants,
   isHost,
   localParticipantId,
+  onViewerInteraction,
 }: UseCursorPresenceOptions): UseCursorPresenceReturn {
   // [CursorPresence] mount log
   useEffect(() => {
@@ -665,6 +667,7 @@ export function useCursorPresence({
     if (isHost) return; // Host inputs are handled globally by Desktop Agent
 
     const onTouchStart = (e: TouchEvent) => {
+      onViewerInteraction?.();
       if (e.touches.length !== 1) {
         // Not a single-touch gesture (could be multi-touch, pinch, zoom, etc.)
         touchStartInfo.current = null;
@@ -728,6 +731,7 @@ export function useCursorPresence({
     };
 
     const onTouchEnd = (e: TouchEvent) => {
+      onViewerInteraction?.();
       const startInfo = touchStartInfo.current;
       if (!startInfo || !startInfo.isSingleTouch) return;
 
@@ -759,6 +763,7 @@ export function useCursorPresence({
     };
 
     const onTouchCancel = (e: TouchEvent) => {
+      onViewerInteraction?.();
       if (e.cancelable) {
         e.preventDefault();
       }
@@ -778,7 +783,7 @@ export function useCursorPresence({
       viewportEl.removeEventListener('touchend', onTouchEnd);
       viewportEl.removeEventListener('touchcancel', onTouchCancel);
     };
-  }, [isScreenVisible, viewportEl, isHost, getNormalizedCoords, sendMove, sendClick, sendHide]);
+  }, [isScreenVisible, viewportEl, isHost, getNormalizedCoords, sendMove, sendClick, sendHide, onViewerInteraction]);
 
 
   // ---------------------------------------------------------------------------

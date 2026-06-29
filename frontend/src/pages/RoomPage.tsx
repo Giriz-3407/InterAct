@@ -9,6 +9,7 @@ import { apiClient } from '../lib/axios';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useLiveTranscription } from '../hooks/useLiveTranscription';
 import { useCursorPresence } from '../hooks/useCursorPresence';
+import { isMobileDevice } from '../lib/mobile';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
 import { WebRTCAuditPanel } from '../components/WebRTCAuditPanel';
 import { DiagnosticsPanel } from '../components/DiagnosticsPanel';
@@ -100,6 +101,16 @@ const IconShare = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
     <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+  </svg>
+);
+const IconFullscreenEnter = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+  </svg>
+);
+const IconFullscreenExit = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 14h6v6m10-6h-6v6M4 10h6V4m10 6h-6V4" />
   </svg>
 );
 const IconAI = () => (
@@ -912,6 +923,331 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
 };
 
 /* ─────────────────────────────────────────────────
+   MOBILE PRESENTATION FLOATING COMPONENTS
+───────────────────────────────────────────────── */
+interface FloatingHeaderProps {
+  roomId: string;
+  participantCount: number;
+  showCopied: boolean;
+  onShare: () => void;
+  onInteraction: () => void;
+  onRelease: () => void;
+}
+
+const FloatingHeader: React.FC<FloatingHeaderProps> = ({
+  roomId, participantCount, showCopied, onShare, onInteraction, onRelease
+}) => (
+  <div
+    onTouchStart={onInteraction}
+    onMouseDown={onInteraction}
+    onTouchEnd={onRelease}
+    onMouseUp={onRelease}
+    className="flex items-center justify-between px-4 py-2.5 w-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 rounded-2xl shadow-lg pointer-events-auto"
+    onClick={(e) => e.stopPropagation()}
+  >
+    <div className="flex items-center gap-2 min-w-0">
+      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+      <span className="text-xs font-bold font-geist text-zinc-200 truncate">Room: {roomId}</span>
+      <span className="text-[10px] text-zinc-500 shrink-0">({participantCount} inside)</span>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={onShare}
+        className="h-7 px-3 rounded-lg bg-indigo-600/90 hover:bg-indigo-500 text-white text-[10px] font-semibold transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+      >
+        <IconShare />
+        <span>{showCopied ? 'Copied!' : 'Share'}</span>
+      </button>
+    </div>
+  </div>
+);
+
+interface FloatingQuickControlsProps {
+  isMuted: boolean;
+  viewerMuted: boolean;
+  isChatOpen: boolean;
+  isPeopleOpen: boolean;
+  isFullscreen: boolean;
+  messageCount: number;
+  onToggleMic: () => void;
+  onToggleViewerMute: () => void;
+  onToggleChat: () => void;
+  onTogglePeople: () => void;
+  onToggleFullscreen: () => void;
+  onLeave: () => void;
+  onInteraction: () => void;
+  onRelease: () => void;
+}
+
+const FloatingQuickControls: React.FC<FloatingQuickControlsProps> = ({
+  isMuted, viewerMuted, isChatOpen, isPeopleOpen, isFullscreen, messageCount,
+  onToggleMic, onToggleViewerMute, onToggleChat, onTogglePeople, onToggleFullscreen, onLeave,
+  onInteraction, onRelease
+}) => (
+  <div
+    onTouchStart={onInteraction}
+    onMouseDown={onInteraction}
+    onTouchEnd={onRelease}
+    onMouseUp={onRelease}
+    className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto"
+    onClick={(e) => e.stopPropagation()}
+  >
+    {/* Mic */}
+    <button
+      onClick={onToggleMic}
+      className={`p-2.5 rounded-full transition-all active:scale-95 ${isMuted ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-zinc-300 hover:bg-white/10'}`}
+      title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+    >
+      {isMuted ? <IconMicOff /> : <IconMic />}
+    </button>
+
+    {/* Speaker Audio */}
+    <button
+      onClick={onToggleViewerMute}
+      className={`p-2.5 rounded-full transition-all active:scale-95 ${viewerMuted ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-zinc-300 hover:bg-white/10'}`}
+      title={viewerMuted ? 'Unmute session audio' : 'Mute session audio'}
+    >
+      {viewerMuted ? <IconVolumeOff /> : <IconVolumeUp />}
+    </button>
+
+    {/* Chat */}
+    <button
+      onClick={onToggleChat}
+      className={`p-2.5 rounded-full transition-all active:scale-95 relative ${isChatOpen ? 'bg-indigo-600/80 text-white' : 'bg-white/5 text-zinc-300 hover:bg-white/10'}`}
+      title="Chat"
+    >
+      <IconChat />
+      {messageCount > 0 && (
+        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[8px] font-bold text-white">
+          {messageCount}
+        </span>
+      )}
+    </button>
+
+    {/* People */}
+    <button
+      onClick={onTogglePeople}
+      className={`p-2.5 rounded-full transition-all active:scale-95 ${isPeopleOpen ? 'bg-indigo-600/80 text-white' : 'bg-white/5 text-zinc-300 hover:bg-white/10'}`}
+      title="Participants"
+    >
+      <IconPeople />
+    </button>
+
+    {/* Fullscreen */}
+    <button
+      onClick={onToggleFullscreen}
+      className="p-2.5 rounded-full bg-white/5 text-zinc-300 hover:bg-white/10 transition-all active:scale-95"
+      title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+    >
+      {isFullscreen ? <IconFullscreenExit /> : <IconFullscreenEnter />}
+    </button>
+
+    <div className="w-px h-5 bg-zinc-800/40 mx-1" />
+
+    {/* Leave */}
+    <button
+      onClick={onLeave}
+      className="p-2.5 rounded-full bg-red-600/90 text-white hover:bg-red-500 transition-all active:scale-95"
+      title="Leave Room"
+    >
+      <IconLeave />
+    </button>
+  </div>
+);
+
+interface FloatingChatProps {
+  isOpen: boolean;
+  messages: any[];
+  chatInput: string;
+  chatEndRef: React.RefObject<HTMLDivElement | null>;
+  displayName: string;
+  onClose: () => void;
+  onChatInputChange: (val: string) => void;
+  onSendMessage: (e: React.FormEvent) => void;
+  onInteraction: () => void;
+  onRelease: () => void;
+}
+
+const FloatingChat: React.FC<FloatingChatProps> = ({
+  isOpen, messages, chatInput, chatEndRef, displayName, onClose,
+  onChatInputChange, onSendMessage, onInteraction, onRelease
+}) => {
+  const formatTime = (isoString: string) => {
+    try {
+      return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch { return isoString; }
+  };
+
+  return (
+    <>
+      {/* Chat Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/40 z-35 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={onClose}
+      />
+      {/* Slide-over chat panel */}
+      <div
+        onTouchStart={onInteraction}
+        onMouseDown={onInteraction}
+        onTouchEnd={onRelease}
+        onMouseUp={onRelease}
+        className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="h-14 px-4 border-b border-zinc-800/30 flex items-center justify-between shrink-0 bg-white/5">
+          <span className="text-sm font-bold font-geist text-zinc-200">Live Chat</span>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+          >
+            <IconClose />
+          </button>
+        </div>
+
+        {/* Messages list */}
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar min-h-0">
+          {messages.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+              <p className="text-xs text-zinc-500 font-inter">No messages yet. Start the conversation!</p>
+            </div>
+          ) : (
+            messages.map((m, idx) => {
+              if (m.type === 'system_rename') {
+                return (
+                  <div key={idx} className="flex justify-center">
+                    <span className="text-[10px] text-zinc-500 italic font-inter px-2.5 py-0.5 rounded-full bg-white/5 border border-zinc-800/20">
+                      {m.message}
+                    </span>
+                  </div>
+                );
+              }
+              const isMe = m.sender === displayName;
+              return (
+                <div key={idx} className="flex gap-2.5 items-start min-w-0">
+                  <Avatar name={m.sender} size="xs" color={isMe ? 'bg-indigo-600/85' : 'bg-zinc-700/80'} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                      <span className="text-[10px] font-semibold font-geist text-zinc-300 truncate">{m.sender}</span>
+                      <span className="text-[8px] font-mono text-zinc-500 shrink-0">{formatTime(m.timestamp)}</span>
+                    </div>
+                    <p className="text-xs text-zinc-300 font-inter bg-white/5 border border-zinc-800/10 px-2.5 py-1.5 rounded-lg rounded-tl-none break-words leading-relaxed">
+                      {m.message}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Input Form */}
+        <form
+          onSubmit={onSendMessage}
+          className="p-3 border-t border-zinc-800/30 flex gap-2 shrink-0 bg-black/20"
+        >
+          <input
+            type="text"
+            value={chatInput}
+            onChange={(e) => onChatInputChange(e.target.value)}
+            placeholder="Send a message..."
+            className="flex-1 min-w-0 h-9 px-3 rounded-lg bg-zinc-900/60 border border-zinc-800/40 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50"
+          />
+          <button
+            type="submit"
+            className="h-9 px-3.5 rounded-lg bg-indigo-600/90 text-white font-semibold text-xs flex items-center justify-center hover:bg-indigo-500 transition-colors shrink-0"
+          >
+            Send
+          </button>
+        </form>
+      </div>
+    </>
+  );
+};
+
+interface FloatingParticipantsProps {
+  isOpen: boolean;
+  participants: Participant[];
+  currentUserId: string;
+  isHost: boolean;
+  onClose: () => void;
+  onRemoveParticipant: (id: string) => void;
+  onInteraction: () => void;
+  onRelease: () => void;
+}
+
+const FloatingParticipants: React.FC<FloatingParticipantsProps> = ({
+  isOpen, participants, currentUserId, isHost, onClose, onRemoveParticipant, onInteraction, onRelease
+}) => (
+  <>
+    {/* Participants Backdrop */}
+    <div
+      className={`fixed inset-0 bg-black/40 z-35 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      onClick={onClose}
+    />
+    {/* Slide-over participants panel */}
+    <div
+      onTouchStart={onInteraction}
+      onMouseDown={onInteraction}
+      onTouchEnd={onRelease}
+      onMouseUp={onRelease}
+      className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      style={{
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="h-14 px-4 border-b border-zinc-800/30 flex items-center justify-between shrink-0 bg-white/5">
+        <span className="text-sm font-bold font-geist text-zinc-200">Participants ({participants.length})</span>
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+        >
+          <IconClose />
+        </button>
+      </div>
+
+      {/* List content */}
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar">
+        {participants.map((p) => {
+          const isMe = p.socketId === currentUserId;
+          return (
+            <div key={p.socketId} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white/5 border border-zinc-800/20">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Avatar name={p.displayName} size="xs" color={isMe ? 'bg-indigo-600/85' : 'bg-zinc-700/80'} />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-semibold text-zinc-200 truncate">{p.displayName} {isMe && '(You)'}</span>
+                  <span className="text-[9px] text-zinc-550 capitalize">{p.role}</span>
+                </div>
+              </div>
+              {p.role === 'host' ? (
+                <span className="text-[9px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full font-geist font-semibold">Host</span>
+              ) : (
+                isHost && !isMe && (
+                  <button
+                    onClick={() => onRemoveParticipant(p.socketId)}
+                    className="text-[10px] text-red-400 hover:text-red-300 font-bold px-2 py-1 rounded hover:bg-red-500/10 transition-colors"
+                  >
+                    Remove
+                  </button>
+                )
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────
    MAIN ROOM PAGE
 ───────────────────────────────────────────────── */
 export const RoomPage: React.FC = () => {
@@ -941,6 +1277,11 @@ export const RoomPage: React.FC = () => {
   const [activeRightTab, setActiveRightTab] = useState<'chat' | 'transcript' | 'ai' | 'host'>('chat');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
+
+  // Mobile presentation experience states
+  const [isMobileControlsVisible, setIsMobileControlsVisible] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Live Speech Transcription States
   interface CaptionItem {
@@ -1013,6 +1354,52 @@ export const RoomPage: React.FC = () => {
   const isRequesting = sharingState === 'requesting';
   const showLaserPointerNotice = isHost && isSharing && captureDisplaySurface !== 'monitor';
 
+  // Mobile presentation experience definitions
+  const isMobileViewer = isMobileDevice && isViewing && !!remoteStream;
+
+  const showMobileControls = useCallback(() => {
+    setIsMobileControlsVisible(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => {
+      setIsMobileControlsVisible(false);
+    }, 3000);
+  }, []);
+
+  // Track Fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const mainRef = useRef<HTMLDivElement | null>(null);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen().catch(err => {
+        console.warn('[Fullscreen] Request failed:', err);
+      });
+    } else {
+      document.exitFullscreen().catch(err => {
+        console.warn('[Fullscreen] Exit failed:', err);
+      });
+    }
+  }, []);
+
+  // Initially show controls when Mobile Presentation starts
+  useEffect(() => {
+    if (isMobileViewer) {
+      showMobileControls();
+    }
+    return () => {
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    };
+  }, [isMobileViewer, showMobileControls]);
+
   // Audio states
   const [hostAudioEnabled, setHostAudioEnabled] = useState(true);
   const [viewerMuted, setViewerMuted] = useState(false);
@@ -1040,7 +1427,13 @@ export const RoomPage: React.FC = () => {
   const { viewportRef, laserModeActive, spotlightActive } = useCursorPresence({
     isScreenVisible, localStream, remoteStream, captureDisplaySurface,
     participants, isHost, localParticipantId: currentSocketId,
+    onViewerInteraction: isMobileViewer ? showMobileControls : undefined,
   });
+
+  const composedViewportRef = useCallback((node: HTMLDivElement | null) => {
+    mainRef.current = node;
+    viewportRef(node);
+  }, [viewportRef]);
 
   // Refs
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -1326,16 +1719,18 @@ export const RoomPage: React.FC = () => {
     <div className="min-h-[100dvh] bg-[#09090b] text-zinc-100 font-inter flex flex-col h-[100dvh] overflow-hidden relative">
 
       {/* Top Bar */}
-      <RoomTopBar
-        roomId={roomId || ''}
-        participantCount={participants.length}
-        isSharing={isSharing}
-        isViewing={isViewing}
-        displayName={displayName}
-        isHost={isHost}
-        onLeave={() => navigate('/dashboard')}
-        onShare={handleShareRoom}
-      />
+      {!isMobileViewer && (
+        <RoomTopBar
+          roomId={roomId || ''}
+          participantCount={participants.length}
+          isSharing={isSharing}
+          isViewing={isViewing}
+          displayName={displayName}
+          isHost={isHost}
+          onLeave={() => navigate('/dashboard')}
+          onShare={handleShareRoom}
+        />
+      )}
 
       {/* Consent Banner */}
       {showConsentBanner && isTranscriptionActive && (
@@ -1385,22 +1780,25 @@ export const RoomPage: React.FC = () => {
       <div className="flex-1 flex overflow-hidden relative">
 
         {/* Participants Drawer (LEFT overlay) */}
-        <>
-          {isPeopleOpen && (
-            <div className="fixed inset-0 bg-black/50 z-35" onClick={() => setIsPeopleOpen(false)} />
-          )}
-          <ParticipantPanel
-            roomCode={roomId || ''}
-            participants={participants.map(p => p.socketId === currentSocketId ? { ...p, micMuted: isMuted } : p)}
-            currentUserId={currentSocketId}
-            isExpanded={isPeopleOpen}
-            onToggleExpand={handleTogglePeople}
-          />
-        </>
+        {!isMobileViewer && (
+          <>
+            {isPeopleOpen && (
+              <div className="fixed inset-0 bg-black/50 z-35" onClick={() => setIsPeopleOpen(false)} />
+            )}
+            <ParticipantPanel
+              roomCode={roomId || ''}
+              participants={participants.map(p => p.socketId === currentSocketId ? { ...p, micMuted: isMuted } : p)}
+              currentUserId={currentSocketId}
+              isExpanded={isPeopleOpen}
+              onToggleExpand={handleTogglePeople}
+            />
+          </>
+        )}
 
         {/* CENTER STAGE — always full width (drawers overlay, never push) */}
         <main
-          ref={viewportRef}
+          ref={composedViewportRef}
+          id="presentation-viewport"
           className="flex-1 relative flex flex-col overflow-hidden bg-[#0a0a0c] min-w-0"
         >
           {/* Active indicator pills */}
@@ -1500,62 +1898,135 @@ export const RoomPage: React.FC = () => {
 
 
           {/* Collaboration Dock */}
-          <CollabDock
-            isMuted={isMuted}
-            isHost={isHost}
-            isSharing={isSharing}
-            isViewing={isViewing}
-            hostAudioEnabled={hostAudioEnabled}
-            viewerMuted={viewerMuted}
-            viewerVolume={viewerVolume}
-            messageCount={messages.length}
-            isPeopleOpen={isPeopleOpen}
-            isChatOpen={isChatOpen && activeRightTab === 'chat'}
-            isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
-            showMoreMenu={showMoreMenu}
-            autoDelete={autoDelete}
-            isTranscriptionActive={isTranscriptionActive}
-            isTranscriptionSupported={isTranscriptionSupported}
-            onToggleMic={handleToggleMic}
-            onToggleShare={handleShareToggle}
-            onToggleHostAudio={toggleHostAudio}
-            onToggleViewerMute={() => setViewerMuted(p => !p)}
-            onVolumeChange={v => setViewerVolume(v)}
-            onToggleChat={handleToggleChat}
-            onTogglePeople={handleTogglePeople}
-            onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
-            onLeave={() => navigate('/dashboard')}
-            onOpenHostPanel={() => handleOpenRightDrawer('host')}
-            onShareRoom={handleShareRoom}
-            onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
-            onToggleTranscript={handleToggleTranscript}
-          />
+          {!isMobileViewer && (
+            <CollabDock
+              isMuted={isMuted}
+              isHost={isHost}
+              isSharing={isSharing}
+              isViewing={isViewing}
+              hostAudioEnabled={hostAudioEnabled}
+              viewerMuted={viewerMuted}
+              viewerVolume={viewerVolume}
+              messageCount={messages.length}
+              isPeopleOpen={isPeopleOpen}
+              isChatOpen={isChatOpen && activeRightTab === 'chat'}
+              isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
+              showMoreMenu={showMoreMenu}
+              autoDelete={autoDelete}
+              isTranscriptionActive={isTranscriptionActive}
+              isTranscriptionSupported={isTranscriptionSupported}
+              onToggleMic={handleToggleMic}
+              onToggleShare={handleShareToggle}
+              onToggleHostAudio={toggleHostAudio}
+              onToggleViewerMute={() => setViewerMuted(p => !p)}
+              onVolumeChange={v => setViewerVolume(v)}
+              onToggleChat={handleToggleChat}
+              onTogglePeople={handleTogglePeople}
+              onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
+              onLeave={() => navigate('/dashboard')}
+              onOpenHostPanel={() => handleOpenRightDrawer('host')}
+              onShareRoom={handleShareRoom}
+              onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
+              onToggleTranscript={handleToggleTranscript}
+            />
+          )}
+
+          {/* Mobile Presentation overlays */}
+          {isMobileViewer && (
+            <>
+              {/* Floating Header */}
+              <div
+                className={`absolute left-4 right-4 z-30 transition-all duration-300 ease-in-out ${isMobileControlsVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-4 pointer-events-none'}`}
+                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+              >
+                <FloatingHeader
+                  roomId={roomId || ''}
+                  participantCount={participants.length}
+                  showCopied={showCopied}
+                  onShare={handleShareRoom}
+                  onInteraction={showMobileControls}
+                  onRelease={showMobileControls}
+                />
+              </div>
+
+              {/* Floating Quick Controls Dock */}
+              <div
+                className={`absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ease-in-out ${isMobileControlsVisible ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+              >
+                <FloatingQuickControls
+                  isMuted={isMuted}
+                  viewerMuted={viewerMuted}
+                  isChatOpen={isChatOpen}
+                  isPeopleOpen={isPeopleOpen}
+                  isFullscreen={isFullscreen}
+                  messageCount={messages.length}
+                  onToggleMic={handleToggleMic}
+                  onToggleViewerMute={() => setViewerMuted(p => !p)}
+                  onToggleChat={handleToggleChat}
+                  onTogglePeople={handleTogglePeople}
+                  onToggleFullscreen={toggleFullscreen}
+                  onLeave={() => navigate('/dashboard')}
+                  onInteraction={showMobileControls}
+                  onRelease={showMobileControls}
+                />
+              </div>
+
+              {/* Slide-over Floating Chat Overlay */}
+              <FloatingChat
+                isOpen={isChatOpen}
+                messages={messages}
+                chatInput={chatInput}
+                chatEndRef={chatEndRef}
+                displayName={displayName}
+                onClose={() => setIsChatOpen(false)}
+                onChatInputChange={setChatInput}
+                onSendMessage={handleSendMessage}
+                onInteraction={showMobileControls}
+                onRelease={showMobileControls}
+              />
+
+              {/* Slide-over Floating Participants Overlay */}
+              <FloatingParticipants
+                isOpen={isPeopleOpen}
+                participants={participants}
+                currentUserId={currentSocketId}
+                isHost={isHost}
+                onClose={() => setIsPeopleOpen(false)}
+                onRemoveParticipant={(targetId) => wsClient.send('remove_participant', { targetId })}
+                onInteraction={showMobileControls}
+                onRelease={showMobileControls}
+              />
+            </>
+          )}
         </main>
 
         {/* RIGHT DRAWER (Chat / AI / Host) */}
-        <RightDrawer
-          isOpen={isChatOpen}
-          activeTab={activeRightTab}
-          isHost={isHost}
-          messages={messages}
-          chatInput={chatInput}
-          chatEndRef={chatEndRef}
-          displayName={displayName}
-          autoDelete={autoDelete}
-          participants={participants}
-          roomLink={`${window.location.origin}${window.location.pathname}`}
-          isTranscriptionActive={isTranscriptionActive}
-          isTranscriptionSupported={isTranscriptionSupported}
-          roomTranscripts={roomTranscripts}
-          onTabChange={setActiveRightTab}
-          onClose={() => setIsChatOpen(false)}
-          onChatInputChange={setChatInput}
-          onSendMessage={handleSendMessage}
-          onToggleAutoDelete={val => wsClient.send('toggle_auto_delete', { autoDelete: val })}
-          onTransferHost={targetId => wsClient.send('transfer_host', { targetId })}
-          onRemoveParticipant={targetId => wsClient.send('remove_participant', { targetId })}
-          onToggleTranscription={handleToggleTranscription}
-        />
+        {!isMobileViewer && (
+          <RightDrawer
+            isOpen={isChatOpen}
+            activeTab={activeRightTab}
+            isHost={isHost}
+            messages={messages}
+            chatInput={chatInput}
+            chatEndRef={chatEndRef}
+            displayName={displayName}
+            autoDelete={autoDelete}
+            participants={participants}
+            roomLink={`${window.location.origin}${window.location.pathname}`}
+            isTranscriptionActive={isTranscriptionActive}
+            isTranscriptionSupported={isTranscriptionSupported}
+            roomTranscripts={roomTranscripts}
+            onTabChange={setActiveRightTab}
+            onClose={() => setIsChatOpen(false)}
+            onChatInputChange={setChatInput}
+            onSendMessage={handleSendMessage}
+            onToggleAutoDelete={val => wsClient.send('toggle_auto_delete', { autoDelete: val })}
+            onTransferHost={targetId => wsClient.send('transfer_host', { targetId })}
+            onRemoveParticipant={targetId => wsClient.send('remove_participant', { targetId })}
+            onToggleTranscription={handleToggleTranscription}
+          />
+        )}
       </div>
 
       {/* Copy toast */}

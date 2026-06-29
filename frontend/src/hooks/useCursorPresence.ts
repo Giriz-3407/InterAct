@@ -527,6 +527,9 @@ export function useCursorPresence({
     if (isHost) return; // Host inputs are handled globally by Desktop Agent
 
     const onMouseMove = (e: MouseEvent) => {
+      if (e.target && (e.target as HTMLElement).closest('.pointer-events-auto')) {
+        return;
+      }
       const now = Date.now();
 
       if (isDraggingAnnotation.current && currentAnnotationId.current) {
@@ -605,6 +608,9 @@ export function useCursorPresence({
     if (isHost) return; // Host inputs are handled globally by Desktop Agent
 
     const onMouseDown = (e: MouseEvent) => {
+      if (e.target && (e.target as HTMLElement).closest('.pointer-events-auto')) {
+        return;
+      }
       if (e.button !== 0) return;
 
       const isAlt = altHeld.current;
@@ -667,6 +673,9 @@ export function useCursorPresence({
     if (isHost) return; // Host inputs are handled globally by Desktop Agent
 
     const onTouchStart = (e: TouchEvent) => {
+      if (e.target && (e.target as HTMLElement).closest('.pointer-events-auto')) {
+        return;
+      }
       onViewerInteraction?.();
       if (e.touches.length !== 1) {
         // Not a single-touch gesture (could be multi-touch, pinch, zoom, etc.)
@@ -696,6 +705,9 @@ export function useCursorPresence({
     };
 
     const onTouchMove = (e: TouchEvent) => {
+      if (e.target && (e.target as HTMLElement).closest('.pointer-events-auto')) {
+        return;
+      }
       const startInfo = touchStartInfo.current;
       if (!startInfo || !startInfo.isSingleTouch) return;
 
@@ -731,6 +743,9 @@ export function useCursorPresence({
     };
 
     const onTouchEnd = (e: TouchEvent) => {
+      if (e.target && (e.target as HTMLElement).closest('.pointer-events-auto')) {
+        return;
+      }
       onViewerInteraction?.();
       const startInfo = touchStartInfo.current;
       if (!startInfo || !startInfo.isSingleTouch) return;
@@ -763,6 +778,9 @@ export function useCursorPresence({
     };
 
     const onTouchCancel = (e: TouchEvent) => {
+      if (e.target && (e.target as HTMLElement).closest('.pointer-events-auto')) {
+        return;
+      }
       onViewerInteraction?.();
       if (e.cancelable) {
         e.preventDefault();

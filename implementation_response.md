@@ -13,10 +13,10 @@ Mobile Presentation Experience extends InterAct's screen share viewer layout for
 * **Safe Area Compliance**: Integrates CSS padding and margin offsets utilizing `env(safe-area-inset-*)` variables so controls never overlap phone notches or gestures navigation areas.
 * **Native Fullscreen Integration**: Supports HTML5 Fullscreen on the viewport wrapper so that overlays remain functional and active when viewing in native fullscreen.
 * **Native Media Player Fullscreen (Mobile)**: On mobile, the fullscreen toggle targets the `<video>` element directly (falling back to `webkitEnterFullscreen` on iOS Safari and standard video `requestFullscreen` on Android Chrome) to show the exact native fullscreen layout mobile browsers use for media players.
-* **Pointer Event Passthrough & Propagation Isolation**: 
-  - The absolute-positioned overlay wrappers for the header and dock are configured with `pointer-events-none` (with `pointer-events-auto` on the child cards), enabling touch gestures and taps to pass through directly to the viewport canvas beneath.
+* **Pointer Event Passthrough & Native Stacking Isolation**: 
+  - Absolute wrappers for the header and dock are configured with `pointer-events-none` (with `pointer-events-auto` on the child cards), enabling touch gestures and taps to pass through directly to the viewport canvas beneath.
   - Backdrops are rendered conditionally and drawers disable pointer events when closed, ensuring zero viewport blocking.
-  - **Propagation Isolation**: Registered `e.stopPropagation()` inside the overlay container's `onTouchStart`, `onTouchEnd`, `onMouseDown`, and `onMouseUp` event handlers. This stops touch interactions inside buttons and slide-over drawers from bubbling up to the viewport container `<main>`, preventing `useCursorPresence` from executing `e.preventDefault()`. As a result, native emulation clicks on mobile buttons trigger flawlessly.
+  - **Direct DOM Event Isolation**: Added target checking inside the direct native DOM touch and mouse listeners (`onTouchStart`, `onTouchMove`, `onTouchEnd`, `onTouchCancel`, `onMouseDown`, `onMouseMove`) in `useCursorPresence.ts`. These listeners inspect the event target with `(e.target as HTMLElement).closest('.pointer-events-auto')`. If true, the listener immediately exits without calling `e.preventDefault()`. This completely isolates overlay touches from the screen share interaction layer, allowing native touch/click events to bubble and fire React control handlers natively.
 
 ---
 
@@ -24,7 +24,10 @@ Mobile Presentation Experience extends InterAct's screen share viewer layout for
 
 ### 1. [useCursorPresence.ts](file:///d:/latest%20desktop/Interact/Interact%20app/frontend/src/hooks/useCursorPresence.ts)
 * **Purpose**: Manages remote pointer presence, coordinate normalization, and WebSocket messaging.
-* **What Changed**: Added an optional `onViewerInteraction` callback to the options interface, and triggered it on `touchstart`, `touchend`, and `touchcancel` to reset UI auto-hide timers.
+* **What Changed**: 
+  - Added target check `closest('.pointer-events-auto')` to native DOM touch and mouse event listeners.
+  - Returns early on overlay target touches without calling `e.preventDefault()`, preserving native click synthesis.
+  - Triggers `onViewerInteraction` callback on touch gestures to update the parent auto-hide timer.
 
 ### 2. [RoomPage.tsx](file:///d:/latest%20desktop/Interact/Interact%20app/frontend/src/pages/RoomPage.tsx)
 * **Purpose**: The main room layout page displaying the shared screen, drawers, and chat panels.
@@ -36,7 +39,7 @@ Mobile Presentation Experience extends InterAct's screen share viewer layout for
   - Conditionally hid traditional desktop elements (`RoomTopBar`, `CollabDock`, `RightDrawer`, `ParticipantPanel`) in favor of the mobile floating subcomponents when `isMobileViewer` is active.
   - Added pointer event passthrough styles and conditional backdrop rendering to ensure overlays never block taps to the underlying screen.
   - Refactored `toggleFullscreen` to target the video element directly on mobile for native media player view.
-  - Isolated touch propagation on all overlay containers (`FloatingHeader`, `FloatingQuickControls`, `FloatingChat`, `FloatingParticipants`) so that button clicks are not blocked by the parent viewport's `preventDefault()`.
+  - Isolated touch propagation on all overlay containers (`FloatingHeader`, `FloatingQuickControls`, `FloatingChat`, and `FloatingParticipants`) so that button clicks are not blocked by the parent viewport's `preventDefault()`.
 
 ---
 

@@ -1244,8 +1244,8 @@ const FloatingParticipants: React.FC<FloatingParticipantsProps> = ({
         })}
       </div>
     </div>
-  );
-};
+  </>
+);
 
 /* ─────────────────────────────────────────────────
    MAIN ROOM PAGE

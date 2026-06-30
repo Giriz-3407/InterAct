@@ -35,7 +35,8 @@ import {
   Settings,
   Monitor,
   Trash2,
-  Menu
+  Menu,
+  Copy
 } from 'lucide-react';
 
 interface Participant {
@@ -116,11 +117,12 @@ interface RoomTopBarProps {
   displayName: string;
   isHost: boolean;
   onShare: () => void;
+  onCopyCode?: () => void;
   isStacked?: boolean;
 }
 
 const RoomTopBar: React.FC<RoomTopBarProps> = ({
-  roomId, participantCount, isSharing, isViewing, isHost, onShare, isStacked = false,
+  roomId, participantCount, isSharing, isViewing, isHost, onShare, onCopyCode, isStacked = false,
 }) => (
   <div className={isStacked ? "relative w-full z-30 pointer-events-none flex items-center justify-between select-none p-1" : "absolute top-3 left-3 right-3 z-30 pointer-events-none flex items-center justify-between select-none"}>
     {/* Left group */}
@@ -131,6 +133,13 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
         <span className="font-mono text-sm font-bold text-[#c0c1ff]/90 tracking-wide truncate max-w-[6rem] sm:max-w-[10rem]">
           {roomId}
         </span>
+        <button
+          onClick={onCopyCode}
+          className="sm:hidden w-9 h-9 rounded-full flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-colors cursor-pointer shrink-0 active:scale-95"
+          title="Copy room code"
+        >
+          <Copy size={13} />
+        </button>
         {/* Status pill */}
         {(isSharing || isViewing) ? (
           <div className="hidden sm:flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-full h-5.5">
@@ -172,12 +181,12 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
 /* ─────────────────────────────────────────────────
    COPY CONFIRMATION TOAST
 ───────────────────────────────────────────────── */
-const CopyToast: React.FC<{ visible: boolean }> = ({ visible }) => (
+const CopyToast: React.FC<{ visible: boolean; message?: string }> = ({ visible, message = 'Room link copied' }) => (
   <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-[#1e1e21] border border-[#27272a] text-sm font-geist text-zinc-200 shadow-xl transition-all duration-300 ${
     visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
   }`}>
     <span className="text-emerald-400"><IconCheck /></span>
-    Room link copied
+    {message}
   </div>
 );
 
@@ -224,13 +233,15 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
             Host Controls
           </button>
         )}
-        <button
-          onClick={() => { onShareRoom(); onClose(); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
-        >
-          <span className="text-zinc-500"><Share2 size={14} /></span>
-          Copy Room Link
-        </button>
+        {!isMobile && (
+          <button
+            onClick={() => { onShareRoom(); onClose(); }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
+          >
+            <span className="text-zinc-500"><Share2 size={14} /></span>
+            Copy Room Link
+          </button>
+        )}
         {isViewing && onTogglePresentationMode && (
           <button
             onClick={() => { onTogglePresentationMode(); onClose(); }}
@@ -277,18 +288,10 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
             )}
           </button>
         )}
-        <div className="h-px bg-[#1e1e21] mx-2 my-1" />
-        <button
-          onClick={onLeave}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer text-left"
-        >
-          <IconLeave />
-          Leave Room
-        </button>
+        </div>
       </div>
-    </div>
-  </>
-);
+    </>
+  );
 
 /* ─────────────────────────────────────────────────
    COLLABORATION DOCK
@@ -372,7 +375,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
           isStacked 
             ? "relative z-30 flex items-end justify-center mb-1" 
             : isViewing
-              ? "absolute bottom-4 left-4 z-30 flex items-end justify-start pointer-events-auto"
+              ? "absolute bottom-4 left-4 right-4 z-30 flex items-end justify-center pointer-events-auto"
               : "absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-end justify-center pointer-events-auto"
         } transition-all duration-300 ${
           isVisible 
@@ -405,18 +408,19 @@ const CollabDock: React.FC<CollabDockProps> = ({
         )}
 
         {/* Three grouped parent pills */}
-        <div className="flex items-center">
+        <div className="flex items-center justify-center w-full gap-0.5 sm:gap-1">
           {/* Left Parent Pill: Mic, Speaker, Share Screen */}
-          <div 
-            className={`flex items-center whitespace-nowrap transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5`}
-            style={isViewing && effectiveCollapsed ? {
-              width: '48px',
-              height: '48px',
-              paddingLeft: '8px',
-              paddingRight: '8px',
-              gap: '0px',
-            } : undefined}
-          >
+          <div className="flex items-center justify-end pointer-events-auto">
+            <div 
+              className={`flex items-center whitespace-nowrap transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 h-[56px] px-[7px] gap-2.5`}
+              style={isViewing && effectiveCollapsed ? {
+                width: '48px',
+                height: '48px',
+                paddingLeft: '8px',
+                paddingRight: '8px',
+                gap: '0px',
+              } : undefined}
+            >
             {/* Collapsible toggle handle button (Only visible in viewer presentation mode, placed at the very start) */}
             {isViewing && !isMobile && onToggleCollapse && (
               <button
@@ -495,13 +499,15 @@ const CollabDock: React.FC<CollabDockProps> = ({
               </div>
             )}
           </div>
+          </div>
 
           {/* Center Parent Pill: Live Log, Chat, People, More */}
-          <div 
-            className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-0.5 sm:ml-1 ${
-              isViewing && effectiveCollapsed ? 'collapsed' : ''
-            }`}
-          >
+          <div className="flex items-center justify-center">
+            <div 
+              className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-[7px] gap-2.5 ${
+                isViewing && effectiveCollapsed ? 'collapsed' : ''
+              }`}
+            >
             {/* Live Log */}
             {!isMobile && (
               <div 
@@ -568,13 +574,15 @@ const CollabDock: React.FC<CollabDockProps> = ({
               />
             </div>
           </div>
+          </div>
 
           {/* Right Parent Pill: Leave Room (hidden on mobile) */}
-          <div 
-            className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-0.5 sm:ml-1 ${
-              isViewing && effectiveCollapsed ? 'collapsed' : ''
-            }`}
-          >
+          <div className="flex items-center justify-start pointer-events-auto">
+            <div 
+              className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 h-[56px] px-[7px] gap-2.5 ${
+                isViewing && effectiveCollapsed ? 'collapsed' : ''
+              }`}
+            >
             {/* Leave */}
             <div 
               className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
@@ -588,6 +596,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
                 danger
               />
             </div>
+          </div>
           </div>
         </div>
       </div>
@@ -1282,6 +1291,7 @@ export const RoomPage: React.FC = () => {
   const [activeRightTab, setActiveRightTab] = useState<'chat' | 'transcript' | 'ai' | 'host'>('chat');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
+  const [copyMessage, setCopyMessage] = useState('Room link copied');
 
   // Presentation Mode state
   const [isPresentationMode, setIsPresentationMode] = useState(false);
@@ -1829,9 +1839,18 @@ export const RoomPage: React.FC = () => {
   const handleShareRoom = useCallback(() => {
     const link = `${window.location.origin}${window.location.pathname}`;
     navigator.clipboard.writeText(link).catch(() => {});
+    setCopyMessage('Room link copied');
     setShowCopied(true);
     setTimeout(() => setShowCopied(false), 2500);
   }, []);
+
+  const handleCopyRoomCode = useCallback(() => {
+    if (!roomId) return;
+    navigator.clipboard.writeText(roomId).catch(() => {});
+    setCopyMessage('Room code copied');
+    setShowCopied(true);
+    setTimeout(() => setShowCopied(false), 2500);
+  }, [roomId]);
 
   const handleToggleMic = useCallback(() => {
     if (isMuted) beginVoiceNegotiation();
@@ -1967,6 +1986,7 @@ export const RoomPage: React.FC = () => {
                 displayName={displayName}
                 isHost={isHost}
                 onShare={handleShareRoom}
+                onCopyCode={handleCopyRoomCode}
               />
             )}
 
@@ -2172,7 +2192,7 @@ export const RoomPage: React.FC = () => {
       </div>
 
       {/* Copy toast */}
-      <CopyToast visible={showCopied} />
+      <CopyToast visible={showCopied} message={copyMessage} />
 
       {/* Hidden audio elements */}
       <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />

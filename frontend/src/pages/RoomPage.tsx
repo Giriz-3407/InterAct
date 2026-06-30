@@ -1495,12 +1495,21 @@ export const RoomPage: React.FC = () => {
     const mainEl = mainRef.current;
     if (isPresentationMode && mainEl) {
       if (document.fullscreenEnabled && !document.fullscreenElement) {
-        mainEl.requestFullscreen().catch(err => {
-          console.warn('[RoomPage] Failed to enter fullscreen:', err);
-        });
+        mainEl.requestFullscreen()
+          .then(() => {
+            if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+              window.screen.orientation.lock('landscape').catch(() => {});
+            }
+          })
+          .catch(err => {
+            console.warn('[RoomPage] Failed to enter fullscreen:', err);
+          });
       }
     } else {
       if (document.fullscreenElement) {
+        if (window.screen && window.screen.orientation && window.screen.orientation.unlock) {
+          window.screen.orientation.unlock();
+        }
         document.exitFullscreen().catch(err => {
           console.warn('[RoomPage] Failed to exit fullscreen:', err);
         });
@@ -2052,7 +2061,7 @@ export const RoomPage: React.FC = () => {
             )}
 
             {/* Collaboration Dock (Floating overlay) */}
-            {!(isMobileViewer && isPresentationMode) && (
+            {!isPresentationMode && (
               <CollabDock
                 isVisible={!isPresentationMode || isPresentationControlsVisible}
                 isMuted={isMuted}
@@ -2193,7 +2202,7 @@ export const RoomPage: React.FC = () => {
             </>
 
           {/* Live Caption Overlay */}
-          {activeCaptions.length > 0 && (
+          {activeCaptions.length > 0 && !isPresentationMode && (
             <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4 pointer-events-none">
               <div className="mx-auto flex flex-col items-stretch gap-2 px-4 py-2.5 rounded-2xl bg-[#09090b]/85 backdrop-blur-xl border border-indigo-500/20 shadow-2xl select-none animate-fade-in">
                 {activeCaptions.slice(-2).map((caption) => (
@@ -2211,7 +2220,7 @@ export const RoomPage: React.FC = () => {
           )}
 
           {/* SR Alone Mode banner */}
-          {srOnlyMode && (
+          {srOnlyMode && !isPresentationMode && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 w-full max-w-sm px-4">
               <div className="mx-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600/20 border border-rose-500/30 text-rose-300 text-[10px] font-bold font-geist uppercase tracking-widest">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -2223,38 +2232,20 @@ export const RoomPage: React.FC = () => {
           )}
 
           {/* Floating Expand Controls Button */}
-          {isViewing && isPresentationMode && (
+          {isViewing && !isPresentationMode && isDockCollapsed && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                showPresentationControls();
+                setIsDockCollapsed(false);
               }}
               className={`absolute z-40 w-14 h-14 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 text-zinc-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center cursor-pointer ${
                 isMobileViewer 
                   ? 'bottom-4 left-1/2 -translate-x-1/2' 
                   : 'bottom-4 left-4'
-              } ${
-                isPresentationControlsVisible 
-                  ? 'opacity-0 pointer-events-none scale-90' 
-                  : 'opacity-100 pointer-events-auto scale-100'
               }`}
               title="Expand Controls"
             >
               <Maximize2 size={18} />
-            </button>
-          )}
-
-          {/* Floating Exit Presentation Mode Close Button */}
-          {isPresentationMode && isPresentationControlsVisible && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsPresentationMode(false);
-              }}
-              className="absolute z-40 w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 text-zinc-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center cursor-pointer top-4 right-4"
-              title="Exit Presentation Mode"
-            >
-              <X size={18} />
             </button>
           )}
         </main>

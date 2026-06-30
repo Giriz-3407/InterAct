@@ -37,7 +37,8 @@ import {
   Send,
   Settings,
   Monitor,
-  Trash2
+  Trash2,
+  Menu
 } from 'lucide-react';
 
 interface Participant {
@@ -57,21 +58,21 @@ interface MessageItem {
 /* ─────────────────────────────────────────────────
    SVG ICON PRIMITIVES (Mapped to Lucide React)
 ───────────────────────────────────────────────── */
-const IconMic = () => <Mic size={19} />;
-const IconMicOff = () => <MicOff size={19} />;
-const IconScreen = () => <Tv size={19} />;
-const IconScreenStop = () => <Tv size={19} className="text-red-400" />;
-const IconChat = () => <MessageSquare size={19} />;
-const IconPeople = () => <Users size={19} />;
-const IconMore = () => <MoreHorizontal size={19} />;
-const IconLeave = () => <LogOut size={19} />;
-const IconVolumeUp = () => <Volume2 size={19} />;
-const IconVolumeOff = () => <VolumeX size={19} />;
+const IconMic = () => <Mic size={16} />;
+const IconMicOff = () => <MicOff size={16} />;
+const IconScreen = () => <Tv size={16} />;
+const IconScreenStop = () => <Tv size={16} className="text-red-400" />;
+const IconChat = () => <MessageSquare size={16} />;
+const IconPeople = () => <Users size={16} />;
+const IconMore = () => <MoreHorizontal size={16} />;
+const IconLeave = () => <LogOut size={16} />;
+const IconVolumeUp = () => <Volume2 size={16} />;
+const IconVolumeOff = () => <VolumeX size={16} />;
 const IconShare = () => <Share2 size={13} />;
 const IconFullscreenEnter = () => <Maximize2 size={18} />;
 const IconFullscreenExit = () => <Minimize2 size={18} />;
 const IconAI = () => <Sparkles size={18} className="text-[#c0c1ff]" />;
-const IconTranscript = () => <FileText size={19} />;
+const IconTranscript = () => <FileText size={16} />;
 const IconClose = () => <X size={16} />;
 const IconCheck = () => <Check size={14} />;
 const IconSend = () => <Send size={16} />;
@@ -95,16 +96,16 @@ const DockBtn: React.FC<DockBtnProps> = ({ onClick, title, icon, active, danger,
   <button
     onClick={onClick}
     title={title}
-    className={`room-dock-btn ${active ? 'active' : ''} ${danger ? 'danger' : ''} ${className}`}
+    className={`room-dock-btn transition-all active:scale-95 relative ${active ? 'active' : ''} ${danger ? 'danger' : ''} ${className}`}
   >
-    <span className="relative flex items-center justify-center">
+    <span className="flex items-center justify-center">
       {icon}
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 min-w-[15px] h-3.5 px-0.5 rounded-full bg-[#c0c1ff] text-[#09090b] text-[8px] font-bold font-geist flex items-center justify-center leading-none">
-          {badge > 9 ? '9+' : badge}
-        </span>
-      )}
     </span>
+    {badge !== undefined && badge > 0 && (
+      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[8px] font-bold text-white leading-none shadow-[0_1px_2px_rgba(0,0,0,0.2)]">
+        {badge}
+      </span>
+    )}
   </button>
 );
 
@@ -120,28 +121,29 @@ interface RoomTopBarProps {
   isHost: boolean;
   onLeave: () => void;
   onShare: () => void;
+  isStacked?: boolean;
 }
 
 const RoomTopBar: React.FC<RoomTopBarProps> = ({
-  roomId, participantCount, isSharing, isViewing, isHost, onLeave, onShare,
+  roomId, participantCount, isSharing, isViewing, isHost, onLeave, onShare, isStacked = false,
 }) => (
-  <header className="mx-4 mt-3 px-4 h-12 bg-[#0e0e11]/65 backdrop-blur-md border border-white/[0.04] rounded-xl flex items-center justify-between z-20 shrink-0 select-none shadow-panel">
-    {/* Left */}
-    <div className="flex items-center gap-3 min-w-0">
+  <div className={isStacked ? "relative w-full z-30 pointer-events-none flex items-center justify-between select-none p-1" : "absolute top-3 left-3 right-3 z-30 pointer-events-none flex items-center justify-between select-none"}>
+    {/* Left group */}
+    <div className="pointer-events-auto flex items-center gap-3 px-4 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl">
       <img src={interactLogo} alt="InterAct" className="h-5 w-auto flex-shrink-0" />
-      <div className="w-px h-3.5 bg-white/[0.08] flex-shrink-0" />
+      <div className="w-px h-4 bg-zinc-800/40 flex-shrink-0" />
       <div className="flex items-center gap-2 min-w-0">
         <span className="font-mono text-sm font-bold text-[#c0c1ff]/90 tracking-wide truncate max-w-[6rem] sm:max-w-[10rem]">
           {roomId}
         </span>
         {/* Status pill */}
         {(isSharing || isViewing) ? (
-          <div className="hidden sm:flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">
+          <div className="hidden sm:flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 px-2.5 py-1 rounded-full h-5.5">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
             <span className="text-[10px] font-bold font-geist tracking-wider text-red-400">LIVE</span>
           </div>
         ) : (
-          <div className="hidden sm:flex items-center gap-1.5 bg-emerald-500/5 border border-emerald-500/15 px-2 py-0.5 rounded-full">
+          <div className="hidden sm:flex items-center gap-1.5 bg-emerald-500/5 border border-emerald-500/15 px-2.5 py-1 rounded-full h-5.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-slow" />
             <span className="text-[10px] font-semibold font-geist tracking-wide text-emerald-400">Connected</span>
           </div>
@@ -149,18 +151,19 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
       </div>
     </div>
 
-    {/* Center — participant count */}
-    <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.02] border border-white/[0.04]">
+    {/* Center group */}
+    <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-1.5 px-4 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl">
       <Users size={13} className="text-zinc-400" />
       <span className="text-sm font-geist text-zinc-300 font-semibold select-none">{participantCount}</span>
     </div>
 
-    {/* Right */}
-    <div className="flex items-center gap-2">
+    {/* Right group */}
+    <div className="pointer-events-auto flex items-center gap-2 px-3 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl">
       {isHost && <AgentStatusIndicator />}
+      {isHost && <div className="w-px h-4 bg-zinc-800/40 flex-shrink-0" />}
       <button
         onClick={onShare}
-        className="hidden sm:flex items-center gap-1.5 px-3 h-8 rounded-lg border border-white/[0.04] bg-white/[0.02] text-zinc-400 hover:text-zinc-150 hover:bg-white/[0.04] transition-all text-xs font-geist cursor-pointer active:scale-97"
+        className="hidden sm:flex items-center gap-1.5 px-3 h-8 rounded-full border border-transparent bg-white/5 text-zinc-350 hover:text-white hover:bg-white/10 transition-all text-xs font-geist cursor-pointer active:scale-95"
         title="Copy room link"
       >
         <Share2 size={13} />
@@ -168,14 +171,14 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
       </button>
       <button
         onClick={onLeave}
-        className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-red-650 hover:bg-red-600 text-white text-xs font-semibold font-geist cursor-pointer transition-colors active:scale-97"
+        className="flex items-center gap-1.5 px-3.5 h-8 rounded-full bg-red-650 hover:bg-red-600 text-white text-xs font-semibold font-geist cursor-pointer transition-all active:scale-95 shadow-sm"
         title="Leave room"
       >
         <LogOut size={13} />
-        <span className="hidden sm:inline">Leave</span>
+        <span>Leave</span>
       </button>
     </div>
-  </header>
+  </div>
 );
 
 /* ─────────────────────────────────────────────────
@@ -311,6 +314,11 @@ interface CollabDockProps {
   onShareRoom: () => void;
   onToggleAutoDelete: () => void;
   onToggleTranscript: () => void;
+  isStacked?: boolean;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+  onMouseEnter?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 const CollabDock: React.FC<CollabDockProps> = ({
@@ -320,141 +328,254 @@ const CollabDock: React.FC<CollabDockProps> = ({
   onToggleMic, onToggleShare, onToggleHostAudio, onToggleViewerMute, onVolumeChange,
   onToggleChat, onTogglePeople, onToggleMoreMenu, onLeave,
   onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript,
-}) => (
-  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-end justify-center">
-    <div className="relative animate-fade-in">
-      {/* More menu */}
-      {showMoreMenu && (
-        <MoreMenu
-          isHost={isHost}
-          autoDelete={autoDelete}
-          isTranscriptOpen={isTranscriptOpen}
-          isTranscriptionActive={isTranscriptionActive}
-          isTranscriptionSupported={isTranscriptionSupported}
-          onOpenHostPanel={onOpenHostPanel}
-          onShareRoom={onShareRoom}
-          onToggleAutoDelete={onToggleAutoDelete}
-          onToggleTranscript={onToggleTranscript}
-          onLeave={onLeave}
-          onClose={onToggleMoreMenu}
-        />
-      )}
+  isStacked = false,
+  isCollapsed = false,
+  onToggleCollapse,
+  onMouseEnter,
+  onClick,
+}) => {
+  let itemIndex = 0;
+  const getItemDelayStyle = () => {
+    const delay = isCollapsed 
+      ? (12 - itemIndex) * 30 
+      : itemIndex * 30;
+    itemIndex++;
+    return isViewing ? {
+      transitionDelay: `${delay}ms`
+    } : undefined;
+  };
 
-      {/* Dock pill */}
-      <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-[#09090b]/75 backdrop-blur-xl border border-white/[0.06] shadow-dock">
-        {/* Mic */}
-        <DockBtn
-          onClick={onToggleMic}
-          title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-          icon={isMuted ? <IconMicOff /> : <IconMic />}
-          label={isMuted ? 'Muted' : 'Mic'}
-          danger={isMuted}
-        />
-
-        {/* Host shared audio toggle (only when sharing) */}
-        {isHost && isSharing && (
-          <DockBtn
-            onClick={onToggleHostAudio}
-            title={hostAudioEnabled ? 'Mute shared audio' : 'Share audio'}
-            icon={hostAudioEnabled ? <IconVolumeUp /> : <IconVolumeOff />}
-            label="Audio"
-            danger={!hostAudioEnabled}
+  return (
+    <div 
+      onMouseEnter={onMouseEnter}
+      onClick={onClick}
+      className={
+        isStacked 
+          ? "relative z-30 flex items-end justify-center mb-1" 
+          : isViewing
+            ? "absolute bottom-4 left-4 z-30 flex items-end justify-start pointer-events-auto"
+            : "absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-end justify-center pointer-events-auto"
+      }
+    >
+      <div className="relative animate-fade-in">
+        {/* More menu */}
+        {showMoreMenu && !isCollapsed && (
+          <MoreMenu
+            isHost={isHost}
+            autoDelete={autoDelete}
+            isTranscriptOpen={isTranscriptOpen}
+            isTranscriptionActive={isTranscriptionActive}
+            isTranscriptionSupported={isTranscriptionSupported}
+            onOpenHostPanel={onOpenHostPanel}
+            onShareRoom={onShareRoom}
+            onToggleAutoDelete={onToggleAutoDelete}
+            onToggleTranscript={onToggleTranscript}
+            onLeave={onLeave}
+            onClose={onToggleMoreMenu}
           />
         )}
 
-        {/* Viewer audio controls */}
-        {isViewing && (
-          <>
-            <DockBtn
-              onClick={onToggleViewerMute}
-              title={viewerMuted ? 'Unmute session audio' : 'Mute session audio'}
-              icon={viewerMuted ? <IconVolumeOff /> : <IconVolumeUp />}
-              label="Audio"
-              danger={viewerMuted}
-            />
-            <div className="hidden min-[390px]:flex items-center gap-1.5 px-1.5">
-              <input
-                type="range" min="0" max="1" step="0.05" value={viewerVolume}
-                onChange={(e) => {
-                  const vol = parseFloat(e.target.value);
-                  onVolumeChange(vol);
-                  if (vol > 0 && viewerMuted) onToggleViewerMute();
+        {/* Three grouped parent pills */}
+        <div className="flex items-center">
+          {/* Left Parent Pill: Mic, Speaker, Share Screen */}
+          <div 
+            className={`flex items-center whitespace-nowrap transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5`}
+            style={isViewing && isCollapsed ? {
+              width: '48px',
+              height: '48px',
+              paddingLeft: '8px',
+              paddingRight: '8px',
+              gap: '0px',
+            } : undefined}
+          >
+            {/* Collapsible toggle handle button (Only visible in viewer presentation mode, placed at the very start) */}
+            {isViewing && onToggleCollapse && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleCollapse();
                 }}
-                className="w-14 h-1 accent-[#c0c1ff] cursor-pointer bg-white/10 rounded-lg appearance-none"
-                style={{ WebkitAppearance: 'none', outline: 'none' }}
+                className={`w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center shrink-0 transition-all active:scale-95 text-zinc-400 cursor-pointer ${isCollapsed ? 'mr-0' : 'mr-1.5'}`}
+                title={isCollapsed ? "Expand Controls" : "Collapse Controls"}
+              >
+                <Menu size={14} />
+              </button>
+            )}
+
+            {/* Mic */}
+            <div 
+              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              style={getItemDelayStyle()}
+            >
+              <DockBtn
+                onClick={onToggleMic}
+                title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+                icon={isMuted ? <IconMicOff /> : <IconMic />}
+                label={isMuted ? 'Muted' : 'Mic'}
+                danger={isMuted}
               />
             </div>
-          </>
-        )}
 
-        {/* Screen share (host only) */}
-        {isHost && (
-          <DockBtn
-            onClick={onToggleShare}
-            title={isSharing ? 'Stop sharing' : 'Share screen'}
-            icon={isSharing ? <IconScreenStop /> : <IconScreen />}
-            label={isSharing ? 'Stop' : 'Share'}
-            danger={isSharing}
-          />
-        )}
+            {/* Host shared audio toggle (only when sharing) */}
+            {isHost && isSharing && (
+              <div 
+                className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+                style={getItemDelayStyle()}
+              >
+                <DockBtn
+                  onClick={onToggleHostAudio}
+                  title={hostAudioEnabled ? 'Mute shared audio' : 'Share audio'}
+                  icon={hostAudioEnabled ? <IconVolumeUp /> : <IconVolumeOff />}
+                  label="Audio"
+                  danger={!hostAudioEnabled}
+                />
+              </div>
+            )}
 
-        <div className="w-px h-5 bg-white/[0.06] mx-1" />
+            {/* Viewer audio controls */}
+            {isViewing && (
+              <>
+                <div 
+                  className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+                  style={getItemDelayStyle()}
+                >
+                  <DockBtn
+                    onClick={onToggleViewerMute}
+                    title={viewerMuted ? 'Unmute session audio' : 'Mute session audio'}
+                    icon={viewerMuted ? <IconVolumeOff /> : <IconVolumeUp />}
+                    label="Audio"
+                    danger={viewerMuted}
+                  />
+                </div>
+                <div 
+                  className={`dock-item-anim dock-item-slider ${isViewing && isCollapsed ? 'collapsed' : 'expanded'} hidden min-[390px]:flex items-center gap-1.5 px-1.5`}
+                  style={getItemDelayStyle()}
+                >
+                  <input
+                    type="range" min="0" max="1" step="0.05" value={viewerVolume}
+                    onChange={(e) => {
+                      const vol = parseFloat(e.target.value);
+                      onVolumeChange(vol);
+                      if (vol > 0 && viewerMuted) onToggleViewerMute();
+                    }}
+                    className="w-14 h-1 accent-[#c0c1ff] cursor-pointer bg-white/10 rounded-lg appearance-none"
+                    style={{ WebkitAppearance: 'none', outline: 'none' }}
+                  />
+                </div>
+              </>
+            )}
 
-        {/* Live Log */}
-        <DockBtn
-          onClick={onToggleTranscript}
-          title={
-            !isTranscriptionSupported 
-              ? 'Speech transcription is not supported in this browser' 
-              : `Live Transcript Log${isTranscriptionActive ? ' (Active)' : ' (Off)'}`
-          }
-          icon={<IconTranscript />}
-          label="Live Log"
-          active={isTranscriptOpen}
-          className={`hidden sm:flex ${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''} ${isTranscriptionActive ? 'text-indigo-400 font-bold' : ''}`}
-        />
+            {/* Screen share (host only) */}
+            {isHost && (
+              <div 
+                className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+                style={getItemDelayStyle()}
+              >
+                <DockBtn
+                  onClick={onToggleShare}
+                  title={isSharing ? 'Stop sharing' : 'Share screen'}
+                  icon={isSharing ? <IconScreenStop /> : <IconScreen />}
+                  label={isSharing ? 'Stop' : 'Share'}
+                  danger={isSharing}
+                />
+              </div>
+            )}
+          </div>
 
-        {/* Chat */}
-        <DockBtn
-          onClick={onToggleChat}
-          title="Chat"
-          icon={<IconChat />}
-          label="Chat"
-          badge={messageCount}
-          active={isChatOpen}
-        />
+          {/* Center Parent Pill: Live Log, Chat, People, More */}
+          <div 
+            className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-2 ${
+              isViewing && isCollapsed ? 'collapsed' : ''
+            }`}
+          >
+            {/* Live Log */}
+            <div 
+              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              style={getItemDelayStyle()}
+            >
+              <DockBtn
+                onClick={onToggleTranscript}
+                title={
+                  !isTranscriptionSupported 
+                    ? 'Speech transcription is not supported in this browser' 
+                    : `Live Transcript Log${isTranscriptionActive ? ' (Active)' : ' (Off)'}`
+                }
+                icon={<IconTranscript />}
+                label="Live Log"
+                active={isTranscriptOpen}
+                className={`hidden sm:flex ${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''} ${isTranscriptionActive ? 'text-indigo-400 font-bold' : ''}`}
+              />
+            </div>
 
-        {/* People */}
-        <DockBtn
-          onClick={onTogglePeople}
-          title="Participants"
-          icon={<IconPeople />}
-          label="People"
-          active={isPeopleOpen}
-        />
+            {/* Chat */}
+            <div 
+              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              style={getItemDelayStyle()}
+            >
+              <DockBtn
+                onClick={onToggleChat}
+                title="Chat"
+                icon={<IconChat />}
+                label="Chat"
+                badge={messageCount}
+                active={isChatOpen}
+              />
+            </div>
 
-        {/* More */}
-        <DockBtn
-          onClick={onToggleMoreMenu}
-          title="More options"
-          icon={<IconMore />}
-          label="More"
-          active={showMoreMenu}
-        />
+            {/* People */}
+            <div 
+              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              style={getItemDelayStyle()}
+            >
+              <DockBtn
+                onClick={onTogglePeople}
+                title="Participants"
+                icon={<IconPeople />}
+                label="People"
+                active={isPeopleOpen}
+              />
+            </div>
 
-        <div className="w-px h-5 bg-white/[0.06] mx-1" />
+            {/* More */}
+            <div 
+              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              style={getItemDelayStyle()}
+            >
+              <DockBtn
+                onClick={onToggleMoreMenu}
+                title="More options"
+                icon={<IconMore />}
+                label="More"
+                active={showMoreMenu}
+              />
+            </div>
+          </div>
 
-        {/* Leave */}
-        <DockBtn
-          onClick={onLeave}
-          title="Leave room"
-          icon={<IconLeave />}
-          danger
-        />
+          {/* Right Parent Pill: Leave Room */}
+          <div 
+            className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-2 ${
+              isViewing && isCollapsed ? 'collapsed' : ''
+            }`}
+          >
+            {/* Leave */}
+            <div 
+              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              style={getItemDelayStyle()}
+            >
+              <DockBtn
+                onClick={onLeave}
+                title="Leave room"
+                icon={<IconLeave />}
+                label="Leave"
+                danger
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface RightDrawerProps {
   isOpen: boolean;
@@ -478,6 +599,8 @@ interface RightDrawerProps {
   onTransferHost: (id: string) => void;
   onRemoveParticipant: (id: string) => void;
   onToggleTranscription: () => void;
+  isViewing: boolean;
+  isSharing: boolean;
 }
 
 const RightDrawer: React.FC<RightDrawerProps> = ({
@@ -486,12 +609,15 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
   isTranscriptionActive, isTranscriptionSupported, roomTranscripts,
   onTabChange, onClose, onChatInputChange, onSendMessage,
   onToggleAutoDelete, onTransferHost, onRemoveParticipant, onToggleTranscription,
+  isViewing, isSharing,
 }) => {
   const formatTime = (isoString: string) => {
     try {
       return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch { return isoString; }
   };
+
+  const showActiveStream = isViewing || isSharing;
 
   return (
     <>
@@ -500,20 +626,22 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         <div className="fixed inset-0 bg-black/50 z-35 md:hidden" onClick={onClose} />
       )}
 
-      <aside className={`fixed top-0 right-0 bottom-0 z-40 flex flex-col bg-[#09090b]/98 border-l border-white/[0.06] shadow-2xl md:fixed md:top-[72px] md:right-3 md:bottom-3 md:h-[calc(100dvh-5.5rem)] md:w-[350px] md:bg-[#0e0e11]/80 md:border md:border-white/[0.05] md:backdrop-blur-xl md:rounded-xl md:shadow-panel transition-transform duration-350 ease-out ${
-        isOpen ? 'translate-x-0' : 'translate-x-full'
+      <aside className={`flex flex-col bg-black/60 border-l border-zinc-800/40 shadow-2xl transition-all duration-300 ease-in-out shrink-0 z-40 ${
+        showActiveStream
+          ? `static h-auto my-3 mr-3 rounded-2xl border ${isOpen ? 'w-[350px] opacity-100' : 'w-0 opacity-0 overflow-hidden border-none'}`
+          : `fixed top-0 right-0 bottom-0 md:top-[72px] md:right-3 md:bottom-3 md:h-[calc(100dvh-5.5rem)] md:w-[350px] md:border md:rounded-2xl ${isOpen ? 'translate-x-0' : 'translate-x-full'}`
       }`}>
         {/* Tab header */}
-        <div className="h-12 border-b border-white/[0.04] flex items-center justify-between px-3 shrink-0 bg-white/[0.01]">
-          <div className="flex-1 mr-3 flex items-center gap-1 bg-white/[0.02] p-0.5 rounded-lg border border-white/[0.03]">
+        <div className="h-14 border-b border-zinc-800/30 flex items-center justify-between px-3 shrink-0 bg-white/[0.01]">
+          <div className="flex-1 mr-3 flex items-center gap-1 bg-white/5 p-0.5 rounded-full border border-zinc-800/40">
             {(['chat', 'transcript', 'ai', ...(isHost ? ['host'] : [])] as ('chat' | 'transcript' | 'ai' | 'host')[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => onTabChange(tab)}
-                className={`flex-1 h-8 rounded-md transition-all cursor-pointer flex items-center justify-center relative ${
+                className={`flex-1 h-8 rounded-full transition-all cursor-pointer flex items-center justify-center relative active:scale-95 ${
                   activeTab === tab
-                    ? 'bg-white/[0.06] text-[#c0c1ff] shadow-[0_1px_2px_rgba(0,0,0,0.15)] border border-white/[0.02]'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.01]'
+                    ? 'bg-indigo-650/80 text-white shadow-[0_1px_3px_rgba(0,0,0,0.2)]'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
                 }`}
                 title={tab === 'ai' ? 'AI Insights' : tab === 'transcript' ? 'Live Log' : tab === 'host' ? 'Host Controls' : 'Chat'}
               >
@@ -531,7 +659,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-white/5 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer shrink-0"
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center justify-center shrink-0 active:scale-95 text-zinc-400"
           >
             <IconClose />
           </button>
@@ -543,7 +671,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar min-h-0">
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 select-none">
-                  <div className="w-10 h-10 rounded-full bg-white/[0.02] border border-white/[0.04] flex items-center justify-center text-zinc-500">
+                  <div className="w-10 h-10 rounded-full bg-white/5 border border-zinc-800/40 flex items-center justify-center text-zinc-500">
                     <MessageSquare size={20} className="text-zinc-500" />
                   </div>
                   <div>
@@ -558,7 +686,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                   if (m.type === 'system_rename') {
                     return (
                       <div key={idx} className="flex justify-center select-none">
-                        <span className="text-[11px] text-zinc-550 italic font-inter px-2.5 py-0.5 rounded-full bg-white/[0.02] border border-white/[0.03]">
+                        <span className="text-[11px] text-zinc-550 italic font-inter px-2.5 py-0.5 rounded-full bg-white/5 border border-zinc-800/40">
                           {m.message}
                         </span>
                       </div>
@@ -573,7 +701,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                           <span className="text-xs font-semibold font-geist text-zinc-300 truncate">{m.sender}</span>
                           <span className="text-[10px] font-mono text-zinc-650 shrink-0">{formatTime(m.timestamp)}</span>
                         </div>
-                        <p className="text-sm text-zinc-300 font-inter bg-white/[0.02] border border-white/[0.04] px-2.5 py-1.5 rounded-xl rounded-tl-none break-words leading-relaxed">
+                        <p className="text-sm text-zinc-300 font-inter bg-white/5 border border-zinc-800/40 px-3 py-2 rounded-2xl rounded-tl-none break-words leading-relaxed">
                           {m.message}
                         </p>
                       </div>
@@ -585,18 +713,18 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
             </div>
             <form
               onSubmit={onSendMessage}
-              className="p-3 border-t border-white/[0.04] flex gap-2 shrink-0 bg-transparent"
+              className="p-3.5 border-t border-zinc-800/30 flex gap-2 shrink-0 bg-transparent"
             >
               <input
                 type="text"
                 value={chatInput}
                 onChange={e => onChatInputChange(e.target.value)}
                 placeholder="Message everyone..."
-                className="flex-1 min-w-0 px-3 py-2.5 h-9 rounded-lg bg-white/[0.02] border border-white/[0.05] text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#c0c1ff]/30 transition-colors font-inter"
+                className="flex-1 min-w-0 px-3.5 py-2 h-9 rounded-full bg-white/5 border border-zinc-800/40 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50 transition-all font-inter"
               />
               <button
                 type="submit"
-                className="w-9 h-9 rounded-lg bg-[#c0c1ff] hover:bg-[#b0b1ff] active:scale-95 text-[#09090b] flex items-center justify-center cursor-pointer transition-colors flex-shrink-0"
+                className="w-9 h-9 rounded-full bg-[#c0c1ff] hover:bg-[#b0b1ff] active:scale-95 text-[#09090b] flex items-center justify-center cursor-pointer transition-all flex-shrink-0 shadow-sm"
               >
                 <IconSend />
               </button>
@@ -608,7 +736,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         {activeTab === 'transcript' && (
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             {/* Header controls */}
-            <div className="p-4 border-b border-white/[0.04] bg-white/[0.01] flex flex-col gap-3 shrink-0">
+            <div className="p-4 border-b border-zinc-800/30 bg-white/[0.01] flex flex-col gap-3 shrink-0">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold font-geist text-zinc-500 uppercase tracking-widest">
                   Speech Logger
@@ -627,12 +755,12 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                 <button
                   onClick={onToggleTranscription}
                   disabled={!isTranscriptionSupported}
-                  className={`w-full py-2 rounded-lg text-xs font-bold font-geist transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`w-full py-2 rounded-full text-xs font-bold font-geist transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-97 ${
                     !isTranscriptionSupported
-                      ? 'bg-white/[0.01] border border-white/[0.03] text-zinc-650 cursor-not-allowed'
+                      ? 'bg-white/[0.01] border border-zinc-800/30 text-zinc-650 cursor-not-allowed'
                       : isTranscriptionActive
-                        ? 'bg-rose-500/10 border border-rose-500/15 text-rose-400 hover:bg-rose-500/15'
-                        : 'bg-indigo-500/10 border border-[#c0c1ff]/15 text-[#c0c1ff] hover:bg-[#c0c1ff]/10'
+                        ? 'bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/15'
+                        : 'bg-indigo-650/80 text-white hover:bg-indigo-600'
                   }`}
                 >
                   <span>{isTranscriptionActive ? 'Stop transcription' : 'Start transcription'}</span>
@@ -658,14 +786,14 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 custom-scrollbar min-h-0">
               {roomTranscripts.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 select-none">
-                  <div className="w-10 h-10 rounded-full bg-white/[0.02] border border-white/[0.04] flex items-center justify-center text-zinc-500">
+                  <div className="w-10 h-10 rounded-full bg-white/5 border border-zinc-800/40 flex items-center justify-center text-zinc-500">
                     <FileText size={20} className="text-zinc-500" />
                   </div>
                   <div>
                     <p className="text-xs font-bold font-geist text-zinc-400 mb-1">
                       {isTranscriptionActive ? 'Waiting for speech...' : 'No transcript log'}
                     </p>
-                    <p className="text-xs text-zinc-550 font-inter leading-normal max-w-[200px] mx-auto">
+                    <p className="text-xs text-zinc-555 font-inter leading-normal max-w-[200px] mx-auto">
                       {isTranscriptionActive
                         ? 'Captions will appear here once someone starts speaking.'
                         : 'Transcripts will be captured automatically once transcription is started.'}
@@ -686,7 +814,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                               {new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          <p className="text-sm text-zinc-300 font-inter bg-white/[0.02] border border-white/[0.04] px-2.5 py-1.5 rounded-xl rounded-tl-none break-words leading-relaxed">
+                          <p className="text-sm text-zinc-300 font-inter bg-white/5 border border-zinc-800/40 px-3 py-2 rounded-2xl rounded-tl-none break-words leading-relaxed">
                             {t.text}
                           </p>
                         </div>
@@ -706,17 +834,17 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
               <span className="text-[#c0c1ff]"><IconAI /></span>
               <span className="text-xs font-bold font-geist text-zinc-500 uppercase tracking-widest">AI Insights</span>
             </div>
-            <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
+            <div className="bg-white/5 border border-zinc-800/40 rounded-2xl p-4 transition-all hover:bg-white/[0.08] hover:border-zinc-800/60">
               <p className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-widest mb-3">Action Item</p>
               <p className="text-sm text-zinc-300 leading-relaxed italic font-inter">
                 "Ensure middleware validation handles nested structs."
               </p>
-              <div className="mt-3 pt-3 border-t border-white/[0.03] flex items-center gap-1.5 select-none">
+              <div className="mt-3 pt-3 border-t border-zinc-800/30 flex items-center gap-1.5 select-none">
                 <span className="text-emerald-400"><IconCheck /></span>
                 <span className="text-xs text-zinc-400 font-geist">Assigned to Alex</span>
               </div>
             </div>
-            <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
+            <div className="bg-white/5 border border-zinc-800/40 rounded-2xl p-4 transition-all hover:bg-white/[0.08] hover:border-zinc-800/60">
               <p className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-widest mb-2">Session Status</p>
               <p className="text-sm text-zinc-400 font-inter leading-relaxed">
                 AI is listening. Summaries and action items will appear here as the session progresses.
@@ -1252,6 +1380,8 @@ export const RoomPage: React.FC = () => {
   const [isMobileControlsVisible, setIsMobileControlsVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isDockCollapsed, setIsDockCollapsed] = useState(true);
+  const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Live Speech Transcription States
   interface CaptionItem {
@@ -1334,6 +1464,40 @@ export const RoomPage: React.FC = () => {
       setIsMobileControlsVisible(false);
     }, 3000);
   }, []);
+
+  const resetCollapseTimer = useCallback(() => {
+    if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    if (isViewing) {
+      collapseTimerRef.current = setTimeout(() => {
+        setIsDockCollapsed(true);
+      }, 5000); // 5 seconds of inactivity
+    }
+  }, [isViewing]);
+
+  const handleCanvasClick = useCallback(() => {
+    if (isViewing) {
+      setIsDockCollapsed(true);
+    }
+  }, [isViewing]);
+
+  // Collapse dock automatically when screen sharing starts
+  useEffect(() => {
+    if (isViewing) {
+      setIsDockCollapsed(true);
+    }
+  }, [isViewing]);
+
+  // Manage active timer based on collapsed state changes
+  useEffect(() => {
+    if (!isDockCollapsed) {
+      resetCollapseTimer();
+    } else {
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    }
+    return () => {
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    };
+  }, [isDockCollapsed, resetCollapseTimer]);
 
   // Track Fullscreen state
   useEffect(() => {
@@ -1707,20 +1871,6 @@ export const RoomPage: React.FC = () => {
   return (
     <div className="min-h-[100dvh] bg-[#09090b] text-zinc-100 font-inter flex flex-col h-[100dvh] overflow-hidden relative">
 
-      {/* Top Bar */}
-      {!isMobileViewer && (
-        <RoomTopBar
-          roomId={roomId || ''}
-          participantCount={participants.length}
-          isSharing={isSharing}
-          isViewing={isViewing}
-          displayName={displayName}
-          isHost={isHost}
-          onLeave={() => navigate('/dashboard')}
-          onShare={handleShareRoom}
-        />
-      )}
-
       {/* Consent Banner */}
       {showConsentBanner && isTranscriptionActive && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-35 w-full max-w-md px-4 pointer-events-auto">
@@ -1790,70 +1940,278 @@ export const RoomPage: React.FC = () => {
           id="presentation-viewport"
           className="flex-1 relative flex flex-col overflow-hidden bg-[#0c0c0e] border border-white/[0.03] rounded-xl min-w-0 md:my-3 md:mx-3 shadow-panel"
         >
-          {/* Active indicator pills */}
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none">
-            {laserModeActive && (
-              <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Laser Active
-              </div>
-            )}
-            {spotlightActive && (
-              <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                Spotlight Active
-              </div>
-            )}
-            {showLaserPointerNotice && (
-              <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-400 px-3 py-1.5 rounded-full text-[10px] font-inter flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
-                Laser pointer available only when sharing an entire screen
-              </div>
-            )}
-          </div>
+          {/* Main layout routing depending on stream state and mobile viewer status */}
+          {!isMobileViewer && isViewing ? (
+            /* Immersive Presentation Sharing Mode layout */
+            <div 
+              onClick={handleCanvasClick}
+              className="w-full h-full relative flex items-center justify-center bg-black cursor-pointer"
+            >
+              {isViewing && remoteStream && (
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay playsInline muted
+                  className="w-full h-full object-contain z-10"
+                />
+              )}
 
-          {/* Video content */}
-          {isViewing && remoteStream && (
-            <video
-              ref={remoteVideoRef}
-              autoPlay playsInline muted
-              className="w-full h-full object-contain"
-            />
-          )}
+              {/* Overlays floating relative to the video viewport container */}
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none">
+                {laserModeActive && (
+                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none pointer-events-auto">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Laser Active
+                  </div>
+                )}
+                {spotlightActive && (
+                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none pointer-events-auto">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    Spotlight Active
+                  </div>
+                )}
+              </div>
 
-          {/* Empty / sharing state */}
-          {!isViewing && (
-            <div className="flex-1 flex items-center justify-center">
-              <CenterState
-                isHost={isHost}
-                isRequesting={isRequesting}
-                isSharing={isSharing}
-                onStartShare={handleShareToggle}
-                onStopShare={handleShareToggle}
-              />
+              {isSharing && (
+                <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
+                  <Avatar name={displayName} size="xs" color="bg-indigo-600/90" />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-semibold font-inter text-zinc-200 truncate">{displayName} is sharing</span>
+                    <span className="text-[9px] font-mono text-zinc-500">LIVE · Screen</span>
+                  </div>
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse ml-1" />
+                </div>
+              )}
+
+              {/* "Receiving live stream" status pill is completely hidden from viewport per request */}
+
+              {/* Collaboration Dock (Floating overlay) */}
+              {!isMobileViewer && (
+                <CollabDock
+                  isMuted={isMuted}
+                  isHost={isHost}
+                  isSharing={isSharing}
+                  isViewing={isViewing}
+                  hostAudioEnabled={hostAudioEnabled}
+                  viewerMuted={viewerMuted}
+                  viewerVolume={viewerVolume}
+                  messageCount={messages.length}
+                  isPeopleOpen={isPeopleOpen}
+                  isChatOpen={isChatOpen && activeRightTab === 'chat'}
+                  isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
+                  showMoreMenu={showMoreMenu}
+                  autoDelete={autoDelete}
+                  isTranscriptionActive={isTranscriptionActive}
+                  isTranscriptionSupported={isTranscriptionSupported}
+                  onToggleMic={handleToggleMic}
+                  onToggleShare={handleShareToggle}
+                  onToggleHostAudio={toggleHostAudio}
+                  onToggleViewerMute={() => setViewerMuted(p => !p)}
+                  onVolumeChange={v => setViewerVolume(v)}
+                  onToggleChat={handleToggleChat}
+                  onTogglePeople={handleTogglePeople}
+                  onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
+                  onLeave={() => navigate('/dashboard')}
+                  onOpenHostPanel={() => handleOpenRightDrawer('host')}
+                  onShareRoom={handleShareRoom}
+                  onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
+                  onToggleTranscript={handleToggleTranscript}
+                  isCollapsed={isDockCollapsed}
+                  onToggleCollapse={() => {
+                    setIsDockCollapsed(p => !p);
+                    resetCollapseTimer();
+                  }}
+                  onMouseEnter={resetCollapseTimer}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resetCollapseTimer();
+                  }}
+                />
+              )}
             </div>
-          )}
+          ) : (
+            /* Immersive floating overlay layouts for desktop empty stage or mobile presentation viewports */
+            <>
+              {/* Floating Top Bar (Desktop only) */}
+              {!isMobileViewer && (
+                <RoomTopBar
+                  roomId={roomId || ''}
+                  participantCount={participants.length}
+                  isSharing={isSharing}
+                  isViewing={isViewing}
+                  displayName={displayName}
+                  isHost={isHost}
+                  onLeave={() => navigate('/dashboard')}
+                  onShare={handleShareRoom}
+                />
+              )}
 
-          {/* Presenter pill */}
-          {isSharing && (
-            <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
-              <Avatar name={displayName} size="xs" color="bg-indigo-600/90" />
-              <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-semibold font-inter text-zinc-200 truncate">{displayName} is sharing</span>
-                <span className="text-[9px] font-mono text-zinc-500">LIVE · Screen</span>
+              {/* Active indicator pills */}
+              <div className="absolute top-15 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none">
+                {laserModeActive && (
+                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Laser Active
+                  </div>
+                )}
+                {spotlightActive && (
+                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    Spotlight Active
+                  </div>
+                )}
+                {showLaserPointerNotice && (
+                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-400 px-3 py-1.5 rounded-full text-[10px] font-inter flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                    Laser pointer available only when sharing an entire screen
+                  </div>
+                )}
               </div>
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse ml-1" />
-            </div>
-          )}
 
-          {/* Viewer status pill */}
-          {isViewing && (
-            <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#c0c1ff] animate-pulse-slow" />
-              <span className="text-[10px] font-semibold font-inter text-zinc-200">Receiving live stream</span>
-            </div>
-          )}
+              {/* Video content (Mobile viewport or absolute overlay backups) */}
+              {isViewing && remoteStream && (
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay playsInline muted
+                  className="w-full h-full object-contain"
+                />
+              )}
 
-          {/* Removed duplicate connection indicator */}
+              {/* Empty / sharing state */}
+              {!isViewing && (
+                <div className="flex-1 flex items-center justify-center">
+                  <CenterState
+                    isHost={isHost}
+                    isRequesting={isRequesting}
+                    isSharing={isSharing}
+                    onStartShare={handleShareToggle}
+                    onStopShare={handleShareToggle}
+                  />
+                </div>
+              )}
+
+              {/* Presenter pill */}
+              {isSharing && (
+                <div className="absolute top-15 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
+                  <Avatar name={displayName} size="xs" color="bg-indigo-600/90" />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-semibold font-inter text-zinc-200 truncate">{displayName} is sharing</span>
+                    <span className="text-[9px] font-mono text-zinc-500">LIVE · Screen</span>
+                  </div>
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse ml-1" />
+                </div>
+              )}
+
+              {/* Viewer status pill */}
+              {isViewing && (
+                <div className="absolute top-15 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#c0c1ff] animate-pulse-slow" />
+                  <span className="text-[10px] font-semibold font-inter text-zinc-200">Receiving live stream</span>
+                </div>
+              )}
+
+              {/* Collaboration Dock (Floating overlay) */}
+              {!isMobileViewer && (
+                <CollabDock
+                  isMuted={isMuted}
+                  isHost={isHost}
+                  isSharing={isSharing}
+                  isViewing={isViewing}
+                  hostAudioEnabled={hostAudioEnabled}
+                  viewerMuted={viewerMuted}
+                  viewerVolume={viewerVolume}
+                  messageCount={messages.length}
+                  isPeopleOpen={isPeopleOpen}
+                  isChatOpen={isChatOpen && activeRightTab === 'chat'}
+                  isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
+                  showMoreMenu={showMoreMenu}
+                  autoDelete={autoDelete}
+                  isTranscriptionActive={isTranscriptionActive}
+                  isTranscriptionSupported={isTranscriptionSupported}
+                  onToggleMic={handleToggleMic}
+                  onToggleShare={handleShareToggle}
+                  onToggleHostAudio={toggleHostAudio}
+                  onToggleViewerMute={() => setViewerMuted(p => !p)}
+                  onVolumeChange={v => setViewerVolume(v)}
+                  onToggleChat={handleToggleChat}
+                  onTogglePeople={handleTogglePeople}
+                  onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
+                  onLeave={() => navigate('/dashboard')}
+                  onOpenHostPanel={() => handleOpenRightDrawer('host')}
+                  onShareRoom={handleShareRoom}
+                  onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
+                  onToggleTranscript={handleToggleTranscript}
+                />
+              )}
+
+              {/* Mobile Presentation overlays */}
+              {isMobileViewer && (
+                <>
+                  {/* Floating Header */}
+                  <div
+                    className={`absolute left-4 right-4 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isMobileControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}
+                    style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+                  >
+                    <FloatingHeader
+                      roomId={roomId || ''}
+                      participantCount={participants.length}
+                      showCopied={showCopied}
+                      onShare={handleShareRoom}
+                      onInteraction={showMobileControls}
+                      onRelease={showMobileControls}
+                    />
+                  </div>
+
+                  {/* Floating Quick Controls Dock */}
+                  <div
+                    className={`absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isMobileControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                    style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+                  >
+                    <FloatingQuickControls
+                      isMuted={isMuted}
+                      viewerMuted={viewerMuted}
+                      isChatOpen={isChatOpen}
+                      isPeopleOpen={isPeopleOpen}
+                      isFullscreen={isFullscreen}
+                      messageCount={messages.length}
+                      onToggleMic={handleToggleMic}
+                      onToggleViewerMute={() => setViewerMuted(p => !p)}
+                      onToggleChat={handleToggleChat}
+                      onTogglePeople={handleTogglePeople}
+                      onToggleFullscreen={toggleFullscreen}
+                      onLeave={() => navigate('/dashboard')}
+                      onInteraction={showMobileControls}
+                      onRelease={showMobileControls}
+                    />
+                  </div>
+
+                  {/* Slide-over Floating Chat Overlay */}
+                  <FloatingChat
+                    isOpen={isChatOpen}
+                    messages={messages}
+                    chatInput={chatInput}
+                    chatEndRef={chatEndRef}
+                    displayName={displayName}
+                    onClose={() => setIsChatOpen(false)}
+                    onChatInputChange={setChatInput}
+                    onSendMessage={handleSendMessage}
+                    onInteraction={showMobileControls}
+                    onRelease={showMobileControls}
+                  />
+
+                  {/* Slide-over Floating Participants Overlay */}
+                  <FloatingParticipants
+                    isOpen={isPeopleOpen}
+                    participants={participants}
+                    currentUserId={currentSocketId}
+                    isHost={isHost}
+                    onClose={() => setIsPeopleOpen(false)}
+                    onRemoveParticipant={(targetId) => wsClient.send('remove_participant', { targetId })}
+                    onInteraction={showMobileControls}
+                    onRelease={showMobileControls}
+                  />
+                </>
+              )}
+            </>
+          )}
 
           {/* Live Caption Overlay */}
           {activeCaptions.length > 0 && (
@@ -1884,110 +2242,6 @@ export const RoomPage: React.FC = () => {
               </div>
             </div>
           )}
-
-
-          {/* Collaboration Dock */}
-          {!isMobileViewer && (
-            <CollabDock
-              isMuted={isMuted}
-              isHost={isHost}
-              isSharing={isSharing}
-              isViewing={isViewing}
-              hostAudioEnabled={hostAudioEnabled}
-              viewerMuted={viewerMuted}
-              viewerVolume={viewerVolume}
-              messageCount={messages.length}
-              isPeopleOpen={isPeopleOpen}
-              isChatOpen={isChatOpen && activeRightTab === 'chat'}
-              isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
-              showMoreMenu={showMoreMenu}
-              autoDelete={autoDelete}
-              isTranscriptionActive={isTranscriptionActive}
-              isTranscriptionSupported={isTranscriptionSupported}
-              onToggleMic={handleToggleMic}
-              onToggleShare={handleShareToggle}
-              onToggleHostAudio={toggleHostAudio}
-              onToggleViewerMute={() => setViewerMuted(p => !p)}
-              onVolumeChange={v => setViewerVolume(v)}
-              onToggleChat={handleToggleChat}
-              onTogglePeople={handleTogglePeople}
-              onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
-              onLeave={() => navigate('/dashboard')}
-              onOpenHostPanel={() => handleOpenRightDrawer('host')}
-              onShareRoom={handleShareRoom}
-              onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
-              onToggleTranscript={handleToggleTranscript}
-            />
-          )}
-
-          {/* Mobile Presentation overlays */}
-          {isMobileViewer && (
-            <>
-              {/* Floating Header */}
-              <div
-                className={`absolute left-4 right-4 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isMobileControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}
-                style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
-              >
-                <FloatingHeader
-                  roomId={roomId || ''}
-                  participantCount={participants.length}
-                  showCopied={showCopied}
-                  onShare={handleShareRoom}
-                  onInteraction={showMobileControls}
-                  onRelease={showMobileControls}
-                />
-              </div>
-
-              {/* Floating Quick Controls Dock */}
-              <div
-                className={`absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isMobileControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
-              >
-                <FloatingQuickControls
-                  isMuted={isMuted}
-                  viewerMuted={viewerMuted}
-                  isChatOpen={isChatOpen}
-                  isPeopleOpen={isPeopleOpen}
-                  isFullscreen={isFullscreen}
-                  messageCount={messages.length}
-                  onToggleMic={handleToggleMic}
-                  onToggleViewerMute={() => setViewerMuted(p => !p)}
-                  onToggleChat={handleToggleChat}
-                  onTogglePeople={handleTogglePeople}
-                  onToggleFullscreen={toggleFullscreen}
-                  onLeave={() => navigate('/dashboard')}
-                  onInteraction={showMobileControls}
-                  onRelease={showMobileControls}
-                />
-              </div>
-
-              {/* Slide-over Floating Chat Overlay */}
-              <FloatingChat
-                isOpen={isChatOpen}
-                messages={messages}
-                chatInput={chatInput}
-                chatEndRef={chatEndRef}
-                displayName={displayName}
-                onClose={() => setIsChatOpen(false)}
-                onChatInputChange={setChatInput}
-                onSendMessage={handleSendMessage}
-                onInteraction={showMobileControls}
-                onRelease={showMobileControls}
-              />
-
-              {/* Slide-over Floating Participants Overlay */}
-              <FloatingParticipants
-                isOpen={isPeopleOpen}
-                participants={participants}
-                currentUserId={currentSocketId}
-                isHost={isHost}
-                onClose={() => setIsPeopleOpen(false)}
-                onRemoveParticipant={(targetId) => wsClient.send('remove_participant', { targetId })}
-                onInteraction={showMobileControls}
-                onRelease={showMobileControls}
-              />
-            </>
-          )}
         </main>
 
         {/* RIGHT DRAWER (Chat / AI / Host) */}
@@ -2014,6 +2268,8 @@ export const RoomPage: React.FC = () => {
             onTransferHost={targetId => wsClient.send('transfer_host', { targetId })}
             onRemoveParticipant={targetId => wsClient.send('remove_participant', { targetId })}
             onToggleTranscription={handleToggleTranscription}
+            isViewing={isViewing}
+            isSharing={isSharing}
           />
         )}
       </div>

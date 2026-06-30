@@ -8,10 +8,28 @@ import type { PastSession } from '../types';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
 import { useAuth } from '../context/AuthContext';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
+import {
+  Plus,
+  Users,
+  Clock,
+  Sparkles,
+  Search,
+  ArrowRight,
+  ShieldAlert,
+  Check,
+  X,
+  Tv,
+  UserPlus,
+  ChevronRight,
+  Compass,
+  Activity,
+  User,
+  Menu
+} from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────
    STAT CARD
-───────────────────────────────────────────────────────────── */
+   ───────────────────────────────────────────────────────────── */
 interface StatCardProps {
   label: string;
   value: string | number;
@@ -21,25 +39,25 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, sub, icon, accent = '#c0c1ff' }) => (
-  <div className="db-card p-4 flex flex-col gap-3">
+  <div className="flex flex-col gap-3.5 p-5 sm:p-6 select-none transition-all hover:bg-white/[0.01]">
     <div className="flex items-start justify-between">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${accent}14` }}>
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/[0.02] border border-white/[0.04]">
         <span style={{ color: accent }}>{icon}</span>
       </div>
       {sub && (
-        <span className="text-[10px] font-geist text-zinc-600 bg-[#1a1a1d] px-1.5 py-0.5 rounded-full">{sub}</span>
+        <span className="status-pill-neutral font-geist text-[9px] tracking-wide py-0.5 px-2">{sub}</span>
       )}
     </div>
     <div>
-      <p className="text-2xl font-black font-geist text-white tracking-tight leading-none mb-0.5">{value}</p>
-      <p className="text-xs text-zinc-500 font-inter">{label}</p>
+      <p className="text-2xl font-bold font-geist text-white tracking-tight leading-none mb-1.5">{value}</p>
+      <p className="text-xs text-zinc-400 font-inter">{label}</p>
     </div>
   </div>
 );
 
 /* ─────────────────────────────────────────────────────────────
    LIVE ROOM CARD
-───────────────────────────────────────────────────────────── */
+   ───────────────────────────────────────────────────────────── */
 interface LiveRoomCardProps {
   name: string;
   hostName: string;
@@ -66,40 +84,37 @@ const WaveformBarsSmall: React.FC = () => (
 );
 
 const LiveRoomCard: React.FC<LiveRoomCardProps> = ({ name, hostName, participantCount, duration, onJoin }) => (
-  <div className="db-card p-4 flex flex-col gap-3 group">
+  <div className="db-card p-4.5 flex flex-col gap-3.5 group select-none">
     {/* Header */}
-    <div className="flex items-start justify-between gap-2">
+    <div className="flex items-start justify-between gap-2.5">
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
-          <span className="text-[10px] font-bold font-geist text-red-400 uppercase tracking-wider">Live</span>
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="status-pill-live text-[9px] py-0.5 px-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            Live
+          </span>
         </div>
-        <h3 className="text-sm font-bold font-geist text-white leading-snug truncate">{name}</h3>
+        <h3 className="text-sm font-bold font-geist text-white leading-snug truncate group-hover:text-[#c0c1ff] transition-colors">{name}</h3>
       </div>
-      <span className="text-[10px] font-mono text-zinc-500 bg-[#1a1a1d] px-1.5 py-0.5 rounded flex-shrink-0 mt-1">{duration}</span>
+      <span className="status-pill-neutral font-mono text-[9px] py-0.5 px-2 flex-shrink-0 mt-0.5">{duration}</span>
     </div>
 
     {/* Meta */}
-    <div className="flex items-center gap-3 text-xs text-zinc-500 font-inter">
+    <div className="flex items-center gap-3 text-xs text-zinc-400 font-inter">
       <div className="flex items-center gap-1.5">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-        </svg>
-        <span>{hostName}</span>
+        <User size={13} className="text-zinc-500" />
+        <span className="text-zinc-400">{hostName}</span>
       </div>
       <div className="flex items-center gap-1.5">
         <WaveformBarsSmall />
-        <span>{participantCount} active</span>
+        <span className="text-zinc-400">{participantCount} active</span>
       </div>
     </div>
 
     {/* Join */}
     <button
       onClick={onJoin}
-      className="w-full py-2 rounded-lg text-xs font-semibold font-geist text-[#09090b] transition-all cursor-pointer"
-      style={{ background: '#c0c1ff' }}
-      onMouseEnter={e => (e.currentTarget.style.background = '#d0d1ff')}
-      onMouseLeave={e => (e.currentTarget.style.background = '#c0c1ff')}
+      className="btn-pill-primary w-full text-xs h-8.5"
     >
       Join Room
     </button>
@@ -108,34 +123,45 @@ const LiveRoomCard: React.FC<LiveRoomCardProps> = ({ name, hostName, participant
 
 /* ─────────────────────────────────────────────────────────────
    ACTIVITY FEED ITEM
-───────────────────────────────────────────────────────────── */
+   ───────────────────────────────────────────────────────────── */
 const feedItems = [
-  { icon: '▶', color: '#c0c1ff', bg: '#c0c1ff14', user: 'Girish K', action: 'started screen sharing', room: 'Design Review', time: '2m ago' },
-  { icon: '+', color: '#10b981', bg: '#10b98114', user: 'Sarah Johnson', action: 'joined', room: 'Weekly Tech Sync', time: '5m ago' },
-  { icon: '✦', color: '#c0c1ff', bg: '#c0c1ff14', user: 'AI', action: 'generated session summary', room: 'API Review', time: '12m ago' },
-  { icon: '⊕', color: '#8b5cf6', bg: '#8b5cf614', user: 'Alex Smith', action: 'created room', room: 'Sprint Planning', time: '24m ago' },
-  { icon: '✓', color: '#52525b', bg: '#52525b14', user: 'Marco Rossi', action: 'ended session', room: 'Client Demo', time: '1h ago' },
+  { icon: '▶', color: '#c0c1ff', bg: 'rgba(192, 193, 255, 0.08)', user: 'Girish K', action: 'started screen sharing', room: 'Design Review', time: '2m ago' },
+  { icon: '+', color: '#10b981', bg: 'rgba(16, 185, 129, 0.08)', user: 'Sarah Johnson', action: 'joined', room: 'Weekly Tech Sync', time: '5m ago' },
+  { icon: '✦', color: '#c0c1ff', bg: 'rgba(192, 193, 255, 0.08)', user: 'AI', action: 'generated session summary', room: 'API Review', time: '12m ago' },
+  { icon: '⊕', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.08)', user: 'Alex Smith', action: 'created room', room: 'Sprint Planning', time: '24m ago' },
+  { icon: '✓', color: '#a1a1aa', bg: 'rgba(255, 255, 255, 0.05)', user: 'Marco Rossi', action: 'ended session', room: 'Client Demo', time: '1h ago' },
 ];
 
+const getActivityIcon = (iconStr: string) => {
+  switch (iconStr) {
+    case '▶': return <Tv size={12} />;
+    case '+': return <UserPlus size={12} />;
+    case '✦': return <Sparkles size={12} />;
+    case '⊕': return <Plus size={12} />;
+    case '✓': return <Check size={12} />;
+    default: return <Tv size={12} />;
+  }
+};
+
 const ActivityFeedItem: React.FC<typeof feedItems[0]> = ({ icon, color, bg, user, action, room, time }) => (
-  <div className="flex items-start gap-3 py-3 border-b border-[#1a1a1d] last:border-b-0">
-    <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-bold" style={{ background: bg, color }}>
-      {icon}
+  <div className="flex items-start gap-3 py-3 px-1 border-b border-white/[0.02] last:border-b-0 hover:bg-white/[0.01] transition-all rounded-lg select-none">
+    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: bg, color }}>
+      {getActivityIcon(icon)}
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-sm text-zinc-300 font-inter leading-snug">
-        <span className="font-semibold text-zinc-100 font-geist">{user}</span>
+      <p className="text-xs text-zinc-300 font-inter leading-relaxed">
+        <span className="font-bold text-zinc-100 font-geist">{user}</span>
         {' '}{action}{' '}
-        <span className="text-[#c0c1ff]">{room}</span>
+        <span className="text-[#c0c1ff] font-semibold">{room}</span>
       </p>
-      <p className="text-[11px] text-zinc-600 mt-0.5 font-geist">{time}</p>
+      <p className="text-[10px] text-zinc-500 mt-1 font-geist">{time}</p>
     </div>
   </div>
 );
 
 /* ─────────────────────────────────────────────────────────────
    RECENT ROOM (jump-back) ROW
-───────────────────────────────────────────────────────────── */
+   ───────────────────────────────────────────────────────────── */
 interface JumpBackRowProps {
   roomCode: string;
   participantCount: number;
@@ -145,35 +171,29 @@ interface JumpBackRowProps {
 const JumpBackRow: React.FC<JumpBackRowProps> = ({ roomCode, participantCount, onClick }) => (
   <button
     onClick={onClick}
-    className="w-full flex items-center justify-between p-3 rounded-xl border border-[#1e1e21] bg-[#111113] hover:border-[#c0c1ff]/20 hover:bg-[#141416] transition-all text-left cursor-pointer group"
+    className="w-full flex items-center justify-between p-3.5 hover:bg-white/[0.02] transition-all duration-150 text-left cursor-pointer group active:scale-[0.99]"
   >
     <div className="flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg bg-[#c0c1ff]/8 border border-[#c0c1ff]/15 flex items-center justify-center flex-shrink-0">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c0c1ff" strokeWidth="2">
-          <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
-        </svg>
+      <div className="w-8.5 h-8.5 rounded-lg bg-[#c0c1ff]/5 border border-[#c0c1ff]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#c0c1ff]/10 group-hover:border-[#c0c1ff]/20 transition-all">
+        <Tv size={14} className="text-[#c0c1ff]" />
       </div>
       <div>
-        <p className="text-sm font-semibold font-geist text-zinc-200">{roomCode}</p>
-        <p className="text-xs text-zinc-500 font-inter">
+        <p className="text-sm font-semibold font-geist text-zinc-200 group-hover:text-white transition-colors">{roomCode}</p>
+        <p className="text-xs text-zinc-500 font-inter mt-0.5">
           {participantCount > 0 ? `${participantCount} active now` : 'Retained'}
         </p>
       </div>
     </div>
     <div className="flex items-center gap-2">
-      {participantCount > 0 && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-      <svg className="text-zinc-600 group-hover:text-[#c0c1ff] transition-colors" width="14" height="14"
-        viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M5 12h14M12 5l7 7-7 7" />
-      </svg>
+      {participantCount > 0 && <span className="status-pill-connected text-[9px] py-0.5 px-2">Active</span>}
+      <ChevronRight className="text-zinc-500 group-hover:text-[#c0c1ff] group-hover:translate-x-0.5 transition-all" size={16} />
     </div>
   </button>
 );
 
 /* ─────────────────────────────────────────────────────────────
    DASHBOARD HEADER (replaces TopBar)
-───────────────────────────────────────────────────────────── */
+   ───────────────────────────────────────────────────────────── */
 interface DashHeaderProps {
   onCreateRoom: () => void;
   onToggleSidebar: () => void;
@@ -181,25 +201,23 @@ interface DashHeaderProps {
 }
 
 const DashHeader: React.FC<DashHeaderProps> = ({ onCreateRoom, onToggleSidebar, activeRoomCount }) => (
-  <header className="sticky top-0 z-20 bg-[#09090b]/90 backdrop-blur-md border-b border-[#1e1e21]">
+  <header className="sticky top-0 z-20 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/[0.04]">
     <div className="flex items-center justify-between px-4 sm:px-6 h-14">
       {/* Left: hamburger (mobile) + title */}
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleSidebar}
-          className="md:hidden p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-[#1a1a1d] transition-colors cursor-pointer"
+          className="md:hidden p-1.5 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors cursor-pointer"
           aria-label="Toggle sidebar"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
+          <Menu size={18} />
         </button>
         {/* Workspace title */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <img src={interactLogo} alt="" className="h-5 w-auto md:hidden" />
-          <h1 className="text-sm font-bold font-geist text-white hidden sm:block">Workspace</h1>
+          <h1 className="text-sm font-bold font-geist text-white hidden sm:block select-none">Workspace</h1>
           {activeRoomCount > 0 && (
-            <div className="hidden sm:flex items-center gap-1.5 bg-emerald-400/8 border border-emerald-400/20 px-2 py-0.5 rounded-full">
+            <div className="hidden sm:flex items-center gap-1.5 status-pill-connected py-0.5 px-2.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[10px] font-semibold font-geist text-emerald-400">{activeRoomCount} live</span>
             </div>
@@ -212,22 +230,18 @@ const DashHeader: React.FC<DashHeaderProps> = ({ onCreateRoom, onToggleSidebar, 
         <AgentStatusIndicator showRefresh={true} />
         {/* Command-palette search */}
         <button
-          className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#111113] border border-[#1e1e21] text-zinc-500 hover:border-[#27272a] hover:text-zinc-300 transition-all cursor-pointer text-xs font-geist"
+          className="hidden md:flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.04] text-zinc-400 hover:border-white/[0.08] hover:bg-white/[0.04] hover:text-zinc-200 transition-all cursor-pointer text-xs font-geist active:scale-95"
           onClick={() => {}}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-          </svg>
+          <Search size={13} />
           <span>Search rooms...</span>
-          <kbd className="ml-2 text-[9px] border border-[#27272a] px-1 rounded text-zinc-600">⌘K</kbd>
+          <kbd className="ml-2 text-[9px] border border-white/10 px-1.5 py-0.2 rounded text-zinc-500">⌘K</kbd>
         </button>
         <button
           onClick={onCreateRoom}
-          className="lp-btn-primary text-xs h-9 px-3 sm:px-4"
+          className="btn-pill-primary text-xs h-9 px-4 sm:px-4.5"
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <Plus size={13} />
           <span className="hidden xs:inline">Create Room</span>
           <span className="xs:hidden">New</span>
         </button>
@@ -238,7 +252,7 @@ const DashHeader: React.FC<DashHeaderProps> = ({ onCreateRoom, onToggleSidebar, 
 
 /* ─────────────────────────────────────────────────────────────
    MAIN DASHBOARD PAGE
-───────────────────────────────────────────────────────────── */
+   ───────────────────────────────────────────────────────────── */
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -346,18 +360,18 @@ export const DashboardPage: React.FC = () => {
         activeRoomCount={totalActiveRooms}
       />
 
-      {/* Error toast */}
+      {/* Error toast warning */}
       {apiError && (
-        <div className="fixed top-4 right-4 z-50 w-80 bg-[#111113] border border-red-500/30 p-4 rounded-xl shadow-2xl flex items-start gap-3">
-          <div className="w-5 h-5 rounded-full bg-red-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        <div className="fixed top-4 right-4 z-50 w-80 bg-[#0c0c0e] border border-red-500/20 p-4 rounded-xl shadow-2xl flex items-start gap-3 backdrop-blur-md transition-all duration-300">
+          <div className="w-5.5 h-5.5 rounded-full bg-red-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-red-500/20">
+            <ShieldAlert size={12} className="text-red-400" />
           </div>
           <div className="flex-1">
             <p className="text-xs font-bold font-geist text-red-400 mb-0.5">Room Error</p>
             <p className="text-xs text-zinc-400 font-inter leading-relaxed">{apiError}</p>
           </div>
-          <button onClick={() => setApiError('')} className="text-zinc-600 hover:text-zinc-300 cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+          <button onClick={() => setApiError('')} className="text-zinc-550 hover:text-zinc-300 cursor-pointer active:scale-90 transition-all">
+            <X size={14} />
           </button>
         </div>
       )}
@@ -367,37 +381,39 @@ export const DashboardPage: React.FC = () => {
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6 sm:gap-8">
 
           {/* ── WORKSPACE HERO ── */}
-          <section className="relative overflow-hidden rounded-2xl border border-[#1e1e21] bg-[#0d0d10] p-6 sm:p-8">
+          <section className="relative overflow-hidden rounded-2xl border border-white/[0.03] bg-gradient-to-r from-black/40 to-white/[0.01] p-6 sm:p-8 shadow-panel">
             {/* Ambient radial */}
             <div className="absolute inset-0 pointer-events-none" style={{
-              background: 'radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.1) 0%, transparent 60%)',
+              background: 'radial-gradient(ellipse at 10% 50%, rgba(192, 193, 255, 0.06) 0%, transparent 60%)',
             }} />
             <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
               {/* Left: greeting */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs font-geist text-emerald-400">Workspace online</span>
+                <div className="flex items-center gap-2 mb-3.5 select-none">
+                  <span className="status-pill-connected text-[10px] py-0.5 px-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-slow" />
+                    Workspace online
+                  </span>
                 </div>
-                <h2 className="font-geist font-black text-white tracking-tight leading-tight mb-2"
-                  style={{ fontSize: 'clamp(22px, 3vw, 32px)' }}>
+                <h2 className="font-geist font-bold text-white tracking-tight leading-tight mb-2.5 select-none"
+                  style={{ fontSize: 'clamp(22px, 3vw, 30px)' }}>
                   Ready to collaborate?
                 </h2>
-                <p className="text-sm text-zinc-400 max-w-md leading-relaxed">
+                <p className="text-sm text-zinc-400 max-w-md leading-relaxed select-none">
                   Your collaboration workspace is active.{' '}
-                  <span className="text-zinc-300">{totalActiveRooms} live {totalActiveRooms === 1 ? 'room' : 'rooms'}</span>
+                  <span className="text-[#c0c1ff] font-semibold">{totalActiveRooms} live {totalActiveRooms === 1 ? 'room' : 'rooms'}</span>
                   {' '}running right now.
                 </p>
               </div>
               {/* Right: quick stats strip */}
-              <div className="flex gap-3 sm:flex-col sm:items-end">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black font-geist text-white">{totalActiveRooms}</span>
+              <div className="flex gap-4 sm:gap-6 sm:flex-row sm:items-center select-none">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-3xl font-bold font-geist text-white leading-none">{totalActiveRooms}</span>
                   <span className="text-xs text-zinc-500 font-inter leading-tight">Active<br/>rooms</span>
                 </div>
-                <div className="w-px bg-[#1e1e21] sm:hidden" />
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black font-geist text-white">
+                <div className="w-px h-6 bg-white/[0.04] hidden sm:block" />
+                <div className="flex items-center gap-2.5">
+                  <span className="text-3xl font-bold font-geist text-white leading-none">
                     {MOCK_ROOMS.reduce((a, r) => a + r.participants.length, 0)}
                   </span>
                   <span className="text-xs text-zinc-500 font-inter leading-tight">Live<br/>collaborators</span>
@@ -406,35 +422,35 @@ export const DashboardPage: React.FC = () => {
             </div>
           </section>
 
-          {/* ── STAT CARDS ── */}
-          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {/* ── STAT CARDS (Merged Surface) ── */}
+          <section className="db-card grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.03] overflow-hidden">
             <StatCard
               label="Rooms created today"
               value="6"
               sub="+2 vs yesterday"
               accent="#c0c1ff"
-              icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14" /></svg>}
+              icon={<Plus size={16} />}
             />
             <StatCard
               label="Collaboration time"
               value="4h 12m"
               sub="Today"
               accent="#10b981"
-              icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>}
+              icon={<Clock size={16} />}
             />
             <StatCard
               label="Active participants"
               value={MOCK_ROOMS.reduce((a, r) => a + r.participants.length, 0)}
               sub="Right now"
               accent="#8b5cf6"
-              icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>}
+              icon={<Users size={16} />}
             />
             <StatCard
               label="AI summaries"
               value="3"
               sub="This week"
               accent="#f59e0b"
-              icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 9H22L16 13.5L18.5 20.5L12 16L5.5 20.5L8 13.5L2 9H9.5L12 2Z" fill="#f59e0b" /></svg>}
+              icon={<Sparkles size={16} />}
             />
           </section>
 
@@ -443,56 +459,46 @@ export const DashboardPage: React.FC = () => {
             {/* Create Room — dominant */}
             <button
               onClick={handleCreateTrigger}
-              className="db-action-primary group text-left cursor-pointer relative overflow-hidden rounded-2xl p-6 sm:p-7 flex flex-col gap-4 min-h-[160px] sm:min-h-[180px] transition-all"
+              className="db-action-primary group text-left cursor-pointer relative overflow-hidden rounded-2xl p-6 sm:p-7 flex flex-col gap-4 min-h-[160px] sm:min-h-[180px] transition-all active:scale-[0.99] duration-150"
             >
               {/* Subtle ambient */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                style={{ background: 'radial-gradient(circle at 30% 40%, rgba(192,193,255,0.06) 0%, transparent 70%)' }} />
+                style={{ background: 'radial-gradient(circle at 30% 40%, rgba(192,193,255,0.04) 0%, transparent 70%)' }} />
               {/* Icon */}
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#c0c1ff18', border: '1px solid #c0c1ff25' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c0c1ff" strokeWidth="2.5">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#c0c1ff]/5 border border-[#c0c1ff]/15 group-hover:bg-[#c0c1ff]/10 group-hover:border-[#c0c1ff]/25 transition-all">
+                <Plus size={18} className="text-[#c0c1ff]" />
               </div>
               {/* Text */}
               <div>
-                <h3 className="text-base font-black font-geist text-white tracking-tight mb-1.5">Create Room</h3>
-                <p className="text-sm text-zinc-400 leading-relaxed">
+                <h3 className="text-base font-bold font-geist text-white tracking-tight mb-1.5">Create Room</h3>
+                <p className="text-sm text-zinc-400 leading-relaxed font-inter">
                   Launch an instant collaboration room. Share your link and your team joins in seconds.
                 </p>
               </div>
               {/* Arrow */}
               <div className="flex items-center gap-1.5 mt-auto">
                 <span className="text-xs font-semibold font-geist text-[#c0c1ff]">Start now</span>
-                <svg className="transition-transform group-hover:translate-x-1" width="14" height="14"
-                  viewBox="0 0 24 24" fill="none" stroke="#c0c1ff" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
+                <ArrowRight className="text-[#c0c1ff] transition-transform group-hover:translate-x-0.5" size={14} />
               </div>
             </button>
 
             {/* Join Room */}
             <button
               onClick={handleJoinTrigger}
-              className="db-action-secondary group text-left cursor-pointer rounded-2xl p-6 sm:p-7 flex flex-col gap-4 min-h-[160px] sm:min-h-[180px] transition-all"
+              className="db-action-secondary group text-left cursor-pointer rounded-2xl p-6 sm:p-7 flex flex-col gap-4 min-h-[160px] sm:min-h-[180px] transition-all active:scale-[0.99] duration-150"
             >
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#1a1a1d] border border-[#27272a]">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2">
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><polyline points="10 17 15 12 10 7" /><line x1="15" y1="12" x2="3" y2="12" />
-                </svg>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.02] border border-white/[0.04] group-hover:bg-white/[0.05] group-hover:border-white/[0.08] transition-all">
+                <Compass size={18} className="text-zinc-400 group-hover:text-zinc-300 transition-colors" />
               </div>
               <div>
-                <h3 className="text-base font-black font-geist text-zinc-200 tracking-tight mb-1.5">Join a Room</h3>
-                <p className="text-sm text-zinc-500 leading-relaxed">
+                <h3 className="text-base font-bold font-geist text-zinc-200 tracking-tight mb-1.5">Join a Room</h3>
+                <p className="text-sm text-zinc-400 leading-relaxed font-inter">
                   Have a room code? Enter it to join an active collaboration session instantly.
                 </p>
               </div>
               <div className="flex items-center gap-1.5 mt-auto">
                 <span className="text-xs font-semibold font-geist text-zinc-500 group-hover:text-zinc-300 transition-colors">Enter code</span>
-                <svg className="transition-transform group-hover:translate-x-1 text-zinc-500 group-hover:text-zinc-300" width="14" height="14"
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
+                <ArrowRight className="text-zinc-500 group-hover:text-zinc-300 transition-all transition-transform group-hover:translate-x-0.5" size={14} />
               </div>
             </button>
           </section>
@@ -501,21 +507,21 @@ export const DashboardPage: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
             {/* LEFT + MIDDLE: Live Rooms + Recent Rooms */}
-            <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6">
+            <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-7">
 
               {/* Live rooms */}
               {MOCK_ROOMS.length > 0 && (
                 <section>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-3.5 select-none">
                     <h2 className="text-xs font-bold font-geist text-zinc-500 uppercase tracking-widest">
                       Active Rooms ({MOCK_ROOMS.length})
                     </h2>
-                    <div className="flex items-center gap-1.5">
+                    <span className="status-pill-live text-[8px] py-0.5 px-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                      <span className="text-[10px] text-zinc-600 font-geist">Live</span>
-                    </div>
+                      Live
+                    </span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     {MOCK_ROOMS.map(room => (
                       <LiveRoomCard
                         key={room.id}
@@ -530,13 +536,13 @@ export const DashboardPage: React.FC = () => {
                 </section>
               )}
 
-              {/* Jump back in */}
+              {/* Jump back in & History (Unified lists surfaces) */}
               <section>
-                <h2 className="text-xs font-bold font-geist text-zinc-500 uppercase tracking-widest mb-3">
+                <h2 className="text-xs font-bold font-geist text-zinc-500 uppercase tracking-widest mb-3.5 select-none">
                   Recent Rooms
                 </h2>
                 {jumpBackRooms.length > 0 ? (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col border border-white/[0.03] bg-[#0c0c0e] rounded-2xl divide-y divide-white/[0.02] shadow-panel overflow-hidden">
                     {jumpBackRooms.map(room => (
                       <JumpBackRow
                         key={room.roomCode}
@@ -547,31 +553,25 @@ export const DashboardPage: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  /* Recent rooms from DB */
-                  <div className="flex flex-col gap-2">
+                  /* Recent rooms from DB grouped in unified list card */
+                  <div className="flex flex-col border border-white/[0.03] bg-[#0c0c0e] rounded-2xl divide-y divide-white/[0.02] shadow-panel overflow-hidden">
                     {pastSessions.slice(0, 3).map(session => (
                       <div key={session.id}
-                        className="flex items-center justify-between p-3 rounded-xl border border-[#1e1e21] bg-[#111113]">
+                        className="flex items-center justify-between p-3.5 hover:bg-white/[0.01] transition-all duration-150 select-none">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-[#1a1a1d] flex items-center justify-center flex-shrink-0">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#52525b" strokeWidth="2">
-                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-                            </svg>
+                          <div className="w-8.5 h-8.5 rounded-lg bg-white/[0.02] border border-white/[0.04] flex items-center justify-center flex-shrink-0">
+                            <User size={14} className="text-zinc-400" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold font-geist text-zinc-300 leading-none mb-0.5">{session.roomName}</p>
-                            <p className="text-[11px] text-zinc-600 font-inter">{session.hostName} · {session.durationString}</p>
+                            <p className="text-sm font-semibold font-geist text-zinc-300 leading-none mb-1">{session.roomName}</p>
+                            <p className="text-[11px] text-zinc-500 font-inter">{session.hostName} · {session.durationString}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[9px] font-bold font-geist uppercase px-1.5 py-0.5 rounded-full ${
-                            session.status === 'completed'
-                              ? 'bg-emerald-400/10 text-emerald-500'
-                              : 'bg-zinc-800 text-zinc-500'
-                          }`}>
+                        <div className="flex items-center gap-2.5">
+                          <span className={session.status === 'completed' ? 'status-pill-completed' : 'status-pill-neutral text-[9px] uppercase tracking-wider py-0.5 px-1.5'}>
                             {session.status}
                           </span>
-                          <span className="text-[10px] text-zinc-600 font-geist">{session.participantsCount}p</span>
+                          <span className="status-pill-neutral font-mono text-[9px] py-0.5 px-1.5">{session.participantsCount}p</span>
                         </div>
                       </div>
                     ))}
@@ -580,75 +580,80 @@ export const DashboardPage: React.FC = () => {
               </section>
             </div>
 
-            {/* RIGHT: Activity Feed + Intelligence */}
-            <div className="flex flex-col gap-4 sm:gap-6">
-
-              {/* Activity feed */}
-              <section className="db-card p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-xs font-bold font-geist text-zinc-500 uppercase tracking-widest">Live Feed</h2>
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#c0c1ff] animate-pulse" />
-                </div>
+            {/* RIGHT SIDEBAR PANEL: Activity Feed + AI Workspace (Merged surface) */}
+            <div className="flex flex-col">
+              <section className="db-card p-5 flex flex-col gap-6.5 shadow-panel">
+                {/* Section 1: Live Feed */}
                 <div>
-                  {feedItems.map((item, i) => (
-                    <ActivityFeedItem key={i} {...item} />
-                  ))}
-                </div>
-              </section>
-
-              {/* AI Intelligence panel */}
-              <section className="db-card p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L14.5 9H22L16 13.5L18.5 20.5L12 16L5.5 20.5L8 13.5L2 9H9.5L12 2Z" fill="#c0c1ff" />
-                  </svg>
-                  <h2 className="text-xs font-bold font-geist text-zinc-400 uppercase tracking-widest">AI Workspace</h2>
-                </div>
-
-                {/* Insight cards */}
-                <div className="space-y-3">
-                  <div className="bg-[#0d0d10] border border-[#1e1e21] rounded-xl p-3">
-                    <p className="text-[10px] font-semibold font-geist text-zinc-500 uppercase tracking-wider mb-2">Latest Summary</p>
-                    <p className="text-xs text-zinc-300 leading-relaxed">
-                      Design Review focused on token system alignment. 2 action items assigned to Alex and Girish.
-                    </p>
-                    <div className="mt-2 pt-2 border-t border-[#1a1a1d] flex items-center gap-1.5">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-                      <span className="text-[10px] text-zinc-600 font-geist">2 items resolved</span>
+                  <div className="flex items-center justify-between mb-3 select-none">
+                    <div className="flex items-center gap-2">
+                      <Activity size={14} className="text-[#c0c1ff]" />
+                      <h2 className="text-xs font-bold font-geist text-zinc-400 uppercase tracking-widest">Live Activity Feed</h2>
                     </div>
+                    <span className="status-pill-live text-[8px] py-0.5 px-2">
+                      <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
+                      Live
+                    </span>
+                  </div>
+                  <div className="space-y-0.5">
+                    {feedItems.map((item, i) => (
+                      <ActivityFeedItem key={i} {...item} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-px bg-white/[0.03]" />
+
+                {/* Section 2: AI Workspace */}
+                <div>
+                  <div className="flex items-center gap-2 mb-4 select-none">
+                    <Sparkles size={14} className="text-[#c0c1ff]" />
+                    <h2 className="text-xs font-bold font-geist text-zinc-400 uppercase tracking-widest">AI Workspace</h2>
                   </div>
 
-                  <div className="bg-[#0d0d10] border border-[#1e1e21] rounded-xl p-3">
-                    <p className="text-[10px] font-semibold font-geist text-zinc-500 uppercase tracking-wider mb-2">Collaboration Trend</p>
-                    {/* Mini bar chart */}
-                    <div className="flex items-end gap-1 h-10">
-                      {[40, 65, 50, 80, 70, 90, 75].map((h, i) => (
-                        <div key={i} className="flex-1 rounded-sm" style={{
-                          height: `${h}%`,
-                          background: i === 5 ? '#c0c1ff' : '#c0c1ff20',
-                        }} />
-                      ))}
+                  {/* Insight cards */}
+                  <div className="space-y-3.5">
+                    <div className="bg-black/35 border border-white/[0.03] rounded-xl p-3.5 hover:border-white/[0.06] transition-all select-none shadow-panel">
+                      <p className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-wider mb-2">Latest Summary</p>
+                      <p className="text-xs text-zinc-300 leading-relaxed font-inter">
+                        Design Review focused on token system alignment. 2 action items assigned to Alex and Girish.
+                      </p>
+                      <div className="mt-3 pt-2.5 border-t border-white/[0.02] flex items-center gap-1.5">
+                        <Check size={11} className="text-emerald-400" />
+                        <span className="text-[10px] text-zinc-500 font-geist">2 items resolved</span>
+                      </div>
                     </div>
-                    <p className="text-[10px] text-zinc-600 font-geist mt-2">Peak: Friday 2PM — 90 min avg</p>
-                  </div>
 
-                  {/* Quick actions */}
-                  <div className="flex flex-col gap-2">
-                    <button
-                      onClick={handleCreateTrigger}
-                      className="lp-btn-primary w-full text-xs h-9"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M12 5v14M5 12h14" />
-                      </svg>
-                      New Room
-                    </button>
-                    <button
-                      onClick={handleJoinTrigger}
-                      className="lp-btn-ghost w-full text-xs h-9"
-                    >
-                      Join with code
-                    </button>
+                    <div className="bg-black/35 border border-white/[0.03] rounded-xl p-3.5 hover:border-white/[0.06] transition-all select-none shadow-panel">
+                      <p className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-wider mb-2">Collaboration Trend</p>
+                      {/* Mini bar chart */}
+                      <div className="flex items-end gap-1.5 h-10 mt-3 px-1">
+                        {[40, 65, 50, 80, 70, 90, 75].map((h, i) => (
+                          <div key={i} className="flex-1 rounded-t-sm transition-all duration-300 hover:opacity-80 cursor-pointer" style={{
+                            height: `${h}%`,
+                            background: i === 5 ? '#c0c1ff' : 'rgba(192, 193, 255, 0.15)',
+                          }} />
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-zinc-500 font-geist mt-2.5">Peak: Friday 2PM · 90 min avg</p>
+                    </div>
+
+                    {/* Quick actions */}
+                    <div className="flex flex-col gap-2 pt-2">
+                      <button
+                        onClick={handleCreateTrigger}
+                        className="btn-pill-primary w-full text-xs h-9"
+                      >
+                        <Plus size={14} />
+                        New Room
+                      </button>
+                      <button
+                        onClick={handleJoinTrigger}
+                        className="btn-pill-secondary w-full text-xs h-9"
+                      >
+                        Join with code
+                      </button>
+                    </div>
                   </div>
                 </div>
               </section>

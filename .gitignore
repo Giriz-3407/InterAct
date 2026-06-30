@@ -31,3 +31,4 @@ agent/dist/
 # Python
 __pycache__/
 *.pyc
+*.py[cod]

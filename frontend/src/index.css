@@ -301,38 +301,153 @@ body {
 ─────────────────────────────────────────────────── */
 
 /* Base card used throughout the dashboard */
+/* Base card used throughout the dashboard */
 .db-card {
-  background: #111113;
-  border: 1px solid #1e1e21;
+  background: #0c0c0e;
+  border: 1px solid rgba(255, 255, 255, 0.03);
   border-radius: 16px;
-  transition: border-color 0.2s ease;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .db-card:hover {
-  border-color: #27272a;
+  border-color: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
 /* Primary action card — Create Room */
 .db-action-primary {
-  background: #111113;
-  border: 1px solid rgba(192, 193, 255, 0.18);
-  box-shadow: 0 0 0 1px rgba(192, 193, 255, 0.04) inset;
-  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  background: #0c0c0e;
+  border: 1px solid rgba(192, 193, 255, 0.12);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(192, 193, 255, 0.03) inset;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .db-action-primary:hover {
-  border-color: rgba(192, 193, 255, 0.32);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.08), 0 0 0 1px rgba(192, 193, 255, 0.06) inset;
+  border-color: rgba(192, 193, 255, 0.25);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 48px -12px rgba(192, 193, 255, 0.08), 0 0 0 1px rgba(192, 193, 255, 0.06) inset;
 }
 
 /* Secondary action card — Join Room */
 .db-action-secondary {
-  background: #0f0f11;
-  border: 1px solid #1e1e21;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  background: #0c0c0e;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .db-action-secondary:hover {
-  border-color: #27272a;
-  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.08);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+/* Reusable Status Pills & Buttons from Room Page */
+.status-pill-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-pill-connected {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+}
+
+.status-pill-completed {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  color: #34d399;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.status-pill-neutral {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #a1a1aa;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10px;
+}
+
+.btn-pill-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #c0c1ff;
+  color: #09090b;
+  font-weight: 600;
+  padding: 0 16px;
+  height: 36px;
+  border-radius: 9999px;
+  font-size: 12px;
+  border: 1px solid transparent;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(192, 193, 255, 0.1);
+}
+.btn-pill-primary:hover {
+  background: #d0d1ff;
+  box-shadow: 0 6px 20px rgba(192, 193, 255, 0.2);
+  transform: translateY(-0.5px);
+}
+.btn-pill-primary:active {
+  transform: scale(0.95) translateY(0);
+}
+
+.btn-pill-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #d4d4d8;
+  font-weight: 500;
+  padding: 0 16px;
+  height: 36px;
+  border-radius: 9999px;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-pill-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.08);
+  transform: translateY(-0.5px);
+}
+.btn-pill-secondary:active {
+  transform: scale(0.95) translateY(0);
 }
 
 /* ───────────────────────────────────────────────────
@@ -343,21 +458,20 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
   border: 1px solid transparent;
-  color: #a1a1aa;
-  background: transparent;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  color: #d4d4d8;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .room-dock-btn:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: #f4f4f5;
-  border-color: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .room-dock-btn:active {
@@ -365,20 +479,19 @@ body {
 }
 
 .room-dock-btn.active {
-  background: rgba(192, 193, 255, 0.08);
-  border-color: rgba(192, 193, 255, 0.15);
-  color: #c0c1ff;
+  background: rgba(79, 70, 229, 0.8);
+  color: #ffffff;
 }
 
 .room-dock-btn.danger {
-  background: rgba(239, 68, 68, 0.06);
-  border-color: rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.2);
   color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .room-dock-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.3);
+  color: #ffffff;
 }
 
 /* Waveform animation for broadcasting state */
@@ -410,8 +523,52 @@ body {
   animation: pulse-slow 3s infinite ease-in-out;
 }
 
-/* z-index layers for room overlay architecture */
+/* z-index layers for room room overlay architecture */
 .z-35 { z-index: 35; }
+
+/* Premium Collapsible Dock Animations */
+.dock-item-anim {
+  transition: max-width 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), margin 0.5s cubic-bezier(0.16, 1, 0.3, 1), padding 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  max-width: 120px;
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+.dock-item-anim.collapsed {
+  max-width: 0px !important;
+  opacity: 0 !important;
+  transform: scale(0.6) !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  pointer-events: none !important;
+}
+.dock-item-slider {
+  max-width: 200px;
+}
+
+/* Parent Pill Container Animations */
+.dock-pill-container {
+  transition: max-width 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), margin 0.5s cubic-bezier(0.16, 1, 0.3, 1), padding 0.5s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 600px;
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+.dock-pill-container.collapsed {
+  max-width: 0px !important;
+  opacity: 0 !important;
+  transform: scale(0.6) !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding: 0 !important;
+  border-width: 0 !important;
+  pointer-events: none !important;
+}
 
 
 

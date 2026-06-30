@@ -997,7 +997,7 @@ interface FloatingHeaderProps {
   onRelease: () => void;
 }
 
-const FloatingHeader: React.FC<FloatingHeaderProps> = ({
+export const FloatingHeader: React.FC<FloatingHeaderProps> = ({
   roomId, showCopied, onShare, onInteraction, onRelease
 }) => (
   <div
@@ -1050,7 +1050,7 @@ interface FloatingChatProps {
   onRelease: () => void;
 }
 
-const FloatingChat: React.FC<FloatingChatProps> = ({
+export const FloatingChat: React.FC<FloatingChatProps> = ({
   isOpen, messages, chatInput, chatEndRef, displayName, onClose,
   onChatInputChange, onSendMessage, onInteraction, onRelease
 }) => {
@@ -1177,7 +1177,7 @@ interface FloatingParticipantsProps {
   onRelease: () => void;
 }
 
-const FloatingParticipants: React.FC<FloatingParticipantsProps> = ({
+export const FloatingParticipants: React.FC<FloatingParticipantsProps> = ({
   isOpen, participants, currentUserId, isHost, onClose, onRemoveParticipant, onInteraction, onRelease
 }) => (
   <>
@@ -1976,38 +1976,36 @@ export const RoomPage: React.FC = () => {
             )}
 
             {/* Active indicator pills */}
-            <div className={`absolute top-15 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none transition-all duration-300 ${
-              isPresentationMode 
-                ? (isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none') 
-                : 'opacity-100 scale-100'
-            }`}>
-              {laserModeActive && (
-                <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Laser Active
-                </div>
-              )}
-              {spotlightActive && (
-                <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                  Spotlight Active
-                </div>
-              )}
-              {showLaserPointerNotice && (
-                <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-400 px-3 py-1.5 rounded-full text-[10px] font-inter flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
-                  Laser pointer available only when sharing an entire screen
-                </div>
-              )}
-            </div>
+            {!isPresentationMode && (
+              <div className="absolute top-15 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none">
+                {laserModeActive && (
+                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Laser Active
+                  </div>
+                )}
+                {spotlightActive && (
+                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    Spotlight Active
+                  </div>
+                )}
+                {showLaserPointerNotice && (
+                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-400 px-3 py-1.5 rounded-full text-[10px] font-inter flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                    Laser pointer available only when sharing an entire screen
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Video content (Mobile viewport or absolute overlay backups) */}
             {isViewing && remoteStream && (
               <div
                 className="w-full h-full cursor-pointer"
-                onClick={isPresentationMode ? togglePresentationControls : (isMobileViewer ? togglePresentationControls : undefined)}
+                onClick={isPresentationMode ? undefined : (isMobileViewer ? togglePresentationControls : undefined)}
                 onDoubleClick={() => {
-                  if (!isMobile) {
-                    setIsPresentationMode(prev => !prev);
+                  if (!isMobile && !isPresentationMode) {
+                    setIsPresentationMode(true);
                   }
                 }}
               >
@@ -2098,107 +2096,7 @@ export const RoomPage: React.FC = () => {
               />
             )}
 
-              {/* Mobile Presentation overlays */}
-              {isMobileViewer && isPresentationMode && (
-                <>
-                  {/* Floating Header */}
-                  <div
-                    className={`absolute left-4 right-4 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isPresentationControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}
-                    style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
-                  >
-                    <FloatingHeader
-                      roomId={roomId || ''}
-                      showCopied={showCopied}
-                      onShare={handleShareRoom}
-                      onInteraction={resetPresentationTimer}
-                      onRelease={resetPresentationTimer}
-                    />
-                  </div>
 
-                  {/* Floating Quick Controls Dock */}
-                  <div
-                    className={`absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isPresentationControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-                    style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
-                  >
-                    <div
-                      onTouchStart={(e) => { e.stopPropagation(); resetPresentationTimer(); }}
-                      onMouseDown={(e) => { e.stopPropagation(); resetPresentationTimer(); }}
-                      onTouchEnd={(e) => { e.stopPropagation(); resetPresentationTimer(); }}
-                      onMouseUp={(e) => { e.stopPropagation(); resetPresentationTimer(); }}
-                      onClick={(e) => { e.stopPropagation(); resetPresentationTimer(); }}
-                      className="pointer-events-auto"
-                    >
-                      <CollabDock
-                        isVisible={isPresentationControlsVisible}
-                        isMuted={isMuted}
-                        isHost={isHost}
-                        isSharing={isSharing}
-                        isViewing={isViewing}
-                        isPresentationMode={isPresentationMode}
-                        onTogglePresentationMode={() => setIsPresentationMode(p => !p)}
-                        hostAudioEnabled={hostAudioEnabled}
-                        viewerMuted={viewerMuted}
-                        messageCount={messages.length}
-                        isPeopleOpen={isPeopleOpen}
-                        isChatOpen={isChatOpen && activeRightTab === 'chat'}
-                        isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
-                        showMoreMenu={showMoreMenu}
-                        autoDelete={autoDelete}
-                        isTranscriptionActive={isTranscriptionActive}
-                        isTranscriptionSupported={isTranscriptionSupported}
-                        onToggleMic={handleToggleMic}
-                        onToggleShare={handleShareToggle}
-                        onToggleHostAudio={toggleHostAudio}
-                        onToggleViewerMute={() => setViewerMuted(p => !p)}
-                        onToggleChat={handleToggleChat}
-                        onTogglePeople={handleTogglePeople}
-                        onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
-                        onMoreBackdropClick={handleMoreBackdropClick}
-                        onLeave={() => navigate('/dashboard')}
-                        onOpenHostPanel={() => handleOpenRightDrawer('host')}
-                        onShareRoom={handleShareRoom}
-                        onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
-                        onToggleTranscript={handleToggleTranscript}
-                        isStacked={true}
-                        isCollapsed={isDockCollapsed}
-                        onToggleCollapse={() => {
-                          setIsDockCollapsed(p => !p);
-                          resetCollapseTimer();
-                        }}
-                        onMouseEnter={resetCollapseTimer}
-                        isMobile={isMobile}
-                        participantCount={participants.length}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Slide-over Floating Chat Overlay */}
-                  <FloatingChat
-                    isOpen={isChatOpen}
-                    messages={messages}
-                    chatInput={chatInput}
-                    chatEndRef={chatEndRef}
-                    displayName={displayName}
-                    onClose={() => setIsChatOpen(false)}
-                    onChatInputChange={setChatInput}
-                    onSendMessage={handleSendMessage}
-                    onInteraction={resetPresentationTimer}
-                    onRelease={resetPresentationTimer}
-                  />
-
-                  {/* Slide-over Floating Participants Overlay */}
-                  <FloatingParticipants
-                    isOpen={isPeopleOpen}
-                    participants={participants}
-                    currentUserId={currentSocketId}
-                    isHost={isHost}
-                    onClose={() => setIsPeopleOpen(false)}
-                    onRemoveParticipant={(targetId) => wsClient.send('remove_participant', { targetId })}
-                    onInteraction={resetPresentationTimer}
-                    onRelease={resetPresentationTimer}
-                  />
-                </>
-              )}
             </>
 
           {/* Live Caption Overlay */}

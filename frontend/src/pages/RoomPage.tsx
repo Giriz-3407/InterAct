@@ -617,8 +617,6 @@ interface RightDrawerProps {
   onTransferHost: (id: string) => void;
   onRemoveParticipant: (id: string) => void;
   onToggleTranscription: () => void;
-  isViewing: boolean;
-  isSharing: boolean;
 }
 
 const RightDrawer: React.FC<RightDrawerProps> = ({
@@ -627,7 +625,6 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
   isTranscriptionActive, isTranscriptionSupported, roomTranscripts,
   onTabChange, onClose, onChatInputChange, onSendMessage,
   onToggleAutoDelete, onTransferHost, onRemoveParticipant, onToggleTranscription,
-  isViewing, isSharing,
 }) => {
   const formatTime = (isoString: string) => {
     try {
@@ -635,7 +632,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
     } catch { return isoString; }
   };
 
-  const showActiveStream = isViewing || isSharing;
+
 
   return (
     <>
@@ -644,10 +641,8 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         <div className="fixed inset-0 bg-black/50 z-35 md:hidden" onClick={onClose} />
       )}
 
-      <aside className={`flex flex-col bg-[#111113] border-l border-zinc-800/40 shadow-2xl transition-all duration-300 ease-in-out shrink-0 z-40 ${
-        showActiveStream
-          ? `static h-auto my-3 mr-3 rounded-2xl border ${isOpen ? 'w-[350px] opacity-100' : 'w-0 opacity-0 overflow-hidden border-none'}`
-          : `fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] md:top-[72px] md:right-3 md:bottom-3 md:h-[calc(100dvh-5.5rem)] md:w-[350px] md:border md:rounded-2xl ${isOpen ? 'translate-x-0' : 'translate-x-full'}`
+      <aside className={`flex flex-col bg-[#111113] border-l border-zinc-800/40 shadow-2xl transition-all duration-300 ease-in-out shrink-0 z-40 fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] md:top-[72px] md:right-3 md:bottom-3 md:h-[calc(100dvh-5.5rem)] md:w-[350px] md:border md:rounded-2xl ${
+        isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         {/* Tab header */}
         <div className="h-14 border-b border-zinc-800/30 flex items-center justify-between px-3 shrink-0 bg-white/[0.01]">
@@ -2172,8 +2167,6 @@ export const RoomPage: React.FC = () => {
             onTransferHost={targetId => wsClient.send('transfer_host', { targetId })}
             onRemoveParticipant={targetId => wsClient.send('remove_participant', { targetId })}
             onToggleTranscription={handleToggleTranscription}
-            isViewing={isViewing}
-            isSharing={isSharing}
           />
         )}
       </div>

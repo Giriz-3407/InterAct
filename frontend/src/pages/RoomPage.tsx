@@ -152,7 +152,7 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
     </div>
 
     {/* Right group */}
-    <div className="pointer-events-auto flex items-center gap-2 px-3 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl">
+    <div className="hidden sm:flex pointer-events-auto items-center gap-2 px-3 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl">
       {isHost && <AgentStatusIndicator />}
       {isHost && <div className="w-px h-4 bg-zinc-800/40 flex-shrink-0" />}
       <button
@@ -537,7 +537,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
 
           {/* Right Parent Pill: Leave Room (hidden on mobile) */}
           <div 
-            className={`dock-pill-container hidden sm:flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-0.5 sm:ml-1 ${
+            className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-0.5 sm:ml-1 ${
               isViewing && effectiveCollapsed ? 'collapsed' : ''
             }`}
           >

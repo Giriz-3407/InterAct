@@ -198,12 +198,18 @@ interface MoreMenuProps {
   onClose: () => void;
   onBackdropClick?: () => void;
   isMobile: boolean;
+  isViewing: boolean;
+  isPresentationMode?: boolean;
+  onTogglePresentationMode?: () => void;
 }
 
 const MoreMenu: React.FC<MoreMenuProps> = ({
   isHost, autoDelete, isTranscriptOpen, isTranscriptionActive, isTranscriptionSupported,
   onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript, onLeave, onClose, onBackdropClick,
   isMobile,
+  isViewing,
+  isPresentationMode = false,
+  onTogglePresentationMode,
 }) => (
   <>
     <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); (onBackdropClick ?? onClose)(); }} />
@@ -225,6 +231,15 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
           <span className="text-zinc-500"><Share2 size={14} /></span>
           Copy Room Link
         </button>
+        {isViewing && onTogglePresentationMode && (
+          <button
+            onClick={() => { onTogglePresentationMode(); onClose(); }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
+          >
+            <span className="text-zinc-500"><Maximize2 size={14} /></span>
+            {isPresentationMode ? 'Exit Presentation Mode' : 'Enter Presentation Mode'}
+          </button>
+        )}
         {isHost && (
           <button
             onClick={() => { onToggleAutoDelete(); onClose(); }}
@@ -314,6 +329,8 @@ interface CollabDockProps {
   isMobile?: boolean;
   participantCount?: number;
   isVisible?: boolean;
+  isPresentationMode?: boolean;
+  onTogglePresentationMode?: () => void;
 }
 
 const CollabDock: React.FC<CollabDockProps> = ({
@@ -331,6 +348,8 @@ const CollabDock: React.FC<CollabDockProps> = ({
   isMobile = false,
   participantCount = 0,
   isVisible = true,
+  isPresentationMode = false,
+  onTogglePresentationMode,
 }) => {
   const effectiveCollapsed = isMobile ? false : isCollapsed;
   let itemIndex = 0;
@@ -379,6 +398,9 @@ const CollabDock: React.FC<CollabDockProps> = ({
             onClose={onToggleMoreMenu}
             onBackdropClick={onMoreBackdropClick}
             isMobile={isMobile}
+            isViewing={isViewing}
+            isPresentationMode={isPresentationMode}
+            onTogglePresentationMode={onTogglePresentationMode}
           />
         )}
 
@@ -1266,6 +1288,9 @@ export const RoomPage: React.FC = () => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
 
+  // Presentation Mode state
+  const [isPresentationMode, setIsPresentationMode] = useState(false);
+
   // Presentation mode controls visibility state
   const [isPresentationControlsVisible, setIsPresentationControlsVisible] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1346,12 +1371,12 @@ export const RoomPage: React.FC = () => {
 
   const resetPresentationTimer = useCallback(() => {
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-    if (!isViewing) return;
+    if (!isViewing || !isPresentationMode) return;
     if (showMoreMenu) return; // Pause timer if More menu is open
     controlsTimeoutRef.current = setTimeout(() => {
       setIsPresentationControlsVisible(false);
     }, 3000);
-  }, [isViewing, showMoreMenu]);
+  }, [isViewing, isPresentationMode, showMoreMenu]);
 
   const showPresentationControls = useCallback(() => {
     setIsPresentationControlsVisible(true);
@@ -1360,7 +1385,7 @@ export const RoomPage: React.FC = () => {
 
   const togglePresentationControls = useCallback((e?: React.MouseEvent) => {
     if (e && e.stopPropagation) e.stopPropagation();
-    if (!isViewing) return;
+    if (!isViewing || !isPresentationMode) return;
     
     // Layered Dismissal: If More menu is open, the first tap outside only closes the popup
     if (showMoreMenu) {
@@ -1378,11 +1403,11 @@ export const RoomPage: React.FC = () => {
       }
       return next;
     });
-  }, [isViewing, showMoreMenu, resetPresentationTimer]);
+  }, [isViewing, isPresentationMode, showMoreMenu, resetPresentationTimer]);
 
   // Track interactions when controls are visible to reset the auto-hide timer
   useEffect(() => {
-    if (!isViewing || !isPresentationControlsVisible) return;
+    if (!isViewing || !isPresentationMode || !isPresentationControlsVisible) return;
 
     const handleInteraction = () => {
       resetPresentationTimer();
@@ -1399,17 +1424,17 @@ export const RoomPage: React.FC = () => {
       window.removeEventListener('touchstart', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
     };
-  }, [isViewing, isPresentationControlsVisible, resetPresentationTimer]);
+  }, [isViewing, isPresentationMode, isPresentationControlsVisible, resetPresentationTimer]);
 
   // Pause collapse timer while More menu is open
   const resetCollapseTimer = useCallback(() => {
     if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
-    if (isViewing) {
+    if (isViewing && isPresentationMode) {
       collapseTimerRef.current = setTimeout(() => {
         setIsDockCollapsed(true);
       }, 5000); // 5 seconds of inactivity
     }
-  }, [isViewing]);
+  }, [isViewing, isPresentationMode]);
 
   useEffect(() => {
     if (showMoreMenu) {
@@ -1433,12 +1458,37 @@ export const RoomPage: React.FC = () => {
     setIsDockCollapsed(true);
   }, []);
 
-  // Collapse dock automatically when screen sharing starts
+  // Collapse dock automatically when Presentation Mode starts, expand it when it stops
   useEffect(() => {
-    if (isViewing) {
+    if (isViewing && isPresentationMode) {
       setIsDockCollapsed(true);
+    } else {
+      setIsDockCollapsed(false);
     }
-  }, [isViewing]);
+  }, [isViewing, isPresentationMode]);
+
+  // Close panels when entering presentation mode
+  useEffect(() => {
+    if (isPresentationMode) {
+      setIsChatOpen(false);
+      setIsPeopleOpen(false);
+      setShowMoreMenu(false);
+    }
+  }, [isPresentationMode]);
+
+  // Exit presentation mode on Escape key
+  useEffect(() => {
+    if (!isViewing || !isPresentationMode) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsPresentationMode(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isViewing, isPresentationMode]);
 
   // Manage active timer based on collapsed state changes
   useEffect(() => {
@@ -1470,13 +1520,15 @@ export const RoomPage: React.FC = () => {
 
   // Initially show controls when Presentation Mode starts
   useEffect(() => {
-    if (isViewing) {
+    if (isViewing && isPresentationMode) {
       showPresentationControls();
+    } else {
+      setIsPresentationControlsVisible(true);
     }
     return () => {
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
-  }, [isViewing, showPresentationControls]);
+  }, [isViewing, isPresentationMode, showPresentationControls]);
 
   // Audio states
   const [hostAudioEnabled, setHostAudioEnabled] = useState(true);
@@ -1505,7 +1557,7 @@ export const RoomPage: React.FC = () => {
   const { viewportRef, laserModeActive, spotlightActive } = useCursorPresence({
     isScreenVisible, localStream, remoteStream, captureDisplaySurface,
     participants, isHost, localParticipantId: currentSocketId,
-    onViewerInteraction: isViewing ? showPresentationControls : undefined,
+    onViewerInteraction: (isViewing && isPresentationMode) ? showPresentationControls : undefined,
   });
 
   const composedViewportRef = useCallback((node: HTMLDivElement | null) => {
@@ -1844,7 +1896,7 @@ export const RoomPage: React.FC = () => {
       <div className="flex-1 flex overflow-hidden relative">
 
         {/* Participants Drawer (LEFT overlay) */}
-        {!isMobileViewer && (
+        {!(isMobileViewer && isPresentationMode) && (
           <>
             {isPeopleOpen && (
               <div className="fixed inset-0 bg-black/50 z-35" onClick={() => setIsPeopleOpen(false)} />
@@ -1866,10 +1918,11 @@ export const RoomPage: React.FC = () => {
           className="flex-1 relative flex flex-col overflow-hidden bg-[#0c0c0e] border border-white/[0.03] rounded-xl min-w-0 md:my-3 md:mx-3 shadow-panel"
         >
           {/* Main layout routing depending on stream state and mobile viewer status */}
-          {!isMobileViewer && isViewing ? (
+          {!isMobileViewer && isViewing && isPresentationMode ? (
             /* Immersive Presentation Sharing Mode layout */
             <div 
               onClick={togglePresentationControls}
+              onDoubleClick={() => setIsPresentationMode(false)}
               className="w-full h-full relative flex items-center justify-center bg-black cursor-pointer"
             >
               {isViewing && remoteStream && (
@@ -1917,6 +1970,8 @@ export const RoomPage: React.FC = () => {
                   isHost={isHost}
                   isSharing={isSharing}
                   isViewing={isViewing}
+                  isPresentationMode={isPresentationMode}
+                  onTogglePresentationMode={() => setIsPresentationMode(p => !p)}
                   hostAudioEnabled={hostAudioEnabled}
                   viewerMuted={viewerMuted}
                   messageCount={messages.length}
@@ -1959,7 +2014,7 @@ export const RoomPage: React.FC = () => {
             /* Immersive floating overlay layouts for desktop empty stage or mobile presentation viewports */
             <>
               {/* Floating Top Bar (Desktop only) */}
-              {!isMobileViewer && (
+              {!(isMobileViewer && isPresentationMode) && (
                 <RoomTopBar
                   roomId={roomId || ''}
                   participantCount={participants.length}
@@ -1995,8 +2050,13 @@ export const RoomPage: React.FC = () => {
               {/* Video content (Mobile viewport or absolute overlay backups) */}
               {isViewing && remoteStream && (
                 <div
-                  className="w-full h-full"
+                  className="w-full h-full cursor-pointer"
                   onClick={isMobileViewer ? togglePresentationControls : undefined}
+                  onDoubleClick={() => {
+                    if (!isMobile) {
+                      setIsPresentationMode(true);
+                    }
+                  }}
                 >
                   <video
                     ref={remoteVideoRef}
@@ -2040,12 +2100,14 @@ export const RoomPage: React.FC = () => {
               )}
 
               {/* Collaboration Dock (Floating overlay) */}
-              {!isMobileViewer && (
+              {!(isMobileViewer && isPresentationMode) && (
                 <CollabDock
                   isMuted={isMuted}
                   isHost={isHost}
                   isSharing={isSharing}
                   isViewing={isViewing}
+                  isPresentationMode={isPresentationMode}
+                  onTogglePresentationMode={() => setIsPresentationMode(p => !p)}
                   hostAudioEnabled={hostAudioEnabled}
                   viewerMuted={viewerMuted}
                   messageCount={messages.length}
@@ -2075,7 +2137,7 @@ export const RoomPage: React.FC = () => {
               )}
 
               {/* Mobile Presentation overlays */}
-              {isMobileViewer && (
+              {isMobileViewer && isPresentationMode && (
                 <>
                   {/* Floating Header */}
                   <div
@@ -2110,20 +2172,22 @@ export const RoomPage: React.FC = () => {
                         isHost={isHost}
                         isSharing={isSharing}
                         isViewing={isViewing}
+                        isPresentationMode={isPresentationMode}
+                        onTogglePresentationMode={() => setIsPresentationMode(p => !p)}
                         hostAudioEnabled={hostAudioEnabled}
                         viewerMuted={viewerMuted}
-                  messageCount={messages.length}
-                  isPeopleOpen={isPeopleOpen}
-                  isChatOpen={isChatOpen && activeRightTab === 'chat'}
-                  isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
-                  showMoreMenu={showMoreMenu}
-                  autoDelete={autoDelete}
-                  isTranscriptionActive={isTranscriptionActive}
-                  isTranscriptionSupported={isTranscriptionSupported}
-                  onToggleMic={handleToggleMic}
-                  onToggleShare={handleShareToggle}
-                  onToggleHostAudio={toggleHostAudio}
-                  onToggleViewerMute={() => setViewerMuted(p => !p)}
+                        messageCount={messages.length}
+                        isPeopleOpen={isPeopleOpen}
+                        isChatOpen={isChatOpen && activeRightTab === 'chat'}
+                        isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
+                        showMoreMenu={showMoreMenu}
+                        autoDelete={autoDelete}
+                        isTranscriptionActive={isTranscriptionActive}
+                        isTranscriptionSupported={isTranscriptionSupported}
+                        onToggleMic={handleToggleMic}
+                        onToggleShare={handleShareToggle}
+                        onToggleHostAudio={toggleHostAudio}
+                        onToggleViewerMute={() => setViewerMuted(p => !p)}
                         onToggleChat={handleToggleChat}
                         onTogglePeople={handleTogglePeople}
                         onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
@@ -2207,7 +2271,7 @@ export const RoomPage: React.FC = () => {
           )}
 
           {/* Floating Expand Controls Button */}
-          {isViewing && (
+          {isViewing && isPresentationMode && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -2230,7 +2294,7 @@ export const RoomPage: React.FC = () => {
         </main>
 
         {/* RIGHT DRAWER (Chat / AI / Host) */}
-        {!isMobileViewer && (
+        {!(isMobileViewer && isPresentationMode) && (
           <RightDrawer
             isOpen={isChatOpen}
             activeTab={activeRightTab}

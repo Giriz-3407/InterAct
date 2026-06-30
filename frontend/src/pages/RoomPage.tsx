@@ -11,10 +11,8 @@ import { useLiveTranscription } from '../hooks/useLiveTranscription';
 import { useCursorPresence } from '../hooks/useCursorPresence';
 import { isMobileDevice } from '../lib/mobile';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
-import { WebRTCAuditPanel } from '../components/WebRTCAuditPanel';
 import { DiagnosticsPanel } from '../components/DiagnosticsPanel';
 import { VoiceNegotiationToast } from '../components/VoiceNegotiationToast';
-import { SRDiagPanel } from '../components/SRDiagPanel';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -148,8 +146,8 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
       </div>
     </div>
 
-    {/* Center group */}
-    <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-1.5 px-4 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl">
+    {/* Center group (hidden on mobile) */}
+    <div className="hidden sm:flex absolute left-1/2 -translate-x-1/2 pointer-events-auto items-center gap-1.5 px-4 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl">
       <Users size={13} className="text-zinc-400" />
       <span className="text-sm font-geist text-zinc-300 font-semibold select-none">{participantCount}</span>
     </div>
@@ -166,14 +164,7 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
         <Share2 size={13} />
         <span>Share</span>
       </button>
-      <button
-        onClick={onLeave}
-        className="flex items-center gap-1.5 px-3.5 h-8 rounded-full bg-red-650 hover:bg-red-600 text-white text-xs font-semibold font-geist cursor-pointer transition-all active:scale-95 shadow-sm"
-        title="Leave room"
-      >
-        <LogOut size={13} />
-        <span>Leave</span>
-      </button>
+
     </div>
   </div>
 );
@@ -455,7 +446,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
                   />
                 </div>
                 <div 
-                  className={`dock-item-anim dock-item-slider ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'} hidden min-[390px]:flex items-center gap-1.5 px-1.5`}
+                  className={`dock-item-anim dock-item-slider ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'} hidden sm:flex items-center gap-1.5 px-1.5`}
                   style={getItemDelayStyle()}
                 >
                   <input
@@ -1979,8 +1970,8 @@ export const RoomPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Viewer status pill */}
-              {isViewing && (
+              {/* Viewer status pill (hidden in mobile presentation mode) */}
+              {isViewing && !isMobileViewer && (
                 <div className="absolute top-15 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#c0c1ff] animate-pulse-slow" />
                   <span className="text-[10px] font-semibold font-inter text-zinc-200">Receiving live stream</span>
@@ -2203,16 +2194,9 @@ export const RoomPage: React.FC = () => {
         />
       ))}
 
-      {/* Developer tools (unchanged) */}
-      <WebRTCAuditPanel
-        auditReports={auditReports}
-        participants={participants}
-        sharingActive={sharingState === 'sharing' || sharingState === 'viewing'}
-      />
       {searchParams.get('diag') === '1' && (
         <DiagnosticsPanel isHost={isHost} roomId={roomId || ''} getPeerConnectionStates={getPeerConnectionStates} />
       )}
-      <SRDiagPanel logs={diagLogs} onClear={clearDiagLogs} srOnly={srOnlyMode} />
       <VoiceNegotiationToast state={voiceNegotiation} />
     </div>
   );

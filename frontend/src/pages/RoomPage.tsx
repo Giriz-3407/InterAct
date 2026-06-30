@@ -1490,6 +1490,36 @@ export const RoomPage: React.FC = () => {
     };
   }, [isViewing, isPresentationMode]);
 
+  // Fullscreen API optional enhancement
+  useEffect(() => {
+    const mainEl = mainRef.current;
+    if (isPresentationMode && mainEl) {
+      if (document.fullscreenEnabled && !document.fullscreenElement) {
+        mainEl.requestFullscreen().catch(err => {
+          console.warn('[RoomPage] Failed to enter fullscreen:', err);
+        });
+      }
+    } else {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(err => {
+          console.warn('[RoomPage] Failed to exit fullscreen:', err);
+        });
+      }
+    }
+  }, [isPresentationMode]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setIsPresentationMode(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
   // Manage active timer based on collapsed state changes
   useEffect(() => {
     if (!isDockCollapsed) {
@@ -1849,7 +1879,7 @@ export const RoomPage: React.FC = () => {
     <div className="min-h-[100dvh] bg-[#09090b] text-zinc-100 font-inter flex flex-col h-[100dvh] overflow-hidden relative">
 
       {/* Consent Banner */}
-      {showConsentBanner && isTranscriptionActive && (
+      {showConsentBanner && isTranscriptionActive && !isPresentationMode && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-35 w-full max-w-md px-4 pointer-events-auto">
           <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-indigo-950/45 backdrop-blur-md border border-indigo-500/20 shadow-lg text-xs text-[#c0c1ff] font-inter">
             <div className="flex items-center gap-2">
@@ -1869,7 +1899,7 @@ export const RoomPage: React.FC = () => {
       )}
 
       {/* Warning banners (styled as compact toasts) */}
-      {(errorMessage || audioWarning || micWarning) && (
+      {(errorMessage || audioWarning || micWarning) && !isPresentationMode && (
         <div className="flex flex-col gap-1.5 px-4 pt-2 shrink-0 z-20">
           {errorMessage && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 font-inter">
@@ -1896,7 +1926,7 @@ export const RoomPage: React.FC = () => {
       <div className="flex-1 flex overflow-hidden relative">
 
         {/* Participants Drawer (LEFT overlay) */}
-        {!(isMobileViewer && isPresentationMode) && (
+        {!isPresentationMode && (
           <>
             {isPeopleOpen && (
               <div className="fixed inset-0 bg-black/50 z-35" onClick={() => setIsPeopleOpen(false)} />
@@ -1915,106 +1945,21 @@ export const RoomPage: React.FC = () => {
         <main
           ref={composedViewportRef}
           id="presentation-viewport"
-          className="flex-1 relative flex flex-col overflow-hidden bg-[#0c0c0e] border border-white/[0.03] rounded-xl min-w-0 md:my-3 md:mx-3 shadow-panel"
+          className={
+            isPresentationMode
+              ? "flex-1 relative flex flex-col overflow-hidden bg-black min-w-0 m-0 border-none rounded-none shadow-none"
+              : "flex-1 relative flex flex-col overflow-hidden bg-[#0c0c0e] border border-white/[0.03] rounded-xl min-w-0 md:my-3 md:mx-3 shadow-panel"
+          }
         >
           {/* Main layout routing depending on stream state and mobile viewer status */}
-          {!isMobileViewer && isViewing && isPresentationMode ? (
-            /* Immersive Presentation Sharing Mode layout */
-            <div 
-              onClick={togglePresentationControls}
-              onDoubleClick={() => setIsPresentationMode(false)}
-              className="w-full h-full relative flex items-center justify-center bg-black cursor-pointer"
-            >
-              {isViewing && remoteStream && (
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay playsInline muted
-                  className="w-full h-full object-contain z-10"
-                />
-              )}
-
-              {/* Overlays floating relative to the video viewport container */}
-              <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none transition-all duration-300 ${isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-                {laserModeActive && (
-                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none pointer-events-auto">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Laser Active
-                  </div>
-                )}
-                {spotlightActive && (
-                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none pointer-events-auto">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    Spotlight Active
-                  </div>
-                )}
-              </div>
-
-              {isSharing && (
-                <div className={`absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none transition-all duration-300 ${isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-                  <Avatar name={displayName} size="xs" color="bg-indigo-600/90" />
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-semibold font-inter text-zinc-200 truncate">{displayName} is sharing</span>
-                    <span className="text-[9px] font-mono text-zinc-500">LIVE · Screen</span>
-                  </div>
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse ml-1" />
-                </div>
-              )}
-
-              {/* "Receiving live stream" status pill is completely hidden from viewport per request */}
-
-              {/* Collaboration Dock (Floating overlay) */}
-              {!isMobileViewer && (
-                <CollabDock
-                  isVisible={isPresentationControlsVisible}
-                  isMuted={isMuted}
-                  isHost={isHost}
-                  isSharing={isSharing}
-                  isViewing={isViewing}
-                  isPresentationMode={isPresentationMode}
-                  onTogglePresentationMode={() => setIsPresentationMode(p => !p)}
-                  hostAudioEnabled={hostAudioEnabled}
-                  viewerMuted={viewerMuted}
-                  messageCount={messages.length}
-                  isPeopleOpen={isPeopleOpen}
-                  isChatOpen={isChatOpen && activeRightTab === 'chat'}
-                  isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
-                  showMoreMenu={showMoreMenu}
-                  autoDelete={autoDelete}
-                  isTranscriptionActive={isTranscriptionActive}
-                  isTranscriptionSupported={isTranscriptionSupported}
-                  onToggleMic={handleToggleMic}
-                  onToggleShare={handleShareToggle}
-                  onToggleHostAudio={toggleHostAudio}
-                  onToggleViewerMute={() => setViewerMuted(p => !p)}
-                  onToggleChat={handleToggleChat}
-                  onTogglePeople={handleTogglePeople}
-                  onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
-                  onMoreBackdropClick={handleMoreBackdropClick}
-                  onLeave={() => navigate('/dashboard')}
-                  onOpenHostPanel={() => handleOpenRightDrawer('host')}
-                  onShareRoom={handleShareRoom}
-                  onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
-                  onToggleTranscript={handleToggleTranscript}
-                  isCollapsed={isDockCollapsed}
-                  onToggleCollapse={() => {
-                    setIsDockCollapsed(p => !p);
-                    resetCollapseTimer();
-                  }}
-                  onMouseEnter={resetCollapseTimer}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    resetCollapseTimer();
-                  }}
-                  isMobile={isMobile}
-                  participantCount={participants.length}
-                />
-              )}
-            </div>
-          ) : (
-            /* Immersive floating overlay layouts for desktop empty stage or mobile presentation viewports */
-            <>
-              {/* Floating Top Bar (Desktop only) */}
-              {!(isMobileViewer && isPresentationMode) && (
+          <>
+            {/* Floating Top Bar (Desktop only) */}
+            {!(isMobileViewer && isPresentationMode) && (
+              <div className={`transition-all duration-300 ${
+                isPresentationMode 
+                  ? (isPresentationControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none') 
+                  : 'opacity-100 translate-y-0'
+              }`}>
                 <RoomTopBar
                   roomId={roomId || ''}
                   participantCount={participants.length}
@@ -2024,117 +1969,131 @@ export const RoomPage: React.FC = () => {
                   isHost={isHost}
                   onShare={handleShareRoom}
                 />
-              )}
-
-              {/* Active indicator pills */}
-              <div className="absolute top-15 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none">
-                {laserModeActive && (
-                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Laser Active
-                  </div>
-                )}
-                {spotlightActive && (
-                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    Spotlight Active
-                  </div>
-                )}
-                {showLaserPointerNotice && (
-                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-400 px-3 py-1.5 rounded-full text-[10px] font-inter flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
-                    Laser pointer available only when sharing an entire screen
-                  </div>
-                )}
               </div>
+            )}
 
-              {/* Video content (Mobile viewport or absolute overlay backups) */}
-              {isViewing && remoteStream && (
-                <div
-                  className="w-full h-full cursor-pointer"
-                  onClick={isMobileViewer ? togglePresentationControls : undefined}
-                  onDoubleClick={() => {
-                    if (!isMobile) {
-                      setIsPresentationMode(true);
-                    }
-                  }}
-                >
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay playsInline muted
-                    className="w-full h-full object-contain"
-                  />
+            {/* Active indicator pills */}
+            <div className={`absolute top-15 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none transition-all duration-300 ${
+              isPresentationMode 
+                ? (isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none') 
+                : 'opacity-100 scale-100'
+            }`}>
+              {laserModeActive && (
+                <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Laser Active
                 </div>
               )}
-
-              {/* Empty / sharing state */}
-              {!isViewing && (
-                <div className="flex-1 flex items-center justify-center">
-                  <CenterState
-                    isHost={isHost}
-                    isRequesting={isRequesting}
-                    isSharing={isSharing}
-                    onStartShare={handleShareToggle}
-                    onStopShare={handleShareToggle}
-                  />
+              {spotlightActive && (
+                <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  Spotlight Active
                 </div>
               )}
-
-              {/* Presenter pill */}
-              {isSharing && (
-                <div className="absolute top-15 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
-                  <Avatar name={displayName} size="xs" color="bg-indigo-600/90" />
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] font-semibold font-inter text-zinc-200 truncate">{displayName} is sharing</span>
-                    <span className="text-[9px] font-mono text-zinc-500">LIVE · Screen</span>
-                  </div>
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse ml-1" />
+              {showLaserPointerNotice && (
+                <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-400 px-3 py-1.5 rounded-full text-[10px] font-inter flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                  Laser pointer available only when sharing an entire screen
                 </div>
               )}
+            </div>
 
-              {/* Viewer status pill (hidden in mobile presentation mode) */}
-              {isViewing && !isMobileViewer && (
-                <div className="absolute top-15 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#c0c1ff] animate-pulse-slow" />
-                  <span className="text-[10px] font-semibold font-inter text-zinc-200">Receiving live stream</span>
-                </div>
-              )}
-
-              {/* Collaboration Dock (Floating overlay) */}
-              {!(isMobileViewer && isPresentationMode) && (
-                <CollabDock
-                  isMuted={isMuted}
-                  isHost={isHost}
-                  isSharing={isSharing}
-                  isViewing={isViewing}
-                  isPresentationMode={isPresentationMode}
-                  onTogglePresentationMode={() => setIsPresentationMode(p => !p)}
-                  hostAudioEnabled={hostAudioEnabled}
-                  viewerMuted={viewerMuted}
-                  messageCount={messages.length}
-                  isPeopleOpen={isPeopleOpen}
-                  isChatOpen={isChatOpen && activeRightTab === 'chat'}
-                  isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
-                  showMoreMenu={showMoreMenu}
-                  autoDelete={autoDelete}
-                  isTranscriptionActive={isTranscriptionActive}
-                  isTranscriptionSupported={isTranscriptionSupported}
-                  onToggleMic={handleToggleMic}
-                  onToggleShare={handleShareToggle}
-                  onToggleHostAudio={toggleHostAudio}
-                  onToggleViewerMute={() => setViewerMuted(p => !p)}
-                  onToggleChat={handleToggleChat}
-                  onTogglePeople={handleTogglePeople}
-                  onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
-                  onMoreBackdropClick={handleMoreBackdropClick}
-                  onLeave={() => navigate('/dashboard')}
-                  onOpenHostPanel={() => handleOpenRightDrawer('host')}
-                  onShareRoom={handleShareRoom}
-                  onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
-                  onToggleTranscript={handleToggleTranscript}
-                  isMobile={isMobile}
-                  participantCount={participants.length}
+            {/* Video content (Mobile viewport or absolute overlay backups) */}
+            {isViewing && remoteStream && (
+              <div
+                className="w-full h-full cursor-pointer"
+                onClick={isPresentationMode ? togglePresentationControls : (isMobileViewer ? togglePresentationControls : undefined)}
+                onDoubleClick={() => {
+                  if (!isMobile) {
+                    setIsPresentationMode(prev => !prev);
+                  }
+                }}
+              >
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay playsInline muted
+                  className="w-full h-full object-contain"
                 />
-              )}
+              </div>
+            )}
+
+            {/* Empty / sharing state */}
+            {!isViewing && (
+              <div className="flex-1 flex items-center justify-center">
+                <CenterState
+                  isHost={isHost}
+                  isRequesting={isRequesting}
+                  isSharing={isSharing}
+                  onStartShare={handleShareToggle}
+                  onStopShare={handleShareToggle}
+                />
+              </div>
+            )}
+
+            {/* Presenter pill */}
+            {isSharing && (
+              <div className={`absolute top-15 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none transition-all duration-300 ${
+                isPresentationMode 
+                  ? (isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none') 
+                  : 'opacity-100 scale-100'
+              }`}>
+                <Avatar name={displayName} size="xs" color="bg-indigo-600/90" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-semibold font-inter text-zinc-200 truncate">{displayName} is sharing</span>
+                  <span className="text-[9px] font-mono text-zinc-500">LIVE · Screen</span>
+                </div>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse ml-1" />
+              </div>
+            )}
+
+            {/* Viewer status pill (hidden in mobile presentation mode) */}
+            {isViewing && !isMobileViewer && (
+              <div className={`absolute top-15 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none transition-all duration-300 ${
+                isPresentationMode 
+                  ? (isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none') 
+                  : 'opacity-100 scale-100'
+              }`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#c0c1ff] animate-pulse-slow" />
+                <span className="text-[10px] font-semibold font-inter text-zinc-200">Receiving live stream</span>
+              </div>
+            )}
+
+            {/* Collaboration Dock (Floating overlay) */}
+            {!(isMobileViewer && isPresentationMode) && (
+              <CollabDock
+                isVisible={!isPresentationMode || isPresentationControlsVisible}
+                isMuted={isMuted}
+                isHost={isHost}
+                isSharing={isSharing}
+                isViewing={isViewing}
+                isPresentationMode={isPresentationMode}
+                onTogglePresentationMode={() => setIsPresentationMode(p => !p)}
+                hostAudioEnabled={hostAudioEnabled}
+                viewerMuted={viewerMuted}
+                messageCount={messages.length}
+                isPeopleOpen={isPeopleOpen}
+                isChatOpen={isChatOpen && activeRightTab === 'chat'}
+                isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
+                showMoreMenu={showMoreMenu}
+                autoDelete={autoDelete}
+                isTranscriptionActive={isTranscriptionActive}
+                isTranscriptionSupported={isTranscriptionSupported}
+                onToggleMic={handleToggleMic}
+                onToggleShare={handleShareToggle}
+                onToggleHostAudio={toggleHostAudio}
+                onToggleViewerMute={() => setViewerMuted(p => !p)}
+                onToggleChat={handleToggleChat}
+                onTogglePeople={handleTogglePeople}
+                onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
+                onMoreBackdropClick={handleMoreBackdropClick}
+                onLeave={() => navigate('/dashboard')}
+                onOpenHostPanel={() => handleOpenRightDrawer('host')}
+                onShareRoom={handleShareRoom}
+                onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
+                onToggleTranscript={handleToggleTranscript}
+                isMobile={isMobile}
+                participantCount={participants.length}
+              />
+            )}
 
               {/* Mobile Presentation overlays */}
               {isMobileViewer && isPresentationMode && (
@@ -2238,7 +2197,6 @@ export const RoomPage: React.FC = () => {
                 </>
               )}
             </>
-          )}
 
           {/* Live Caption Overlay */}
           {activeCaptions.length > 0 && (
@@ -2294,7 +2252,7 @@ export const RoomPage: React.FC = () => {
         </main>
 
         {/* RIGHT DRAWER (Chat / AI / Host) */}
-        {!(isMobileViewer && isPresentationMode) && (
+        {!isPresentationMode && (
           <RightDrawer
             isOpen={isChatOpen}
             activeTab={activeRightTab}

@@ -28,8 +28,6 @@ import {
   LogOut,
   Volume2,
   VolumeX,
-  Maximize2,
-  Minimize2,
   Sparkles,
   FileText,
   X,
@@ -69,8 +67,6 @@ const IconLeave = () => <LogOut size={16} />;
 const IconVolumeUp = () => <Volume2 size={16} />;
 const IconVolumeOff = () => <VolumeX size={16} />;
 const IconShare = () => <Share2 size={13} />;
-const IconFullscreenEnter = () => <Maximize2 size={18} />;
-const IconFullscreenExit = () => <Minimize2 size={18} />;
 const IconAI = () => <Sparkles size={18} className="text-[#c0c1ff]" />;
 const IconTranscript = () => <FileText size={16} />;
 const IconClose = () => <X size={16} />;
@@ -208,11 +204,13 @@ interface MoreMenuProps {
   onToggleTranscript: () => void;
   onLeave: () => void;
   onClose: () => void;
+  isMobile: boolean;
 }
 
 const MoreMenu: React.FC<MoreMenuProps> = ({
   isHost, autoDelete, isTranscriptOpen, isTranscriptionActive, isTranscriptionSupported,
   onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript, onLeave, onClose,
+  isMobile,
 }) => (
   <>
     <div className="fixed inset-0 z-40" onClick={onClose} />
@@ -243,32 +241,34 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
               <span className="text-zinc-500">
                 <Trash2 size={14} />
               </span>
-              Auto-delete room
+              auto-delete room
             </div>
             <div className={`w-8 h-4 rounded-full transition-colors ${autoDelete ? 'bg-[#c0c1ff]' : 'bg-[#27272a]'}`}>
               <div className={`w-3 h-3 rounded-full bg-white shadow-sm mt-0.5 transition-transform ${autoDelete ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </div>
           </button>
         )}
-        <button
-          onClick={() => { onToggleTranscript(); onClose(); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors cursor-pointer text-left font-geist font-medium ${
-            isTranscriptOpen
-              ? 'text-[#c0c1ff] bg-[#c0c1ff]/5'
-              : 'text-zinc-300 hover:bg-[#1a1a1d] hover:text-white'
-          } ${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''}`}
-          disabled={!isTranscriptionSupported}
-        >
-          <span className={`${isTranscriptOpen ? 'text-[#c0c1ff]' : 'text-zinc-500'}`}>
-            <FileText size={14} />
-          </span>
-          <span className="flex-1">Live Log</span>
-          {isTranscriptionActive && (
-            <span className="text-[9px] font-bold font-geist uppercase px-1.5 py-0.5 rounded-full bg-[#c0c1ff]/10 text-[#c0c1ff]">
-              Active
+        {isMobile && (
+          <button
+            onClick={() => { onToggleTranscript(); onClose(); }}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm transition-colors cursor-pointer text-left font-geist font-medium ${
+              isTranscriptOpen
+                ? 'text-[#c0c1ff] bg-[#c0c1ff]/5'
+                : 'text-zinc-300 hover:bg-[#1a1a1d] hover:text-white'
+            } ${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''}`}
+            disabled={!isTranscriptionSupported}
+          >
+            <span className={`${isTranscriptOpen ? 'text-[#c0c1ff]' : 'text-zinc-500'}`}>
+              <FileText size={14} />
             </span>
-          )}
-        </button>
+            <span className="flex-1">Live Log</span>
+            {isTranscriptionActive && (
+              <span className="text-[9px] font-bold font-geist uppercase px-1.5 py-0.5 rounded-full bg-[#c0c1ff]/10 text-[#c0c1ff]">
+                Active
+              </span>
+            )}
+          </button>
+        )}
         <div className="h-px bg-[#1e1e21] mx-2 my-1" />
         <button
           onClick={onLeave}
@@ -319,6 +319,7 @@ interface CollabDockProps {
   onToggleCollapse?: () => void;
   onMouseEnter?: () => void;
   onClick?: (e: React.MouseEvent) => void;
+  isMobile?: boolean;
 }
 
 const CollabDock: React.FC<CollabDockProps> = ({
@@ -333,6 +334,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
   onToggleCollapse,
   onMouseEnter,
   onClick,
+  isMobile = false,
 }) => {
   let itemIndex = 0;
   const getItemDelayStyle = () => {
@@ -372,6 +374,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
             onToggleTranscript={onToggleTranscript}
             onLeave={onLeave}
             onClose={onToggleMoreMenu}
+            isMobile={isMobile}
           />
         )}
 
@@ -460,7 +463,8 @@ const CollabDock: React.FC<CollabDockProps> = ({
                     }}
                     className="w-14 h-1 accent-[#c0c1ff] cursor-pointer bg-white/10 rounded-lg appearance-none"
                     style={{ WebkitAppearance: 'none', outline: 'none' }}
-                  />
+                  >
+                  </input>
                 </div>
               </>
             )}
@@ -489,23 +493,25 @@ const CollabDock: React.FC<CollabDockProps> = ({
             }`}
           >
             {/* Live Log */}
-            <div 
-              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
-              style={getItemDelayStyle()}
-            >
-              <DockBtn
-                onClick={onToggleTranscript}
-                title={
-                  !isTranscriptionSupported 
-                    ? 'Speech transcription is not supported in this browser' 
-                    : `Live Transcript Log${isTranscriptionActive ? ' (Active)' : ' (Off)'}`
-                }
-                icon={<IconTranscript />}
-                label="Live Log"
-                active={isTranscriptOpen}
-                className={`hidden sm:flex ${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''} ${isTranscriptionActive ? 'text-indigo-400 font-bold' : ''}`}
-              />
-            </div>
+            {!isMobile && (
+              <div 
+                className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+                style={getItemDelayStyle()}
+              >
+                <DockBtn
+                  onClick={onToggleTranscript}
+                  title={
+                    !isTranscriptionSupported 
+                      ? 'Speech transcription is not supported in this browser' 
+                      : `Live Transcript Log${isTranscriptionActive ? ' (Active)' : ' (Off)'}`
+                  }
+                  icon={<IconTranscript />}
+                  label="Live Log"
+                  active={isTranscriptOpen}
+                  className={`hidden sm:flex ${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''} ${isTranscriptionActive ? 'text-indigo-400 font-bold' : ''}`}
+                />
+              </div>
+            )}
 
             {/* Chat */}
             <div 
@@ -1020,110 +1026,6 @@ const FloatingHeader: React.FC<FloatingHeaderProps> = ({
   </div>
 );
 
-interface FloatingQuickControlsProps {
-  isMuted: boolean;
-  viewerMuted: boolean;
-  isChatOpen: boolean;
-  isPeopleOpen: boolean;
-  isFullscreen: boolean;
-  messageCount: number;
-  onToggleMic: () => void;
-  onToggleViewerMute: () => void;
-  onToggleChat: () => void;
-  onTogglePeople: () => void;
-  onToggleFullscreen: () => void;
-  onLeave: () => void;
-  onInteraction: () => void;
-  onRelease: () => void;
-}
-
-const FloatingQuickControls: React.FC<FloatingQuickControlsProps> = ({
-  isMuted, viewerMuted, isChatOpen, isPeopleOpen, isFullscreen, messageCount,
-  onToggleMic, onToggleViewerMute, onToggleChat, onTogglePeople, onToggleFullscreen, onLeave,
-  onInteraction, onRelease
-}) => (
-  <div
-    onTouchStart={(e) => {
-      e.stopPropagation();
-      onInteraction();
-    }}
-    onMouseDown={(e) => {
-      e.stopPropagation();
-      onInteraction();
-    }}
-    onTouchEnd={(e) => {
-      e.stopPropagation();
-      onRelease();
-    }}
-    onMouseUp={(e) => {
-      e.stopPropagation();
-      onRelease();
-    }}
-    className="flex items-center gap-2 px-3 py-2.5 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto"
-    onClick={(e) => e.stopPropagation()}
-  >
-    {/* Mic */}
-    <button
-      onClick={onToggleMic}
-      className={`p-2.5 rounded-full transition-all active:scale-95 ${isMuted ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-zinc-300 hover:bg-white/10'}`}
-      title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-    >
-      {isMuted ? <IconMicOff /> : <IconMic />}
-    </button>
-
-    {/* Speaker Audio */}
-    <button
-      onClick={onToggleViewerMute}
-      className={`p-2.5 rounded-full transition-all active:scale-95 ${viewerMuted ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-zinc-300 hover:bg-white/10'}`}
-      title={viewerMuted ? 'Unmute session audio' : 'Mute session audio'}
-    >
-      {viewerMuted ? <IconVolumeOff /> : <IconVolumeUp />}
-    </button>
-
-    {/* Chat */}
-    <button
-      onClick={onToggleChat}
-      className={`p-2.5 rounded-full transition-all active:scale-95 relative ${isChatOpen ? 'bg-indigo-600/80 text-white' : 'bg-white/5 text-zinc-300 hover:bg-white/10'}`}
-      title="Chat"
-    >
-      <IconChat />
-      {messageCount > 0 && (
-        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[8px] font-bold text-white">
-          {messageCount}
-        </span>
-      )}
-    </button>
-
-    {/* People */}
-    <button
-      onClick={onTogglePeople}
-      className={`p-2.5 rounded-full transition-all active:scale-95 ${isPeopleOpen ? 'bg-indigo-600/80 text-white' : 'bg-white/5 text-zinc-300 hover:bg-white/10'}`}
-      title="Participants"
-    >
-      <IconPeople />
-    </button>
-
-    {/* Fullscreen */}
-    <button
-      onClick={onToggleFullscreen}
-      className="p-2.5 rounded-full bg-white/5 text-zinc-300 hover:bg-white/10 transition-all active:scale-95"
-      title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-    >
-      {isFullscreen ? <IconFullscreenExit /> : <IconFullscreenEnter />}
-    </button>
-
-    <div className="w-px h-5 bg-zinc-800/40 mx-1" />
-
-    {/* Leave */}
-    <button
-      onClick={onLeave}
-      className="p-2.5 rounded-full bg-red-600/90 text-white hover:bg-red-500 transition-all active:scale-95"
-      title="Leave Room"
-    >
-      <IconLeave />
-    </button>
-  </div>
-);
 
 interface FloatingChatProps {
   isOpen: boolean;
@@ -1378,7 +1280,6 @@ export const RoomPage: React.FC = () => {
 
   // Mobile presentation experience states
   const [isMobileControlsVisible, setIsMobileControlsVisible] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isDockCollapsed, setIsDockCollapsed] = useState(true);
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1499,49 +1400,21 @@ export const RoomPage: React.FC = () => {
     };
   }, [isDockCollapsed, resetCollapseTimer]);
 
-  // Track Fullscreen state
+  // Track Mobile state
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
     };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   const mainRef = useRef<HTMLDivElement | null>(null);
 
-  const toggleFullscreen = useCallback(() => {
-    if (isMobileViewer) {
-      const video = remoteVideoRef.current;
-      if (!video) return;
-      if (typeof (video as any).webkitEnterFullscreen === 'function') {
-        // iOS Safari iPhone native fullscreen player
-        (video as any).webkitEnterFullscreen();
-      } else if (video.requestFullscreen) {
-        if (!document.fullscreenElement) {
-          video.requestFullscreen().catch(err => {
-            console.warn('[Fullscreen] Video request failed:', err);
-          });
-        } else {
-          document.exitFullscreen().catch(err => {
-            console.warn('[Fullscreen] Exit failed:', err);
-          });
-        }
-      }
-    } else {
-      const el = mainRef.current;
-      if (!el) return;
-      if (!document.fullscreenElement) {
-        el.requestFullscreen().catch(err => {
-          console.warn('[Fullscreen] Request failed:', err);
-        });
-      } else {
-        document.exitFullscreen().catch(err => {
-          console.warn('[Fullscreen] Exit failed:', err);
-        });
-      }
-    }
-  }, [isMobileViewer]);
+
 
   // Initially show controls when Mobile Presentation starts
   useEffect(() => {
@@ -2025,6 +1898,7 @@ export const RoomPage: React.FC = () => {
                     e.stopPropagation();
                     resetCollapseTimer();
                   }}
+                  isMobile={isMobile}
                 />
               )}
             </div>
@@ -2139,6 +2013,7 @@ export const RoomPage: React.FC = () => {
                   onShareRoom={handleShareRoom}
                   onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
                   onToggleTranscript={handleToggleTranscript}
+                  isMobile={isMobile}
                 />
               )}
 
@@ -2165,22 +2040,53 @@ export const RoomPage: React.FC = () => {
                     className={`absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isMobileControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
                     style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
                   >
-                    <FloatingQuickControls
-                      isMuted={isMuted}
-                      viewerMuted={viewerMuted}
-                      isChatOpen={isChatOpen}
-                      isPeopleOpen={isPeopleOpen}
-                      isFullscreen={isFullscreen}
-                      messageCount={messages.length}
-                      onToggleMic={handleToggleMic}
-                      onToggleViewerMute={() => setViewerMuted(p => !p)}
-                      onToggleChat={handleToggleChat}
-                      onTogglePeople={handleTogglePeople}
-                      onToggleFullscreen={toggleFullscreen}
-                      onLeave={() => navigate('/dashboard')}
-                      onInteraction={showMobileControls}
-                      onRelease={showMobileControls}
-                    />
+                    <div
+                      onTouchStart={(e) => { e.stopPropagation(); showMobileControls(); }}
+                      onMouseDown={(e) => { e.stopPropagation(); showMobileControls(); }}
+                      onTouchEnd={(e) => { e.stopPropagation(); showMobileControls(); }}
+                      onMouseUp={(e) => { e.stopPropagation(); showMobileControls(); }}
+                      onClick={(e) => { e.stopPropagation(); showMobileControls(); }}
+                      className="pointer-events-auto"
+                    >
+                      <CollabDock
+                        isMuted={isMuted}
+                        isHost={isHost}
+                        isSharing={isSharing}
+                        isViewing={isViewing}
+                        hostAudioEnabled={hostAudioEnabled}
+                        viewerMuted={viewerMuted}
+                        viewerVolume={viewerVolume}
+                        messageCount={messages.length}
+                        isPeopleOpen={isPeopleOpen}
+                        isChatOpen={isChatOpen && activeRightTab === 'chat'}
+                        isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
+                        showMoreMenu={showMoreMenu}
+                        autoDelete={autoDelete}
+                        isTranscriptionActive={isTranscriptionActive}
+                        isTranscriptionSupported={isTranscriptionSupported}
+                        onToggleMic={handleToggleMic}
+                        onToggleShare={handleShareToggle}
+                        onToggleHostAudio={toggleHostAudio}
+                        onToggleViewerMute={() => setViewerMuted(p => !p)}
+                        onVolumeChange={v => setViewerVolume(v)}
+                        onToggleChat={handleToggleChat}
+                        onTogglePeople={handleTogglePeople}
+                        onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
+                        onLeave={() => navigate('/dashboard')}
+                        onOpenHostPanel={() => handleOpenRightDrawer('host')}
+                        onShareRoom={handleShareRoom}
+                        onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
+                        onToggleTranscript={handleToggleTranscript}
+                        isStacked={true}
+                        isCollapsed={isDockCollapsed}
+                        onToggleCollapse={() => {
+                          setIsDockCollapsed(p => !p);
+                          resetCollapseTimer();
+                        }}
+                        onMouseEnter={resetCollapseTimer}
+                        isMobile={isMobile}
+                      />
+                    </div>
                   </div>
 
                   {/* Slide-over Floating Chat Overlay */}

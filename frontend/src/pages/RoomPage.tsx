@@ -206,7 +206,7 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
   isMobile,
 }) => (
   <>
-    <div className="fixed inset-0 z-40" onClick={onBackdropClick ?? onClose} />
+    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); (onBackdropClick ?? onClose)(); }} />
     <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 z-50 w-56 bg-[#111113] border border-[#1e1e21] rounded-xl shadow-2xl overflow-hidden animate-fade-in">
       <div className="py-1.5">
         {isHost && (
@@ -313,6 +313,7 @@ interface CollabDockProps {
   onClick?: (e: React.MouseEvent) => void;
   isMobile?: boolean;
   participantCount?: number;
+  isVisible?: boolean;
 }
 
 const CollabDock: React.FC<CollabDockProps> = ({
@@ -329,6 +330,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
   onClick,
   isMobile = false,
   participantCount = 0,
+  isVisible = true,
 }) => {
   const effectiveCollapsed = isMobile ? false : isCollapsed;
   let itemIndex = 0;
@@ -347,11 +349,17 @@ const CollabDock: React.FC<CollabDockProps> = ({
       onMouseEnter={onMouseEnter}
       onClick={onClick}
       className={
-        isStacked 
-          ? "relative z-30 flex items-end justify-center mb-1" 
-          : isViewing
-            ? "absolute bottom-4 left-4 z-30 flex items-end justify-start pointer-events-auto"
-            : "absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-end justify-center pointer-events-auto"
+        `${
+          isStacked 
+            ? "relative z-30 flex items-end justify-center mb-1" 
+            : isViewing
+              ? "absolute bottom-4 left-4 z-30 flex items-end justify-start pointer-events-auto"
+              : "absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-end justify-center pointer-events-auto"
+        } transition-all duration-300 ${
+          isVisible 
+            ? "opacity-100 translate-y-0" 
+            : "opacity-0 translate-y-4 pointer-events-none"
+        }`
       }
     >
       <div className="relative animate-fade-in">
@@ -1258,8 +1266,8 @@ export const RoomPage: React.FC = () => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
 
-  // Mobile presentation experience states
-  const [isMobileControlsVisible, setIsMobileControlsVisible] = useState(false);
+  // Presentation mode controls visibility state
+  const [isPresentationControlsVisible, setIsPresentationControlsVisible] = useState(true);
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isDockCollapsed, setIsDockCollapsed] = useState(true);
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1336,31 +1344,64 @@ export const RoomPage: React.FC = () => {
   // Mobile presentation experience definitions
   const isMobileViewer = isMobileDevice && isViewing && !!remoteStream;
 
-  const resetControlsTimer = useCallback(() => {
+  const resetPresentationTimer = useCallback(() => {
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    if (!isViewing) return;
+    if (showMoreMenu) return; // Pause timer if More menu is open
     controlsTimeoutRef.current = setTimeout(() => {
-      setIsMobileControlsVisible(false);
+      setIsPresentationControlsVisible(false);
     }, 3000);
-  }, []);
+  }, [isViewing, showMoreMenu]);
 
-  const showMobileControls = useCallback(() => {
-    setIsMobileControlsVisible(true);
-    resetControlsTimer();
-  }, [resetControlsTimer]);
+  const showPresentationControls = useCallback(() => {
+    setIsPresentationControlsVisible(true);
+    resetPresentationTimer();
+  }, [resetPresentationTimer]);
 
-  const toggleMobileControls = useCallback(() => {
-    setIsMobileControlsVisible(prev => {
-      if (prev) {
+  const togglePresentationControls = useCallback((e?: React.MouseEvent) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (!isViewing) return;
+    
+    // Layered Dismissal: If More menu is open, the first tap outside only closes the popup
+    if (showMoreMenu) {
+      setShowMoreMenu(false);
+      resetPresentationTimer();
+      return;
+    }
+
+    setIsPresentationControlsVisible(prev => {
+      const next = !prev;
+      if (next) {
+        resetPresentationTimer();
+      } else {
         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-        return false;
       }
-      controlsTimeoutRef.current = setTimeout(() => {
-        setIsMobileControlsVisible(false);
-      }, 3000);
-      return true;
+      return next;
     });
-  }, []);
+  }, [isViewing, showMoreMenu, resetPresentationTimer]);
 
+  // Track interactions when controls are visible to reset the auto-hide timer
+  useEffect(() => {
+    if (!isViewing || !isPresentationControlsVisible) return;
+
+    const handleInteraction = () => {
+      resetPresentationTimer();
+    };
+
+    window.addEventListener('mousemove', handleInteraction);
+    window.addEventListener('mousedown', handleInteraction);
+    window.addEventListener('touchstart', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+
+    return () => {
+      window.removeEventListener('mousemove', handleInteraction);
+      window.removeEventListener('mousedown', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+  }, [isViewing, isPresentationControlsVisible, resetPresentationTimer]);
+
+  // Pause collapse timer while More menu is open
   const resetCollapseTimer = useCallback(() => {
     if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
     if (isViewing) {
@@ -1370,14 +1411,6 @@ export const RoomPage: React.FC = () => {
     }
   }, [isViewing]);
 
-  const handleCanvasClick = useCallback(() => {
-    if (isViewing) {
-      if (showMoreMenu) setShowMoreMenu(false);
-      setIsDockCollapsed(true);
-    }
-  }, [isViewing, showMoreMenu]);
-
-  // Pause collapse timer while More menu is open
   useEffect(() => {
     if (showMoreMenu) {
       if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
@@ -1385,6 +1418,15 @@ export const RoomPage: React.FC = () => {
       resetCollapseTimer();
     }
   }, [showMoreMenu, resetCollapseTimer]);
+
+  // Pause presentation controls auto-hide when More menu is open
+  useEffect(() => {
+    if (showMoreMenu) {
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    } else {
+      resetPresentationTimer();
+    }
+  }, [showMoreMenu, resetPresentationTimer]);
 
   const handleMoreBackdropClick = useCallback(() => {
     setShowMoreMenu(false);
@@ -1426,15 +1468,15 @@ export const RoomPage: React.FC = () => {
 
 
 
-  // Initially show controls when Mobile Presentation starts
+  // Initially show controls when Presentation Mode starts
   useEffect(() => {
-    if (isMobileViewer) {
-      showMobileControls();
+    if (isViewing) {
+      showPresentationControls();
     }
     return () => {
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
-  }, [isMobileViewer, showMobileControls]);
+  }, [isViewing, showPresentationControls]);
 
   // Audio states
   const [hostAudioEnabled, setHostAudioEnabled] = useState(true);
@@ -1463,7 +1505,7 @@ export const RoomPage: React.FC = () => {
   const { viewportRef, laserModeActive, spotlightActive } = useCursorPresence({
     isScreenVisible, localStream, remoteStream, captureDisplaySurface,
     participants, isHost, localParticipantId: currentSocketId,
-    onViewerInteraction: isMobileViewer ? showMobileControls : undefined,
+    onViewerInteraction: isViewing ? showPresentationControls : undefined,
   });
 
   const composedViewportRef = useCallback((node: HTMLDivElement | null) => {
@@ -1827,7 +1869,7 @@ export const RoomPage: React.FC = () => {
           {!isMobileViewer && isViewing ? (
             /* Immersive Presentation Sharing Mode layout */
             <div 
-              onClick={handleCanvasClick}
+              onClick={togglePresentationControls}
               className="w-full h-full relative flex items-center justify-center bg-black cursor-pointer"
             >
               {isViewing && remoteStream && (
@@ -1839,7 +1881,7 @@ export const RoomPage: React.FC = () => {
               )}
 
               {/* Overlays floating relative to the video viewport container */}
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none">
+              <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none transition-all duration-300 ${isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
                 {laserModeActive && (
                   <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none pointer-events-auto">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -1855,7 +1897,7 @@ export const RoomPage: React.FC = () => {
               </div>
 
               {isSharing && (
-                <div className="absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none">
+                <div className={`absolute top-3 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none transition-all duration-300 ${isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
                   <Avatar name={displayName} size="xs" color="bg-indigo-600/90" />
                   <div className="flex flex-col min-w-0">
                     <span className="text-[10px] font-semibold font-inter text-zinc-200 truncate">{displayName} is sharing</span>
@@ -1870,6 +1912,7 @@ export const RoomPage: React.FC = () => {
               {/* Collaboration Dock (Floating overlay) */}
               {!isMobileViewer && (
                 <CollabDock
+                  isVisible={isPresentationControlsVisible}
                   isMuted={isMuted}
                   isHost={isHost}
                   isSharing={isSharing}
@@ -1953,7 +1996,7 @@ export const RoomPage: React.FC = () => {
               {isViewing && remoteStream && (
                 <div
                   className="w-full h-full"
-                  onClick={isMobileViewer ? toggleMobileControls : undefined}
+                  onClick={isMobileViewer ? togglePresentationControls : undefined}
                 >
                   <video
                     ref={remoteVideoRef}
@@ -2036,32 +2079,33 @@ export const RoomPage: React.FC = () => {
                 <>
                   {/* Floating Header */}
                   <div
-                    className={`absolute left-4 right-4 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isMobileControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}
+                    className={`absolute left-4 right-4 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isPresentationControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}
                     style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
                   >
                     <FloatingHeader
                       roomId={roomId || ''}
                       showCopied={showCopied}
                       onShare={handleShareRoom}
-                      onInteraction={resetControlsTimer}
-                      onRelease={resetControlsTimer}
+                      onInteraction={resetPresentationTimer}
+                      onRelease={resetPresentationTimer}
                     />
                   </div>
 
                   {/* Floating Quick Controls Dock */}
                   <div
-                    className={`absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isMobileControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                    className={`absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-300 ease-in-out pointer-events-none ${isPresentationControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
                     style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
                   >
                     <div
-                      onTouchStart={(e) => { e.stopPropagation(); resetControlsTimer(); }}
-                      onMouseDown={(e) => { e.stopPropagation(); resetControlsTimer(); }}
-                      onTouchEnd={(e) => { e.stopPropagation(); resetControlsTimer(); }}
-                      onMouseUp={(e) => { e.stopPropagation(); resetControlsTimer(); }}
-                      onClick={(e) => { e.stopPropagation(); resetControlsTimer(); }}
+                      onTouchStart={(e) => { e.stopPropagation(); resetPresentationTimer(); }}
+                      onMouseDown={(e) => { e.stopPropagation(); resetPresentationTimer(); }}
+                      onTouchEnd={(e) => { e.stopPropagation(); resetPresentationTimer(); }}
+                      onMouseUp={(e) => { e.stopPropagation(); resetPresentationTimer(); }}
+                      onClick={(e) => { e.stopPropagation(); resetPresentationTimer(); }}
                       className="pointer-events-auto"
                     >
                       <CollabDock
+                        isVisible={isPresentationControlsVisible}
                         isMuted={isMuted}
                         isHost={isHost}
                         isSharing={isSharing}
@@ -2112,8 +2156,8 @@ export const RoomPage: React.FC = () => {
                     onClose={() => setIsChatOpen(false)}
                     onChatInputChange={setChatInput}
                     onSendMessage={handleSendMessage}
-                    onInteraction={resetControlsTimer}
-                    onRelease={resetControlsTimer}
+                    onInteraction={resetPresentationTimer}
+                    onRelease={resetPresentationTimer}
                   />
 
                   {/* Slide-over Floating Participants Overlay */}
@@ -2124,18 +2168,18 @@ export const RoomPage: React.FC = () => {
                     isHost={isHost}
                     onClose={() => setIsPeopleOpen(false)}
                     onRemoveParticipant={(targetId) => wsClient.send('remove_participant', { targetId })}
-                    onInteraction={resetControlsTimer}
-                    onRelease={resetControlsTimer}
+                    onInteraction={resetPresentationTimer}
+                    onRelease={resetPresentationTimer}
                   />
 
                   {/* Expand Controls button (shown when UI is hidden) */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      showMobileControls();
+                      showPresentationControls();
                     }}
                     className={`absolute bottom-4 right-4 z-30 w-10 h-10 rounded-full bg-black/70 backdrop-blur-xl border border-zinc-700/50 shadow-xl flex items-center justify-center text-zinc-300 hover:text-white hover:bg-black/80 transition-all active:scale-90 ${
-                      isMobileControlsVisible ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
+                      isPresentationControlsVisible ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
                     }`}
                     title="Show controls"
                   >
@@ -2174,6 +2218,28 @@ export const RoomPage: React.FC = () => {
                 <span>SR Alone Mode — WebRTC mic disabled</span>
               </div>
             </div>
+          )}
+
+          {/* Floating Expand Controls Button */}
+          {isViewing && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                showPresentationControls();
+              }}
+              className={`absolute z-40 w-14 h-14 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 text-zinc-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center cursor-pointer ${
+                isMobileViewer 
+                  ? 'bottom-4 left-1/2 -translate-x-1/2' 
+                  : 'bottom-4 left-4'
+              } ${
+                isPresentationControlsVisible 
+                  ? 'opacity-0 pointer-events-none scale-90' 
+                  : 'opacity-100 pointer-events-auto scale-100'
+              }`}
+              title="Expand Controls"
+            >
+              <Maximize2 size={18} />
+            </button>
           )}
         </main>
 

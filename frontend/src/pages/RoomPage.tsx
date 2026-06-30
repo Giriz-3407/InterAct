@@ -54,19 +54,19 @@ interface MessageItem {
 /* ─────────────────────────────────────────────────
    SVG ICON PRIMITIVES (Mapped to Lucide React)
 ───────────────────────────────────────────────── */
-const IconMic = () => <Mic size={16} />;
-const IconMicOff = () => <MicOff size={16} />;
-const IconScreen = () => <Tv size={16} />;
-const IconScreenStop = () => <Tv size={16} className="text-red-400" />;
-const IconChat = () => <MessageSquare size={16} />;
-const IconPeople = () => <Users size={16} />;
-const IconMore = () => <MoreHorizontal size={16} />;
-const IconLeave = () => <LogOut size={16} />;
-const IconVolumeUp = () => <Volume2 size={16} />;
-const IconVolumeOff = () => <VolumeX size={16} />;
+const IconMic = () => <Mic size={18} />;
+const IconMicOff = () => <MicOff size={18} />;
+const IconScreen = () => <Tv size={18} />;
+const IconScreenStop = () => <Tv size={18} className="text-red-400" />;
+const IconChat = () => <MessageSquare size={18} />;
+const IconPeople = () => <Users size={18} />;
+const IconMore = () => <MoreHorizontal size={18} />;
+const IconLeave = () => <LogOut size={18} />;
+const IconVolumeUp = () => <Volume2 size={18} />;
+const IconVolumeOff = () => <VolumeX size={18} />;
 const IconShare = () => <Share2 size={13} />;
 const IconAI = () => <Sparkles size={18} className="text-[#c0c1ff]" />;
-const IconTranscript = () => <FileText size={16} />;
+const IconTranscript = () => <FileText size={18} />;
 const IconClose = () => <X size={16} />;
 const IconCheck = () => <Check size={14} />;
 const IconSend = () => <Send size={16} />;
@@ -283,7 +283,6 @@ interface CollabDockProps {
   isViewing: boolean;
   hostAudioEnabled: boolean;
   viewerMuted: boolean;
-  viewerVolume: number;
   messageCount: number;
   isPeopleOpen: boolean;
   isChatOpen: boolean;
@@ -296,7 +295,6 @@ interface CollabDockProps {
   onToggleShare: () => void;
   onToggleHostAudio: () => void;
   onToggleViewerMute: () => void;
-  onVolumeChange: (v: number) => void;
   onToggleChat: () => void;
   onTogglePeople: () => void;
   onToggleMoreMenu: () => void;
@@ -315,10 +313,10 @@ interface CollabDockProps {
 }
 
 const CollabDock: React.FC<CollabDockProps> = ({
-  isMuted, isHost, isSharing, isViewing, hostAudioEnabled, viewerMuted, viewerVolume,
+  isMuted, isHost, isSharing, isViewing, hostAudioEnabled, viewerMuted,
   messageCount, isPeopleOpen, isChatOpen, isTranscriptOpen, showMoreMenu, autoDelete,
   isTranscriptionActive, isTranscriptionSupported,
-  onToggleMic, onToggleShare, onToggleHostAudio, onToggleViewerMute, onVolumeChange,
+  onToggleMic, onToggleShare, onToggleHostAudio, onToggleViewerMute,
   onToggleChat, onTogglePeople, onToggleMoreMenu, onLeave,
   onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript,
   isStacked = false,
@@ -444,22 +442,6 @@ const CollabDock: React.FC<CollabDockProps> = ({
                     danger={viewerMuted}
                   />
                 </div>
-                <div 
-                  className={`dock-item-anim dock-item-slider ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'} hidden sm:flex items-center gap-1.5 px-1.5`}
-                  style={getItemDelayStyle()}
-                >
-                  <input
-                    type="range" min="0" max="1" step="0.05" value={viewerVolume}
-                    onChange={(e) => {
-                      const vol = parseFloat(e.target.value);
-                      onVolumeChange(vol);
-                      if (vol > 0 && viewerMuted) onToggleViewerMute();
-                    }}
-                    className="w-14 h-1 accent-[#c0c1ff] cursor-pointer bg-white/10 rounded-lg appearance-none"
-                    style={{ WebkitAppearance: 'none', outline: 'none' }}
-                  >
-                  </input>
-                </div>
               </>
             )}
 
@@ -482,7 +464,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
 
           {/* Center Parent Pill: Live Log, Chat, People, More */}
           <div 
-            className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-2 ${
+            className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-0.5 sm:ml-1 ${
               isViewing && effectiveCollapsed ? 'collapsed' : ''
             }`}
           >
@@ -553,9 +535,9 @@ const CollabDock: React.FC<CollabDockProps> = ({
             </div>
           </div>
 
-          {/* Right Parent Pill: Leave Room */}
+          {/* Right Parent Pill: Leave Room (hidden on mobile) */}
           <div 
-            className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-2 ${
+            className={`dock-pill-container hidden sm:flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-0.5 sm:ml-1 ${
               isViewing && effectiveCollapsed ? 'collapsed' : ''
             }`}
           >
@@ -1421,7 +1403,7 @@ export const RoomPage: React.FC = () => {
   // Audio states
   const [hostAudioEnabled, setHostAudioEnabled] = useState(true);
   const [viewerMuted, setViewerMuted] = useState(false);
-  const [viewerVolume, setViewerVolume] = useState(0.8);
+  const viewerVolume = 1.0;
 
   // Sync host audio track
   useEffect(() => {
@@ -1858,7 +1840,6 @@ export const RoomPage: React.FC = () => {
                   isViewing={isViewing}
                   hostAudioEnabled={hostAudioEnabled}
                   viewerMuted={viewerMuted}
-                  viewerVolume={viewerVolume}
                   messageCount={messages.length}
                   isPeopleOpen={isPeopleOpen}
                   isChatOpen={isChatOpen && activeRightTab === 'chat'}
@@ -1871,7 +1852,6 @@ export const RoomPage: React.FC = () => {
                   onToggleShare={handleShareToggle}
                   onToggleHostAudio={toggleHostAudio}
                   onToggleViewerMute={() => setViewerMuted(p => !p)}
-                  onVolumeChange={v => setViewerVolume(v)}
                   onToggleChat={handleToggleChat}
                   onTogglePeople={handleTogglePeople}
                   onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
@@ -1983,7 +1963,6 @@ export const RoomPage: React.FC = () => {
                   isViewing={isViewing}
                   hostAudioEnabled={hostAudioEnabled}
                   viewerMuted={viewerMuted}
-                  viewerVolume={viewerVolume}
                   messageCount={messages.length}
                   isPeopleOpen={isPeopleOpen}
                   isChatOpen={isChatOpen && activeRightTab === 'chat'}
@@ -1996,7 +1975,6 @@ export const RoomPage: React.FC = () => {
                   onToggleShare={handleShareToggle}
                   onToggleHostAudio={toggleHostAudio}
                   onToggleViewerMute={() => setViewerMuted(p => !p)}
-                  onVolumeChange={v => setViewerVolume(v)}
                   onToggleChat={handleToggleChat}
                   onTogglePeople={handleTogglePeople}
                   onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
@@ -2047,20 +2025,18 @@ export const RoomPage: React.FC = () => {
                         isViewing={isViewing}
                         hostAudioEnabled={hostAudioEnabled}
                         viewerMuted={viewerMuted}
-                        viewerVolume={viewerVolume}
-                        messageCount={messages.length}
-                        isPeopleOpen={isPeopleOpen}
-                        isChatOpen={isChatOpen && activeRightTab === 'chat'}
-                        isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
-                        showMoreMenu={showMoreMenu}
-                        autoDelete={autoDelete}
-                        isTranscriptionActive={isTranscriptionActive}
-                        isTranscriptionSupported={isTranscriptionSupported}
-                        onToggleMic={handleToggleMic}
-                        onToggleShare={handleShareToggle}
-                        onToggleHostAudio={toggleHostAudio}
-                        onToggleViewerMute={() => setViewerMuted(p => !p)}
-                        onVolumeChange={v => setViewerVolume(v)}
+                  messageCount={messages.length}
+                  isPeopleOpen={isPeopleOpen}
+                  isChatOpen={isChatOpen && activeRightTab === 'chat'}
+                  isTranscriptOpen={isChatOpen && activeRightTab === 'transcript'}
+                  showMoreMenu={showMoreMenu}
+                  autoDelete={autoDelete}
+                  isTranscriptionActive={isTranscriptionActive}
+                  isTranscriptionSupported={isTranscriptionSupported}
+                  onToggleMic={handleToggleMic}
+                  onToggleShare={handleShareToggle}
+                  onToggleHostAudio={toggleHostAudio}
+                  onToggleViewerMute={() => setViewerMuted(p => !p)}
                         onToggleChat={handleToggleChat}
                         onTogglePeople={handleTogglePeople}
                         onToggleMoreMenu={() => setShowMoreMenu(p => !p)}

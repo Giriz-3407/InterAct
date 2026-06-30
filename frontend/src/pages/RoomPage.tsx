@@ -203,7 +203,6 @@ interface MoreMenuProps {
   onShareRoom: () => void;
   onToggleAutoDelete: () => void;
   onToggleTranscript: () => void;
-  onLeave: () => void;
   onClose: () => void;
   onBackdropClick?: () => void;
   isMobile: boolean;
@@ -214,7 +213,7 @@ interface MoreMenuProps {
 
 const MoreMenu: React.FC<MoreMenuProps> = ({
   isHost, autoDelete, isTranscriptOpen, isTranscriptionActive, isTranscriptionSupported,
-  onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript, onLeave, onClose, onBackdropClick,
+  onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript, onClose, onBackdropClick,
   isMobile,
   isViewing,
   isPresentationMode = false,
@@ -397,7 +396,6 @@ const CollabDock: React.FC<CollabDockProps> = ({
             onShareRoom={onShareRoom}
             onToggleAutoDelete={onToggleAutoDelete}
             onToggleTranscript={onToggleTranscript}
-            onLeave={onLeave}
             onClose={onToggleMoreMenu}
             onBackdropClick={onMoreBackdropClick}
             isMobile={isMobile}

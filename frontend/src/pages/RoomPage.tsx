@@ -2171,20 +2171,6 @@ export const RoomPage: React.FC = () => {
                     onInteraction={resetPresentationTimer}
                     onRelease={resetPresentationTimer}
                   />
-
-                  {/* Expand Controls button (shown when UI is hidden) */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      showPresentationControls();
-                    }}
-                    className={`absolute bottom-4 right-4 z-30 w-10 h-10 rounded-full bg-black/70 backdrop-blur-xl border border-zinc-700/50 shadow-xl flex items-center justify-center text-zinc-300 hover:text-white hover:bg-black/80 transition-all active:scale-90 ${
-                      isPresentationControlsVisible ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
-                    }`}
-                    title="Show controls"
-                  >
-                    <Maximize2 size={18} />
-                  </button>
                 </>
               )}
             </>

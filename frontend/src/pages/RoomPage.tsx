@@ -1954,22 +1954,16 @@ export const RoomPage: React.FC = () => {
           {/* Main layout routing depending on stream state and mobile viewer status */}
           <>
             {/* Floating Top Bar (Desktop only) */}
-            {!(isMobileViewer && isPresentationMode) && (
-              <div className={`transition-all duration-300 ${
-                isPresentationMode 
-                  ? (isPresentationControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none') 
-                  : 'opacity-100 translate-y-0'
-              }`}>
-                <RoomTopBar
-                  roomId={roomId || ''}
-                  participantCount={participants.length}
-                  isSharing={isSharing}
-                  isViewing={isViewing}
-                  displayName={displayName}
-                  isHost={isHost}
-                  onShare={handleShareRoom}
-                />
-              </div>
+            {!isPresentationMode && (
+              <RoomTopBar
+                roomId={roomId || ''}
+                participantCount={participants.length}
+                isSharing={isSharing}
+                isViewing={isViewing}
+                displayName={displayName}
+                isHost={isHost}
+                onShare={handleShareRoom}
+              />
             )}
 
             {/* Active indicator pills */}
@@ -2030,7 +2024,7 @@ export const RoomPage: React.FC = () => {
             )}
 
             {/* Presenter pill */}
-            {isSharing && (
+            {isSharing && !isPresentationMode && (
               <div className={`absolute top-15 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none transition-all duration-300 ${
                 isPresentationMode 
                   ? (isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none') 
@@ -2046,7 +2040,7 @@ export const RoomPage: React.FC = () => {
             )}
 
             {/* Viewer status pill (hidden in mobile presentation mode) */}
-            {isViewing && !isMobileViewer && (
+            {isViewing && !isMobileViewer && !isPresentationMode && (
               <div className={`absolute top-15 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none transition-all duration-300 ${
                 isPresentationMode 
                   ? (isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none') 
@@ -2247,6 +2241,20 @@ export const RoomPage: React.FC = () => {
               title="Expand Controls"
             >
               <Maximize2 size={18} />
+            </button>
+          )}
+
+          {/* Floating Exit Presentation Mode Close Button */}
+          {isPresentationMode && isPresentationControlsVisible && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPresentationMode(false);
+              }}
+              className="absolute z-40 w-12 h-12 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 text-zinc-300 hover:text-white hover:bg-white/10 active:scale-95 transition-all duration-300 shadow-2xl flex items-center justify-center cursor-pointer top-4 right-4"
+              title="Exit Presentation Mode"
+            >
+              <X size={18} />
             </button>
           )}
         </main>

@@ -26,6 +26,7 @@ import {
   LogOut,
   Volume2,
   VolumeX,
+  Maximize2,
   Sparkles,
   FileText,
   X,
@@ -195,16 +196,17 @@ interface MoreMenuProps {
   onToggleTranscript: () => void;
   onLeave: () => void;
   onClose: () => void;
+  onBackdropClick?: () => void;
   isMobile: boolean;
 }
 
 const MoreMenu: React.FC<MoreMenuProps> = ({
   isHost, autoDelete, isTranscriptOpen, isTranscriptionActive, isTranscriptionSupported,
-  onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript, onLeave, onClose,
+  onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript, onLeave, onClose, onBackdropClick,
   isMobile,
 }) => (
   <>
-    <div className="fixed inset-0 z-40" onClick={onClose} />
+    <div className="fixed inset-0 z-40" onClick={onBackdropClick ?? onClose} />
     <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 z-50 w-56 bg-[#111113] border border-[#1e1e21] rounded-xl shadow-2xl overflow-hidden animate-fade-in">
       <div className="py-1.5">
         {isHost && (
@@ -298,6 +300,7 @@ interface CollabDockProps {
   onToggleChat: () => void;
   onTogglePeople: () => void;
   onToggleMoreMenu: () => void;
+  onMoreBackdropClick?: () => void;
   onLeave: () => void;
   onOpenHostPanel: () => void;
   onShareRoom: () => void;
@@ -317,7 +320,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
   messageCount, isPeopleOpen, isChatOpen, isTranscriptOpen, showMoreMenu, autoDelete,
   isTranscriptionActive, isTranscriptionSupported,
   onToggleMic, onToggleShare, onToggleHostAudio, onToggleViewerMute,
-  onToggleChat, onTogglePeople, onToggleMoreMenu, onLeave,
+  onToggleChat, onTogglePeople, onToggleMoreMenu, onMoreBackdropClick, onLeave,
   onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript,
   isStacked = false,
   isCollapsed = false,
@@ -366,6 +369,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
             onToggleTranscript={onToggleTranscript}
             onLeave={onLeave}
             onClose={onToggleMoreMenu}
+            onBackdropClick={onMoreBackdropClick}
             isMobile={isMobile}
           />
         )}
@@ -610,10 +614,10 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         <div className="fixed inset-0 bg-black/50 z-35 md:hidden" onClick={onClose} />
       )}
 
-      <aside className={`flex flex-col bg-black/60 border-l border-zinc-800/40 shadow-2xl transition-all duration-300 ease-in-out shrink-0 z-40 ${
+      <aside className={`flex flex-col bg-[#111113] border-l border-zinc-800/40 shadow-2xl transition-all duration-300 ease-in-out shrink-0 z-40 ${
         showActiveStream
           ? `static h-auto my-3 mr-3 rounded-2xl border ${isOpen ? 'w-[350px] opacity-100' : 'w-0 opacity-0 overflow-hidden border-none'}`
-          : `fixed top-0 right-0 bottom-0 md:top-[72px] md:right-3 md:bottom-3 md:h-[calc(100dvh-5.5rem)] md:w-[350px] md:border md:rounded-2xl ${isOpen ? 'translate-x-0' : 'translate-x-full'}`
+          : `fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] md:top-[72px] md:right-3 md:bottom-3 md:h-[calc(100dvh-5.5rem)] md:w-[350px] md:border md:rounded-2xl ${isOpen ? 'translate-x-0' : 'translate-x-full'}`
       }`}>
         {/* Tab header */}
         <div className="h-14 border-b border-zinc-800/30 flex items-center justify-between px-3 shrink-0 bg-white/[0.01]">
@@ -1332,12 +1336,29 @@ export const RoomPage: React.FC = () => {
   // Mobile presentation experience definitions
   const isMobileViewer = isMobileDevice && isViewing && !!remoteStream;
 
-  const showMobileControls = useCallback(() => {
-    setIsMobileControlsVisible(true);
+  const resetControlsTimer = useCallback(() => {
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = setTimeout(() => {
       setIsMobileControlsVisible(false);
     }, 3000);
+  }, []);
+
+  const showMobileControls = useCallback(() => {
+    setIsMobileControlsVisible(true);
+    resetControlsTimer();
+  }, [resetControlsTimer]);
+
+  const toggleMobileControls = useCallback(() => {
+    setIsMobileControlsVisible(prev => {
+      if (prev) {
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        return false;
+      }
+      controlsTimeoutRef.current = setTimeout(() => {
+        setIsMobileControlsVisible(false);
+      }, 3000);
+      return true;
+    });
   }, []);
 
   const resetCollapseTimer = useCallback(() => {
@@ -1351,9 +1372,24 @@ export const RoomPage: React.FC = () => {
 
   const handleCanvasClick = useCallback(() => {
     if (isViewing) {
+      if (showMoreMenu) setShowMoreMenu(false);
       setIsDockCollapsed(true);
     }
-  }, [isViewing]);
+  }, [isViewing, showMoreMenu]);
+
+  // Pause collapse timer while More menu is open
+  useEffect(() => {
+    if (showMoreMenu) {
+      if (collapseTimerRef.current) clearTimeout(collapseTimerRef.current);
+    } else {
+      resetCollapseTimer();
+    }
+  }, [showMoreMenu, resetCollapseTimer]);
+
+  const handleMoreBackdropClick = useCallback(() => {
+    setShowMoreMenu(false);
+    setIsDockCollapsed(true);
+  }, []);
 
   // Collapse dock automatically when screen sharing starts
   useEffect(() => {
@@ -1855,6 +1891,7 @@ export const RoomPage: React.FC = () => {
                   onToggleChat={handleToggleChat}
                   onTogglePeople={handleTogglePeople}
                   onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
+                  onMoreBackdropClick={handleMoreBackdropClick}
                   onLeave={() => navigate('/dashboard')}
                   onOpenHostPanel={() => handleOpenRightDrawer('host')}
                   onShareRoom={handleShareRoom}
@@ -1914,11 +1951,16 @@ export const RoomPage: React.FC = () => {
 
               {/* Video content (Mobile viewport or absolute overlay backups) */}
               {isViewing && remoteStream && (
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay playsInline muted
-                  className="w-full h-full object-contain"
-                />
+                <div
+                  className="w-full h-full"
+                  onClick={isMobileViewer ? toggleMobileControls : undefined}
+                >
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay playsInline muted
+                    className="w-full h-full object-contain"
+                  />
+                </div>
               )}
 
               {/* Empty / sharing state */}
@@ -1978,6 +2020,7 @@ export const RoomPage: React.FC = () => {
                   onToggleChat={handleToggleChat}
                   onTogglePeople={handleTogglePeople}
                   onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
+                  onMoreBackdropClick={handleMoreBackdropClick}
                   onLeave={() => navigate('/dashboard')}
                   onOpenHostPanel={() => handleOpenRightDrawer('host')}
                   onShareRoom={handleShareRoom}
@@ -2000,8 +2043,8 @@ export const RoomPage: React.FC = () => {
                       roomId={roomId || ''}
                       showCopied={showCopied}
                       onShare={handleShareRoom}
-                      onInteraction={showMobileControls}
-                      onRelease={showMobileControls}
+                      onInteraction={resetControlsTimer}
+                      onRelease={resetControlsTimer}
                     />
                   </div>
 
@@ -2011,11 +2054,11 @@ export const RoomPage: React.FC = () => {
                     style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
                   >
                     <div
-                      onTouchStart={(e) => { e.stopPropagation(); showMobileControls(); }}
-                      onMouseDown={(e) => { e.stopPropagation(); showMobileControls(); }}
-                      onTouchEnd={(e) => { e.stopPropagation(); showMobileControls(); }}
-                      onMouseUp={(e) => { e.stopPropagation(); showMobileControls(); }}
-                      onClick={(e) => { e.stopPropagation(); showMobileControls(); }}
+                      onTouchStart={(e) => { e.stopPropagation(); resetControlsTimer(); }}
+                      onMouseDown={(e) => { e.stopPropagation(); resetControlsTimer(); }}
+                      onTouchEnd={(e) => { e.stopPropagation(); resetControlsTimer(); }}
+                      onMouseUp={(e) => { e.stopPropagation(); resetControlsTimer(); }}
+                      onClick={(e) => { e.stopPropagation(); resetControlsTimer(); }}
                       className="pointer-events-auto"
                     >
                       <CollabDock
@@ -2040,6 +2083,7 @@ export const RoomPage: React.FC = () => {
                         onToggleChat={handleToggleChat}
                         onTogglePeople={handleTogglePeople}
                         onToggleMoreMenu={() => setShowMoreMenu(p => !p)}
+                        onMoreBackdropClick={handleMoreBackdropClick}
                         onLeave={() => navigate('/dashboard')}
                         onOpenHostPanel={() => handleOpenRightDrawer('host')}
                         onShareRoom={handleShareRoom}
@@ -2068,8 +2112,8 @@ export const RoomPage: React.FC = () => {
                     onClose={() => setIsChatOpen(false)}
                     onChatInputChange={setChatInput}
                     onSendMessage={handleSendMessage}
-                    onInteraction={showMobileControls}
-                    onRelease={showMobileControls}
+                    onInteraction={resetControlsTimer}
+                    onRelease={resetControlsTimer}
                   />
 
                   {/* Slide-over Floating Participants Overlay */}
@@ -2080,9 +2124,23 @@ export const RoomPage: React.FC = () => {
                     isHost={isHost}
                     onClose={() => setIsPeopleOpen(false)}
                     onRemoveParticipant={(targetId) => wsClient.send('remove_participant', { targetId })}
-                    onInteraction={showMobileControls}
-                    onRelease={showMobileControls}
+                    onInteraction={resetControlsTimer}
+                    onRelease={resetControlsTimer}
                   />
+
+                  {/* Expand Controls button (shown when UI is hidden) */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      showMobileControls();
+                    }}
+                    className={`absolute bottom-4 right-4 z-30 w-10 h-10 rounded-full bg-black/70 backdrop-blur-xl border border-zinc-700/50 shadow-xl flex items-center justify-center text-zinc-300 hover:text-white hover:bg-black/80 transition-all active:scale-90 ${
+                      isMobileControlsVisible ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
+                    }`}
+                    title="Show controls"
+                  >
+                    <Maximize2 size={18} />
+                  </button>
                 </>
               )}
             </>

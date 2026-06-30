@@ -86,9 +86,10 @@ interface DockBtnProps {
   danger?: boolean;
   badge?: number;
   className?: string;
+  badgeClassName?: string;
 }
 
-const DockBtn: React.FC<DockBtnProps> = ({ onClick, title, icon, active, danger, badge, className = '' }) => (
+const DockBtn: React.FC<DockBtnProps> = ({ onClick, title, icon, active, danger, badge, className = '', badgeClassName }) => (
   <button
     onClick={onClick}
     title={title}
@@ -98,7 +99,7 @@ const DockBtn: React.FC<DockBtnProps> = ({ onClick, title, icon, active, danger,
       {icon}
     </span>
     {badge !== undefined && badge > 0 && (
-      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[8px] font-bold text-white leading-none shadow-[0_1px_2px_rgba(0,0,0,0.2)]">
+      <span className={`absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white leading-none shadow-[0_1px_2px_rgba(0,0,0,0.2)] ${badgeClassName || 'bg-indigo-500'}`}>
         {badge}
       </span>
     )}
@@ -320,6 +321,7 @@ interface CollabDockProps {
   onMouseEnter?: () => void;
   onClick?: (e: React.MouseEvent) => void;
   isMobile?: boolean;
+  participantCount?: number;
 }
 
 const CollabDock: React.FC<CollabDockProps> = ({
@@ -335,10 +337,12 @@ const CollabDock: React.FC<CollabDockProps> = ({
   onMouseEnter,
   onClick,
   isMobile = false,
+  participantCount = 0,
 }) => {
+  const effectiveCollapsed = isMobile ? false : isCollapsed;
   let itemIndex = 0;
   const getItemDelayStyle = () => {
-    const delay = isCollapsed 
+    const delay = effectiveCollapsed 
       ? (12 - itemIndex) * 30 
       : itemIndex * 30;
     itemIndex++;
@@ -361,7 +365,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
     >
       <div className="relative animate-fade-in">
         {/* More menu */}
-        {showMoreMenu && !isCollapsed && (
+        {showMoreMenu && !effectiveCollapsed && (
           <MoreMenu
             isHost={isHost}
             autoDelete={autoDelete}
@@ -383,7 +387,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
           {/* Left Parent Pill: Mic, Speaker, Share Screen */}
           <div 
             className={`flex items-center whitespace-nowrap transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5`}
-            style={isViewing && isCollapsed ? {
+            style={isViewing && effectiveCollapsed ? {
               width: '48px',
               height: '48px',
               paddingLeft: '8px',
@@ -392,14 +396,14 @@ const CollabDock: React.FC<CollabDockProps> = ({
             } : undefined}
           >
             {/* Collapsible toggle handle button (Only visible in viewer presentation mode, placed at the very start) */}
-            {isViewing && onToggleCollapse && (
+            {isViewing && !isMobile && onToggleCollapse && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleCollapse();
                 }}
-                className={`w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center shrink-0 transition-all active:scale-95 text-zinc-400 cursor-pointer ${isCollapsed ? 'mr-0' : 'mr-1.5'}`}
-                title={isCollapsed ? "Expand Controls" : "Collapse Controls"}
+                className={`w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white flex items-center justify-center shrink-0 transition-all active:scale-95 text-zinc-400 cursor-pointer ${effectiveCollapsed ? 'mr-0' : 'mr-1.5'}`}
+                title={effectiveCollapsed ? "Expand Controls" : "Collapse Controls"}
               >
                 <Menu size={14} />
               </button>
@@ -407,7 +411,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
 
             {/* Mic */}
             <div 
-              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
               style={getItemDelayStyle()}
             >
               <DockBtn
@@ -422,7 +426,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
             {/* Host shared audio toggle (only when sharing) */}
             {isHost && isSharing && (
               <div 
-                className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+                className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
                 style={getItemDelayStyle()}
               >
                 <DockBtn
@@ -439,7 +443,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
             {isViewing && (
               <>
                 <div 
-                  className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+                  className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
                   style={getItemDelayStyle()}
                 >
                   <DockBtn
@@ -451,7 +455,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
                   />
                 </div>
                 <div 
-                  className={`dock-item-anim dock-item-slider ${isViewing && isCollapsed ? 'collapsed' : 'expanded'} hidden min-[390px]:flex items-center gap-1.5 px-1.5`}
+                  className={`dock-item-anim dock-item-slider ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'} hidden min-[390px]:flex items-center gap-1.5 px-1.5`}
                   style={getItemDelayStyle()}
                 >
                   <input
@@ -472,7 +476,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
             {/* Screen share (host only) */}
             {isHost && (
               <div 
-                className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+                className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
                 style={getItemDelayStyle()}
               >
                 <DockBtn
@@ -489,13 +493,13 @@ const CollabDock: React.FC<CollabDockProps> = ({
           {/* Center Parent Pill: Live Log, Chat, People, More */}
           <div 
             className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-2 ${
-              isViewing && isCollapsed ? 'collapsed' : ''
+              isViewing && effectiveCollapsed ? 'collapsed' : ''
             }`}
           >
             {/* Live Log */}
             {!isMobile && (
               <div 
-                className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+                className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
                 style={getItemDelayStyle()}
               >
                 <DockBtn
@@ -515,7 +519,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
 
             {/* Chat */}
             <div 
-              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
               style={getItemDelayStyle()}
             >
               <DockBtn
@@ -530,7 +534,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
 
             {/* People */}
             <div 
-              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
               style={getItemDelayStyle()}
             >
               <DockBtn
@@ -539,12 +543,14 @@ const CollabDock: React.FC<CollabDockProps> = ({
                 icon={<IconPeople />}
                 label="People"
                 active={isPeopleOpen}
+                badge={isMobile ? participantCount : undefined}
+                badgeClassName={isMobile ? "bg-zinc-800 border border-zinc-700/50 text-zinc-400" : undefined}
               />
             </div>
 
             {/* More */}
             <div 
-              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
               style={getItemDelayStyle()}
             >
               <DockBtn
@@ -560,12 +566,12 @@ const CollabDock: React.FC<CollabDockProps> = ({
           {/* Right Parent Pill: Leave Room */}
           <div 
             className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 pointer-events-auto h-[56px] px-2.5 gap-2.5 ml-2 ${
-              isViewing && isCollapsed ? 'collapsed' : ''
+              isViewing && effectiveCollapsed ? 'collapsed' : ''
             }`}
           >
             {/* Leave */}
             <div 
-              className={`dock-item-anim ${isViewing && isCollapsed ? 'collapsed' : 'expanded'}`}
+              className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
               style={getItemDelayStyle()}
             >
               <DockBtn
@@ -979,7 +985,6 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
 ───────────────────────────────────────────────── */
 interface FloatingHeaderProps {
   roomId: string;
-  participantCount: number;
   showCopied: boolean;
   onShare: () => void;
   onInteraction: () => void;
@@ -987,7 +992,7 @@ interface FloatingHeaderProps {
 }
 
 const FloatingHeader: React.FC<FloatingHeaderProps> = ({
-  roomId, participantCount, showCopied, onShare, onInteraction, onRelease
+  roomId, showCopied, onShare, onInteraction, onRelease
 }) => (
   <div
     onTouchStart={(e) => {
@@ -1012,7 +1017,6 @@ const FloatingHeader: React.FC<FloatingHeaderProps> = ({
     <div className="flex items-center gap-2 min-w-0">
       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
       <span className="text-xs font-bold font-geist text-zinc-200 truncate">Room: {roomId}</span>
-      <span className="text-[10px] text-zinc-500 shrink-0">({participantCount} inside)</span>
     </div>
     <div className="flex items-center gap-1.5">
       <button
@@ -1899,6 +1903,7 @@ export const RoomPage: React.FC = () => {
                     resetCollapseTimer();
                   }}
                   isMobile={isMobile}
+                  participantCount={participants.length}
                 />
               )}
             </div>
@@ -2014,6 +2019,7 @@ export const RoomPage: React.FC = () => {
                   onToggleAutoDelete={() => wsClient.send('toggle_auto_delete', { autoDelete: !autoDelete })}
                   onToggleTranscript={handleToggleTranscript}
                   isMobile={isMobile}
+                  participantCount={participants.length}
                 />
               )}
 
@@ -2027,7 +2033,6 @@ export const RoomPage: React.FC = () => {
                   >
                     <FloatingHeader
                       roomId={roomId || ''}
-                      participantCount={participants.length}
                       showCopied={showCopied}
                       onShare={handleShareRoom}
                       onInteraction={showMobileControls}
@@ -2085,6 +2090,7 @@ export const RoomPage: React.FC = () => {
                         }}
                         onMouseEnter={resetCollapseTimer}
                         isMobile={isMobile}
+                        participantCount={participants.length}
                       />
                     </div>
                   </div>

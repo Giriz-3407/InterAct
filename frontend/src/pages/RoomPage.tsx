@@ -114,13 +114,12 @@ interface RoomTopBarProps {
   isViewing: boolean;
   displayName: string;
   isHost: boolean;
-  onLeave: () => void;
   onShare: () => void;
   isStacked?: boolean;
 }
 
 const RoomTopBar: React.FC<RoomTopBarProps> = ({
-  roomId, participantCount, isSharing, isViewing, isHost, onLeave, onShare, isStacked = false,
+  roomId, participantCount, isSharing, isViewing, isHost, onShare, isStacked = false,
 }) => (
   <div className={isStacked ? "relative w-full z-30 pointer-events-none flex items-center justify-between select-none p-1" : "absolute top-3 left-3 right-3 z-30 pointer-events-none flex items-center justify-between select-none"}>
     {/* Left group */}
@@ -1317,7 +1316,7 @@ export const RoomPage: React.FC = () => {
     sharingState, localStream, remoteStream, remoteMicStreams,
     captureDisplaySurface, startSharing, stopSharing,
     errorMessage, audioWarning, micWarning,
-    auditReports, getPeerConnectionStates,
+    getPeerConnectionStates,
     voiceNegotiation, beginVoiceNegotiation,
     micStream,
   } = useWebRTC({ isHost, currentSocketId, viewerIds, micMuted: isMuted, hostSocketId, srOnly: srOnlyMode });
@@ -1327,8 +1326,6 @@ export const RoomPage: React.FC = () => {
     isSupported: isTranscriptionSupported,
     start: startSpeech,
     stop: stopSpeech,
-    diagLogs,
-    clearDiagLogs,
   } = useLiveTranscription({
     roomCode: roomId || '',
     socketId: currentSocketId,
@@ -1910,7 +1907,6 @@ export const RoomPage: React.FC = () => {
                   isViewing={isViewing}
                   displayName={displayName}
                   isHost={isHost}
-                  onLeave={() => navigate('/dashboard')}
                   onShare={handleShareRoom}
                 />
               )}

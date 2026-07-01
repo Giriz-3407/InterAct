@@ -196,59 +196,110 @@ const JumpBackRow: React.FC<JumpBackRowProps> = ({ roomCode, participantCount, o
    ───────────────────────────────────────────────────────────── */
 interface DashHeaderProps {
   onCreateRoom: () => void;
+  onJoinRoom: () => void;
   onToggleSidebar: () => void;
   activeRoomCount: number;
 }
 
-const DashHeader: React.FC<DashHeaderProps> = ({ onCreateRoom, onToggleSidebar, activeRoomCount }) => (
-  <header className="sticky top-0 z-20 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/[0.04]">
-    <div className="flex items-center justify-between px-4 sm:px-6 h-14">
-      {/* Left: hamburger (mobile) + title */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onToggleSidebar}
-          className="md:hidden p-1.5 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors cursor-pointer"
-          aria-label="Toggle sidebar"
-        >
-          <Menu size={18} />
-        </button>
-        {/* Workspace title */}
-        <div className="flex items-center gap-2.5">
-          <img src={interactLogo} alt="" className="h-5 w-auto md:hidden" />
-          <h1 className="text-sm font-bold font-geist text-white hidden sm:block select-none">Workspace</h1>
-          {activeRoomCount > 0 && (
-            <div className="hidden sm:flex items-center gap-1.5 status-pill-connected py-0.5 px-2.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-semibold font-geist text-emerald-400">{activeRoomCount} live</span>
-            </div>
-          )}
+const DashHeader: React.FC<DashHeaderProps> = ({ onCreateRoom, onJoinRoom, onToggleSidebar, activeRoomCount }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+  return (
+    <header className="sticky top-0 z-20 bg-[#09090b]/80 backdrop-blur-xl border-b border-white/[0.04]">
+      <div className="flex items-center justify-between px-4 sm:px-6 h-14">
+        {/* Left: hamburger (mobile) + title */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onToggleSidebar}
+            className="md:hidden p-1.5 rounded-full text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors cursor-pointer"
+            aria-label="Toggle sidebar"
+          >
+            <Menu size={18} />
+          </button>
+          {/* Workspace title */}
+          <div className="flex items-center gap-2.5">
+            <img src={interactLogo} alt="" className="h-5 w-auto md:hidden" />
+            <h1 className="text-sm font-bold font-geist text-white hidden sm:block select-none">Workspace</h1>
+            {activeRoomCount > 0 && (
+              <div className="hidden sm:flex items-center gap-1.5 status-pill-connected py-0.5 px-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] font-semibold font-geist text-emerald-400">{activeRoomCount} live</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: search + CTA */}
+        <div className="flex items-center gap-2 sm:gap-3 relative">
+          <AgentStatusIndicator showRefresh={true} />
+          {/* Command-palette search */}
+          <button
+            className="hidden md:flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.04] text-zinc-400 hover:border-white/[0.08] hover:bg-white/[0.04] hover:text-zinc-200 transition-all cursor-pointer text-xs font-geist active:scale-95"
+            onClick={() => {}}
+          >
+            <Search size={13} />
+            <span>Search rooms...</span>
+            <kbd className="ml-2 text-[9px] border border-white/10 px-1.5 py-0.2 rounded text-zinc-500">⌘K</kbd>
+          </button>
+
+          {/* Desktop Primary Actions: visible at sm and larger screens */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button
+              onClick={onJoinRoom}
+              className="btn-pill-secondary text-xs h-9 px-4 flex items-center gap-1.5"
+            >
+              <Compass size={13} />
+              <span>Join with Code</span>
+            </button>
+            <button
+              onClick={onCreateRoom}
+              className="btn-pill-primary text-xs h-9 px-4 flex items-center gap-1.5"
+            >
+              <Plus size={13} />
+              <span>New Room</span>
+            </button>
+          </div>
+
+          {/* Mobile Dropdown Action: visible on small screens (xs) */}
+          <div className="sm:hidden relative">
+            <button
+              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="btn-pill-primary text-xs h-9 px-3 flex items-center gap-1"
+            >
+              <span>New</span>
+              <span className={`text-[8px] transition-transform duration-200 ${mobileMenuOpen ? 'rotate-180' : 'rotate-0'}`}>
+                ▼
+              </span>
+            </button>
+            {mobileMenuOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-30" 
+                  onClick={() => setMobileMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-[calc(100%+8px)] z-40 w-40 bg-[#111113] border border-[#1e1e21] rounded-xl shadow-2xl py-1 animate-fade-in">
+                  <button
+                    onClick={() => { onCreateRoom(); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-zinc-300 hover:bg-white/[0.04] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
+                  >
+                    <Plus size={14} className="text-zinc-500" />
+                    <span>New Room</span>
+                  </button>
+                  <button
+                    onClick={() => { onJoinRoom(); setMobileMenuOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-zinc-300 hover:bg-white/[0.04] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
+                  >
+                    <Compass size={14} className="text-zinc-500" />
+                    <span>Join with Code</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Right: search + CTA */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        <AgentStatusIndicator showRefresh={true} />
-        {/* Command-palette search */}
-        <button
-          className="hidden md:flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/[0.02] border border-white/[0.04] text-zinc-400 hover:border-white/[0.08] hover:bg-white/[0.04] hover:text-zinc-200 transition-all cursor-pointer text-xs font-geist active:scale-95"
-          onClick={() => {}}
-        >
-          <Search size={13} />
-          <span>Search rooms...</span>
-          <kbd className="ml-2 text-[9px] border border-white/10 px-1.5 py-0.2 rounded text-zinc-500">⌘K</kbd>
-        </button>
-        <button
-          onClick={onCreateRoom}
-          className="btn-pill-primary text-xs h-9 px-4 sm:px-4.5"
-        >
-          <Plus size={13} />
-          <span className="hidden xs:inline">Create Room</span>
-          <span className="xs:hidden">New</span>
-        </button>
-      </div>
-    </div>
-  </header>
-);
+    </header>
+  );
+};
 
 /* ─────────────────────────────────────────────────────────────
    MAIN DASHBOARD PAGE
@@ -356,6 +407,7 @@ export const DashboardPage: React.FC = () => {
       {/* Header */}
       <DashHeader
         onCreateRoom={handleCreateTrigger}
+        onJoinRoom={handleJoinTrigger}
         onToggleSidebar={() => window.dispatchEvent(new CustomEvent('toggle-sidebar'))}
         activeRoomCount={totalActiveRooms}
       />
@@ -381,7 +433,7 @@ export const DashboardPage: React.FC = () => {
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6 sm:gap-8">
 
           {/* ── WORKSPACE HERO ── */}
-          <section className="relative overflow-hidden rounded-2xl border border-white/[0.03] bg-gradient-to-r from-black/40 to-white/[0.01] p-6 sm:p-8 shadow-panel">
+          <section className="order-2 sm:order-1 relative overflow-hidden rounded-2xl border border-white/[0.03] bg-gradient-to-r from-black/40 to-white/[0.01] p-6 sm:p-8 shadow-panel">
             {/* Ambient radial */}
             <div className="absolute inset-0 pointer-events-none" style={{
               background: 'radial-gradient(ellipse at 10% 50%, rgba(192, 193, 255, 0.06) 0%, transparent 60%)',
@@ -423,7 +475,7 @@ export const DashboardPage: React.FC = () => {
           </section>
 
           {/* ── STAT CARDS (Merged Surface) ── */}
-          <section className="db-card grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.03] overflow-hidden">
+          <section className="order-3 sm:order-2 db-card grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.03] overflow-hidden">
             <StatCard
               label="Rooms created today"
               value="6"
@@ -455,7 +507,7 @@ export const DashboardPage: React.FC = () => {
           </section>
 
           {/* ── PRIMARY ACTIONS ── */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <section className="order-1 sm:order-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Create Room — dominant */}
             <button
               onClick={handleCreateTrigger}
@@ -504,7 +556,7 @@ export const DashboardPage: React.FC = () => {
           </section>
 
           {/* ── BOTTOM GRID: Rooms + Feed + Intelligence ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="order-4 sm:order-4 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
             {/* LEFT + MIDDLE: Live Rooms + Recent Rooms */}
             <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-7">

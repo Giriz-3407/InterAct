@@ -483,7 +483,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
             )}
 
             {/* Screen share (host only) */}
-            {isHost && (
+            {isHost && !isMobile && (
               <div 
                 className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
                 style={getItemDelayStyle()}
@@ -919,9 +919,10 @@ interface CenterStateProps {
   isSharing: boolean;
   onStartShare: () => void;
   onStopShare: () => void;
+  isMobile: boolean;
 }
 
-const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isSharing, onStartShare, onStopShare }) => {
+const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isSharing, onStartShare, onStopShare, isMobile }) => {
   if (isRequesting) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center select-none">
@@ -942,7 +943,7 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
           <div className="flex items-center gap-1">
             {[0, 100, 200].map(d => (
               <div key={d} className="w-1 bg-red-400/90 rounded-full" style={{
-                height: '20px', animation: `waveform 0.8s ease-in-out ${d}ms infinite`,
+                height: '20px', animation: `waveform 0.8s ease-in-out sum_{d}ms infinite`,
                 transformOrigin: 'bottom',
               }} />
             ))}
@@ -962,11 +963,30 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
         </div>
         <button
           onClick={onStopShare}
-          className="flex items-center gap-2 h-9 px-5 rounded-full bg-red-605 hover:bg-red-600 hover:shadow-lg hover:shadow-red-600/10 text-white text-sm font-semibold font-geist cursor-pointer transition-all active:scale-97"
+          className="flex items-center gap-2 h-9 px-5 rounded-full bg-red-650 hover:bg-red-600 hover:shadow-lg hover:shadow-red-600/10 text-white text-sm font-semibold font-geist cursor-pointer transition-all active:scale-97"
         >
           <IconScreenStop />
           Stop Sharing
         </button>
+      </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-6 p-8 text-center max-w-sm select-none animate-fade-in">
+        <div className="relative w-16 h-16 rounded-2xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-center text-zinc-500 shadow-panel">
+          <div className="absolute inset-0 bg-indigo-500/5 blur-xl rounded-full scale-75 animate-pulse-slow" />
+          <IconMonitor />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold font-geist text-white tracking-tight mb-2 bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">
+            Connected to Session
+          </h3>
+          <p className="text-sm text-zinc-400 font-inter leading-relaxed max-w-[280px] mx-auto">
+            You are ready to view presentations, chat, and collaborate! To broadcast your screen, please log in from a desktop browser.
+          </p>
+        </div>
       </div>
     );
   }
@@ -1382,6 +1402,8 @@ export const RoomPage: React.FC = () => {
 
   const srOnlyMode = searchParams.get('sralone') === '1';
 
+
+
   // WebRTC
   const {
     sharingState, localStream, remoteStream, remoteMicStreams,
@@ -1391,6 +1413,41 @@ export const RoomPage: React.FC = () => {
     voiceNegotiation, beginVoiceNegotiation,
     micStream,
   } = useWebRTC({ isHost, currentSocketId, viewerIds, micMuted: isMuted, hostSocketId, srOnly: srOnlyMode });
+
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [localAudioWarning, setLocalAudioWarning] = useState<string | null>(null);
+  const [localMicWarning, setLocalMicWarning] = useState<string | null>(null);
+
+  // Synchronize error messages and add auto-close timers (5 seconds)
+  useEffect(() => {
+    if (errorMessage) {
+      setLocalError(errorMessage);
+      const timer = setTimeout(() => setLocalError(null), 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setLocalError(null);
+    }
+  }, [errorMessage]);
+
+  useEffect(() => {
+    if (audioWarning) {
+      setLocalAudioWarning(audioWarning);
+      const timer = setTimeout(() => setLocalAudioWarning(null), 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setLocalAudioWarning(null);
+    }
+  }, [audioWarning]);
+
+  useEffect(() => {
+    if (micWarning) {
+      setLocalMicWarning(micWarning);
+      const timer = setTimeout(() => setLocalMicWarning(null), 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setLocalMicWarning(null);
+    }
+  }, [micWarning]);
 
   // Live Speech Transcription Hook (Server-Side STT)
   const {
@@ -1975,24 +2032,48 @@ export const RoomPage: React.FC = () => {
       )}
 
       {/* Warning banners (styled as compact toasts) */}
-      {(errorMessage || audioWarning || micWarning) && !isPresentationMode && (
-        <div className="flex flex-col gap-1.5 px-4 pt-2 shrink-0 z-20">
-          {errorMessage && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 font-inter">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-              {errorMessage}
+      {(localError || localAudioWarning || localMicWarning) && !isPresentationMode && (
+        <div className="flex flex-col gap-1.5 px-4 pt-2 shrink-0 z-20 animate-fade-in select-none">
+          {localError && (
+            <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400 font-inter shadow-md">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+                <span>{localError}</span>
+              </div>
+              <button 
+                onClick={() => setLocalError(null)}
+                className="text-red-400 hover:text-red-300 hover:bg-white/[0.02] cursor-pointer active:scale-95 transition-all p-1 rounded-lg shrink-0 ml-1.5"
+              >
+                <X size={12} />
+              </button>
             </div>
           )}
-          {audioWarning && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 font-inter">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-              {audioWarning}
+          {localAudioWarning && (
+            <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 font-inter shadow-md">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                <span>{localAudioWarning}</span>
+              </div>
+              <button 
+                onClick={() => setLocalAudioWarning(null)}
+                className="text-amber-400 hover:text-amber-300 hover:bg-white/[0.02] cursor-pointer active:scale-95 transition-all p-1 rounded-lg shrink-0 ml-1.5"
+              >
+                <X size={12} />
+              </button>
             </div>
           )}
-          {micWarning && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 font-inter">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-              {micWarning}
+          {localMicWarning && (
+            <div className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 font-inter shadow-md">
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+                <span>{localMicWarning}</span>
+              </div>
+              <button 
+                onClick={() => setLocalMicWarning(null)}
+                className="text-amber-400 hover:text-amber-300 hover:bg-white/[0.02] cursor-pointer active:scale-95 transition-all p-1 rounded-lg shrink-0 ml-1.5"
+              >
+                <X size={12} />
+              </button>
             </div>
           )}
         </div>
@@ -2094,6 +2175,7 @@ export const RoomPage: React.FC = () => {
                   isSharing={isSharing}
                   onStartShare={handleShareToggle}
                   onStopShare={handleShareToggle}
+                  isMobile={isMobile}
                 />
               </div>
             )}

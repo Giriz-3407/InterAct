@@ -24,7 +24,8 @@ import {
   Compass,
   Activity,
   User,
-  Menu
+  Menu,
+  ChevronDown
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────
@@ -263,12 +264,13 @@ const DashHeader: React.FC<DashHeaderProps> = ({ onCreateRoom, onJoinRoom, onTog
           <div className="sm:hidden relative">
             <button
               onClick={() => setMobileMenuOpen(prev => !prev)}
-              className="btn-pill-primary text-xs h-9 px-3 flex items-center gap-1"
+              className="btn-pill-primary text-xs h-9 px-4 flex items-center gap-1.5 cursor-pointer"
             >
-              <span>New</span>
-              <span className={`text-[8px] transition-transform duration-200 ${mobileMenuOpen ? 'rotate-180' : 'rotate-0'}`}>
-                ▼
-              </span>
+              <span>Create</span>
+              <ChevronDown 
+                size={14} 
+                className={`transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'rotate-180' : 'rotate-0'}`} 
+              />
             </button>
             {mobileMenuOpen && (
               <>
@@ -430,10 +432,10 @@ export const DashboardPage: React.FC = () => {
 
       {/* ── MAIN SCROLLABLE AREA ── */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6 sm:gap-8">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-4.5 sm:gap-8">
 
           {/* ── WORKSPACE HERO ── */}
-          <section className="order-2 sm:order-1 relative overflow-hidden rounded-2xl border border-white/[0.03] bg-gradient-to-r from-black/40 to-white/[0.01] p-6 sm:p-8 shadow-panel">
+          <section className="order-1 sm:order-1 relative overflow-hidden rounded-2xl border border-white/[0.03] bg-gradient-to-r from-black/40 to-white/[0.01] p-5 sm:p-8 shadow-panel">
             {/* Ambient radial */}
             <div className="absolute inset-0 pointer-events-none" style={{
               background: 'radial-gradient(ellipse at 10% 50%, rgba(192, 193, 255, 0.06) 0%, transparent 60%)',
@@ -507,11 +509,11 @@ export const DashboardPage: React.FC = () => {
           </section>
 
           {/* ── PRIMARY ACTIONS ── */}
-          <section className="order-1 sm:order-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <section className="order-2 sm:order-3 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Create Room — dominant */}
             <button
               onClick={handleCreateTrigger}
-              className="db-action-primary group text-left cursor-pointer relative overflow-hidden rounded-2xl p-6 sm:p-7 flex flex-col gap-4 min-h-[160px] sm:min-h-[180px] transition-all active:scale-[0.99] duration-150"
+              className="db-action-primary group text-left cursor-pointer relative overflow-hidden rounded-2xl p-4.5 sm:p-7 flex flex-col gap-3.5 min-h-[130px] sm:min-h-[180px] transition-all active:scale-[0.99] duration-150"
             >
               {/* Subtle ambient */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
@@ -537,7 +539,7 @@ export const DashboardPage: React.FC = () => {
             {/* Join Room */}
             <button
               onClick={handleJoinTrigger}
-              className="db-action-secondary group text-left cursor-pointer rounded-2xl p-6 sm:p-7 flex flex-col gap-4 min-h-[160px] sm:min-h-[180px] transition-all active:scale-[0.99] duration-150"
+              className="db-action-secondary group text-left cursor-pointer rounded-2xl p-4.5 sm:p-7 flex flex-col gap-3.5 min-h-[130px] sm:min-h-[180px] transition-all active:scale-[0.99] duration-150"
             >
               <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.02] border border-white/[0.04] group-hover:bg-white/[0.05] group-hover:border-white/[0.08] transition-all">
                 <Compass size={18} className="text-zinc-400 group-hover:text-zinc-300 transition-colors" />

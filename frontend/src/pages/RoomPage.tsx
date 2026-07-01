@@ -13,6 +13,7 @@ import { isMobileDevice } from '../lib/mobile';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
 import { DiagnosticsPanel } from '../components/DiagnosticsPanel';
 import { VoiceNegotiationToast } from '../components/VoiceNegotiationToast';
+import { playSelfJoinSound, playParticipantJoinSound, playMessageSound } from '../lib/sounds';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -616,6 +617,8 @@ interface RightDrawerProps {
   isTranscriptionActive: boolean;
   isTranscriptionSupported: boolean;
   roomTranscripts: { id: string; username: string; text: string; timestamp: string; user_id: string }[];
+  isMessageSoundMuted: boolean;
+  onToggleMessageSoundMute: () => void;
   onTabChange: (tab: 'chat' | 'transcript' | 'ai' | 'host') => void;
   onClose: () => void;
   onChatInputChange: (v: string) => void;
@@ -630,6 +633,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
   isOpen, activeTab, isHost, messages, chatInput, chatEndRef, displayName,
   autoDelete, participants, roomLink,
   isTranscriptionActive, isTranscriptionSupported, roomTranscripts,
+  isMessageSoundMuted, onToggleMessageSoundMute,
   onTabChange, onClose, onChatInputChange, onSendMessage,
   onToggleAutoDelete, onTransferHost, onRemoveParticipant, onToggleTranscription,
 }) => {
@@ -677,6 +681,15 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
               </button>
             ))}
           </div>
+          {activeTab === 'chat' && (
+            <button
+              onClick={onToggleMessageSoundMute}
+              className="w-8 h-8 mr-1 rounded-full bg-white/5 hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center justify-center shrink-0 active:scale-95 text-zinc-400"
+              title={isMessageSoundMuted ? "Unmute chat sounds" : "Mute chat sounds"}
+            >
+              {isMessageSoundMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            </button>
+          )}
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center justify-center shrink-0 active:scale-95 text-zinc-400"
@@ -1045,6 +1058,8 @@ interface FloatingChatProps {
   chatInput: string;
   chatEndRef: React.RefObject<HTMLDivElement | null>;
   displayName: string;
+  isMessageSoundMuted?: boolean;
+  onToggleMessageSoundMute?: () => void;
   onClose: () => void;
   onChatInputChange: (val: string) => void;
   onSendMessage: (e: React.FormEvent) => void;
@@ -1053,7 +1068,8 @@ interface FloatingChatProps {
 }
 
 export const FloatingChat: React.FC<FloatingChatProps> = ({
-  isOpen, messages, chatInput, chatEndRef, displayName, onClose,
+  isOpen, messages, chatInput, chatEndRef, displayName,
+  isMessageSoundMuted = false, onToggleMessageSoundMute = () => {}, onClose,
   onChatInputChange, onSendMessage, onInteraction, onRelease
 }) => {
   const formatTime = (isoString: string) => {
@@ -1099,12 +1115,21 @@ export const FloatingChat: React.FC<FloatingChatProps> = ({
         {/* Header */}
         <div className="h-14 px-4 border-b border-zinc-800/30 flex items-center justify-between shrink-0 bg-white/5">
           <span className="text-sm font-bold font-geist text-zinc-200">Live Chat</span>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
-          >
-            <IconClose />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onToggleMessageSoundMute}
+              className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+              title={isMessageSoundMuted ? "Unmute chat sounds" : "Mute chat sounds"}
+            >
+              {isMessageSoundMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer"
+            >
+              <IconClose />
+            </button>
+          </div>
         </div>
 
         {/* Messages list */}
@@ -1281,6 +1306,17 @@ export const RoomPage: React.FC = () => {
   const [isMuted, setIsMuted] = useState(true);
   const isMutedRef = useRef(isMuted);
   isMutedRef.current = isMuted;
+  const [isMessageSoundMuted, setIsMessageSoundMuted] = useState(() => localStorage.getItem('mute_message_sounds') === 'true');
+  const isMessageSoundMutedRef = useRef(isMessageSoundMuted);
+  isMessageSoundMutedRef.current = isMessageSoundMuted;
+
+  const handleToggleMessageSoundMute = useCallback(() => {
+    setIsMessageSoundMuted(prev => {
+      const newVal = !prev;
+      localStorage.setItem('mute_message_sounds', String(newVal));
+      return newVal;
+    });
+  }, []);
   const [autoDelete, setAutoDelete] = useState(true);
 
   // Panel states — all drawers are overlays, not layout-shifting
@@ -1316,6 +1352,19 @@ export const RoomPage: React.FC = () => {
 
   const currentUserObj = participants.find(p => p.socketId === currentSocketId);
   const isHost = currentUserObj ? currentUserObj.role === 'host' : false;
+
+  // Prevent accidental tab closure with collaboration-specific message
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Leaving the collaboration session will disconnect you from all participants. Are you sure?';
+      return 'Leaving the collaboration session will disconnect you from all participants. Are you sure?';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   // Fallback tab
   useEffect(() => {
@@ -1711,10 +1760,12 @@ export const RoomPage: React.FC = () => {
         const joined = JSON.parse(localStorage.getItem('joinedRooms') || '[]');
         if (!joined.includes(data.roomCode)) { joined.push(data.roomCode); localStorage.setItem('joinedRooms', JSON.stringify(joined)); }
       } catch (err) { console.error('Failed to save room to history:', err); }
+      playSelfJoinSound();
     });
     const unsubParticipantJoined = wsClient.on('participant_joined', data => {
       console.log('Participant joined:', data.participant);
       setParticipants(prev => { if (prev.some(p => p.socketId === data.participant.socketId)) return prev; return [...prev, data.participant]; });
+      playParticipantJoinSound();
     });
     const unsubParticipantLeft = wsClient.on('participant_left', data => {
       console.log('Participant left:', data.participantId);
@@ -1727,6 +1778,9 @@ export const RoomPage: React.FC = () => {
     const unsubChatMessage = wsClient.on('chat_message', data => {
       console.log('Received chat message:', data);
       setMessages(prev => [...prev, { sender: data.sender, message: data.message, timestamp: data.timestamp, type: data.type }]);
+      if (data.sender !== displayName && !isMessageSoundMutedRef.current) {
+        playMessageSound();
+      }
     });
     const unsubSettingsUpdated = wsClient.on('room_settings_updated', data => {
       console.log('Room settings updated:', data);
@@ -1844,8 +1898,9 @@ export const RoomPage: React.FC = () => {
 
   const handleCopyRoomCode = useCallback(() => {
     if (!roomId) return;
-    navigator.clipboard.writeText(roomId).catch(() => {});
-    setCopyMessage('Room code copied');
+    const link = `${window.location.origin}${window.location.pathname}`;
+    navigator.clipboard.writeText(link).catch(() => {});
+    setCopyMessage('Room link copied');
     setShowCopied(true);
     setTimeout(() => setShowCopied(false), 2500);
   }, [roomId]);
@@ -2177,6 +2232,8 @@ export const RoomPage: React.FC = () => {
             isTranscriptionActive={isTranscriptionActive}
             isTranscriptionSupported={isTranscriptionSupported}
             roomTranscripts={roomTranscripts}
+            isMessageSoundMuted={isMessageSoundMuted}
+            onToggleMessageSoundMute={handleToggleMessageSoundMute}
             onTabChange={setActiveRightTab}
             onClose={() => setIsChatOpen(false)}
             onChatInputChange={setChatInput}

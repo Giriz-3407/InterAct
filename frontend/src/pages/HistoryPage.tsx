@@ -7,12 +7,14 @@ import { MOCK_PAST_SESSIONS } from '../data/mockData';
 import { TranscriptPanel } from '../components/TranscriptPanel';
 import type { PastSession } from '../types';
 import { apiClient } from '../lib/axios';
+import { Calendar, Download, LayoutGrid, List } from 'lucide-react';
 
 export const HistoryPage: React.FC = () => {
   const [selectedSession, setSelectedSession] = useState<PastSession | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [sessions, setSessions] = useState<PastSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   useEffect(() => {
     setLoading(true);
@@ -43,31 +45,32 @@ export const HistoryPage: React.FC = () => {
       <TopBar title="Activity Hub" showSearch={true} searchPlaceholder="Search transcripts, recordings..." />
       
       {/* Content Canvas */}
-      <main className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar max-w-[1600px] w-full mx-auto">
+      <main className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar max-w-[1600px] w-full mx-auto select-none bg-[#09090b]">
         {/* Top bar filters */}
-        <section className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-zinc-800/60 pb-4">
+        <section className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/[0.03] pb-4">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <button className="px-3.5 py-1.5 rounded-full text-xs font-semibold font-geist bg-indigo-600 text-zinc-950">
+            <button className="px-3.5 py-1.5 rounded-full text-xs font-semibold font-geist bg-[#c0c1ff]/10 border border-[#c0c1ff]/20 text-[#c0c1ff] shadow-sm transition-all cursor-pointer">
               All Time
             </button>
-            <button className="px-3.5 py-1.5 rounded-full text-xs font-semibold font-geist bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200">
+            <button className="px-3.5 py-1.5 rounded-full text-xs font-medium font-geist bg-transparent border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02] transition-all cursor-pointer">
               Today
             </button>
-            <button className="px-3.5 py-1.5 rounded-full text-xs font-semibold font-geist bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200">
+            <button className="px-3.5 py-1.5 rounded-full text-xs font-medium font-geist bg-transparent border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02] transition-all cursor-pointer">
               This Week
             </button>
-            <button className="px-3.5 py-1.5 rounded-full text-xs font-semibold font-geist bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200">
+            <button className="px-3.5 py-1.5 rounded-full text-xs font-medium font-geist bg-transparent border border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02] transition-all cursor-pointer">
               This Month
             </button>
           </div>
           
           <div className="flex gap-2">
-            <button className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs font-semibold font-geist text-zinc-300 hover:bg-zinc-800 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] block">calendar_today</span>
+            <button className="px-3 py-1.5 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs font-semibold font-geist text-zinc-300 hover:bg-white/[0.05] hover:border-white/[0.08] flex items-center gap-1.5 cursor-pointer transition-all">
+              <Calendar size={14} className="text-zinc-500" />
               <span>Last 30 Days</span>
             </button>
-            <button className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-xs font-semibold font-geist hover:opacity-95 shadow-lg shadow-indigo-500/10">
-              Export All
+            <button className="px-4 py-1.5 text-xs font-semibold font-geist bg-[#c0c1ff] hover:bg-[#d0d1ff] text-[#09090b] rounded-xl transition-all duration-200 flex items-center gap-1.5 shadow-lg shadow-[#c0c1ff]/5 active:scale-95 cursor-pointer">
+              <Download size={14} />
+              <span>Export All</span>
             </button>
           </div>
         </section>
@@ -81,26 +84,32 @@ export const HistoryPage: React.FC = () => {
         </section>
 
         {/* Sessions List */}
-        <section className="flex flex-col gap-3 mt-2">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-sm font-bold font-geist text-white tracking-tight uppercase tracking-wider text-zinc-500">
+        <section className="flex flex-col gap-3.5 mt-2">
+          <div className="flex justify-between items-center mb-1">
+            <h2 className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-widest">
               Past Sessions
             </h2>
-            <div className="flex gap-1.5">
-              <button className="p-1.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
-                <span className="material-symbols-outlined text-[16px] block">grid_on</span>
+            <div className="bg-white/[0.02] border border-white/[0.04] p-1 rounded-xl flex items-center gap-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === 'grid' ? 'bg-white/[0.04] border border-white/[0.05] text-[#c0c1ff] shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.01]'}`}
+              >
+                <LayoutGrid size={14} />
               </button>
-              <button className="p-1.5 rounded bg-zinc-800 border border-zinc-750 text-[#c0c1ff]">
-                <span className="material-symbols-outlined text-[16px] block">format_list_bulleted</span>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${viewMode === 'list' ? 'bg-white/[0.04] border border-white/[0.05] text-[#c0c1ff] shadow-sm' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.01]'}`}
+              >
+                <List size={14} />
               </button>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'flex flex-col gap-3.5'}`}>
             {loading ? (
-              <div className="text-zinc-500 text-xs text-center py-6 animate-pulse">Loading sessions...</div>
+              <div className="text-zinc-500 text-xs text-center py-12 animate-pulse font-geist uppercase tracking-widest">Loading sessions...</div>
             ) : sessions.length === 0 ? (
-              <div className="text-zinc-500 text-xs text-center py-6">No past sessions found.</div>
+              <div className="text-zinc-500 text-xs text-center py-12 font-geist uppercase tracking-widest">No past sessions found.</div>
             ) : (
               sessions.map((session, idx) => (
                 <SessionCard
@@ -119,7 +128,7 @@ export const HistoryPage: React.FC = () => {
             )}
           </div>
 
-          <button className="self-center mt-6 px-5 py-2 rounded-full text-xs font-semibold font-geist bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200">
+          <button className="self-center mt-6 px-5 py-2 rounded-xl text-xs font-semibold font-geist bg-white/[0.02] border border-white/[0.04] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04] transition-all cursor-pointer active:scale-95 shadow-sm">
             Load More Sessions
           </button>
         </section>

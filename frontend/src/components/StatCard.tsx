@@ -1,5 +1,5 @@
 import React from 'react';
-import { GlassPanel } from './GlassPanel';
+import { History, Clock, Users, FileText } from 'lucide-react';
 
 interface StatCardProps {
   label: string;
@@ -16,28 +16,36 @@ export const StatCard: React.FC<StatCardProps> = ({
   icon,
   accentColor = 'primary',
 }) => {
-  const accentBorderClasses = {
-    primary: 'border-l-4 border-l-[#c0c1ff]',
-    success: 'border-l-4 border-l-[#10b981]',
-    warning: 'border-l-4 border-l-[#f59e0b]',
+  const accentColors = {
+    primary: '#c0c1ff',
+    success: '#10b981',
+    warning: '#f59e0b',
   };
 
-  const textColors = {
-    primary: 'text-[#c0c1ff]',
-    success: 'text-[#10b981]',
-    warning: 'text-[#f59e0b]',
+  const iconsMap: Record<string, React.ReactNode> = {
+    history: <History size={16} />,
+    timer: <Clock size={16} />,
+    group: <Users size={16} />,
+    file_present: <FileText size={16} />,
   };
+
+  const accent = accentColors[accentColor];
+  const lucideIcon = iconsMap[icon] || <FileText size={16} />;
 
   return (
-    <GlassPanel className={`${accentBorderClasses[accentColor]} flex items-center justify-between`}>
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold text-zinc-500 font-geist uppercase tracking-wider">{label}</span>
-        <span className="text-2xl font-bold font-geist text-white">{value}</span>
-        {subtext && <span className="text-[11px] font-inter text-zinc-400">{subtext}</span>}
+    <div className="db-card p-5 sm:p-6 select-none flex flex-col gap-3.5">
+      <div className="flex items-start justify-between">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white/[0.02] border border-white/[0.04]">
+          <span style={{ color: accent }}>{lucideIcon}</span>
+        </div>
+        {subtext && (
+          <span className="status-pill-neutral font-geist text-[9px] tracking-wide py-0.5 px-2">{subtext}</span>
+        )}
       </div>
-      <div className={`p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800/80 ${textColors[accentColor]}`}>
-        <span className="material-symbols-outlined text-[20px] block">{icon}</span>
+      <div>
+        <p className="text-2xl font-bold font-geist text-white tracking-tight leading-none mb-1.5">{value}</p>
+        <p className="text-xs text-zinc-400 font-inter">{label}</p>
       </div>
-    </GlassPanel>
+    </div>
   );
 };

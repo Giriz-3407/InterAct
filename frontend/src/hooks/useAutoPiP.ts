@@ -294,7 +294,14 @@ export function useAutoPiP({ videoRef, isInRoom, isViewing, onLeaveRoom }: UseAu
 
             const pipDocument = pipWindow.document;
             const styleEl = pipDocument.createElement('style');
-            styleEl.textContent = 'body { margin: 0; background: #1a1a2e; }';
+            styleEl.textContent = `
+              @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@100..900&display=swap');
+              body { margin: 0; background: #09090b; overflow: hidden; }
+              @keyframes pip-pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.35; }
+              }
+            `;
             pipDocument.head.appendChild(styleEl);
 
             const root = createRoot(pipDocument.body);

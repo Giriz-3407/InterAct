@@ -1,4 +1,5 @@
-void 0 && console.log("CURSOR_BUILD_MARKER_20260615 — SOURCE: C:\\Users\\Girish\\Desktop\\InterAct\\frontend");
+const noop = (..._args: unknown[]): void => {};
+noop("CURSOR_BUILD_MARKER_20260615 — SOURCE: C:\\Users\\Girish\\Desktop\\InterAct\\frontend");
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar.FC';
@@ -1638,7 +1639,7 @@ export const RoomPage: React.FC = () => {
             }
           })
           .catch(err => {
-            void 0 && console.warn('[RoomPage] Failed to enter fullscreen:', err);
+            noop('[RoomPage] Failed to enter fullscreen:', err);
           });
       }
     } else {
@@ -1647,7 +1648,7 @@ export const RoomPage: React.FC = () => {
           window.screen.orientation.unlock();
         }
         document.exitFullscreen().catch(err => {
-          void 0 && console.warn('[RoomPage] Failed to exit fullscreen:', err);
+          noop('[RoomPage] Failed to exit fullscreen:', err);
         });
       }
     }
@@ -1753,7 +1754,7 @@ export const RoomPage: React.FC = () => {
     el.muted = false;
     el.volume = 1.0;
     void el.play().catch(err => {
-      void 0 && console.warn(`[WebRTC] Audio play failed for stream ${stream.id}:`, err);
+      noop(`[WebRTC] Audio play failed for stream ${stream.id}:`, err);
     });
   }, []);
 
@@ -1761,7 +1762,7 @@ export const RoomPage: React.FC = () => {
   useEffect(() => {
     const attach = (source: string) => {
       if (!remoteStream) return;
-      void 0 && console.log('[RoomPage] Attaching remote stream. Tracks:', remoteStream.getTracks().map(t => t.kind));
+      noop('[RoomPage] Attaching remote stream. Tracks:', remoteStream.getTracks().map(t => t.kind));
       if (remoteVideoRef.current) {
         if (remoteVideoRef.current.srcObject !== remoteStream) {
           const oldId = remoteVideoRef.current.srcObject instanceof MediaStream ? remoteVideoRef.current.srcObject.id : 'null';
@@ -1832,10 +1833,10 @@ export const RoomPage: React.FC = () => {
     isViewing,
     isInRoom: !!roomId,
     onEnterPiP: () => {
-      void 0 && console.log('[RoomPage] Entered Document Picture-in-Picture mode');
+      noop('[RoomPage] Entered Document Picture-in-Picture mode');
     },
     onExitPiP: () => {
-      void 0 && console.log('[RoomPage] Exited Document Picture-in-Picture mode');
+      noop('[RoomPage] Exited Document Picture-in-Picture mode');
     },
   });
 
@@ -1885,7 +1886,7 @@ export const RoomPage: React.FC = () => {
       wsClient.send('join_room', { roomCode: roomId, displayName, clientId });
     });
     const unsubJoined = wsClient.on('room_joined', data => {
-      void 0 && console.log('Joined room:', data);
+      noop('Joined room:', data);
       setCurrentSocketId(data.socketId);
       setParticipants(data.participants);
       if (data.autoDelete !== undefined) setAutoDelete(data.autoDelete);
@@ -1902,46 +1903,46 @@ export const RoomPage: React.FC = () => {
       playSelfJoinSound();
     });
     const unsubParticipantJoined = wsClient.on('participant_joined', data => {
-      void 0 && console.log('Participant joined:', data.participant);
+      noop('Participant joined:', data.participant);
       setParticipants(prev => { if (prev.some(p => p.socketId === data.participant.socketId)) return prev; return [...prev, data.participant]; });
       playParticipantJoinSound();
     });
     const unsubParticipantLeft = wsClient.on('participant_left', data => {
-      void 0 && console.log('Participant left:', data.participantId);
+      noop('Participant left:', data.participantId);
       setParticipants(prev => prev.filter(p => p.socketId !== data.participantId));
     });
     const unsubUpdated = wsClient.on('participants_updated', data => {
-      void 0 && console.log('Participants updated:', data.participants);
+      noop('Participants updated:', data.participants);
       setParticipants(data.participants);
     });
     const unsubChatMessage = wsClient.on('chat_message', data => {
-      void 0 && console.log('Received chat message:', data);
+      noop('Received chat message:', data);
       setMessages(prev => [...prev, { sender: data.sender, message: data.message, timestamp: data.timestamp, type: data.type }]);
       if (data.sender !== displayName && !isMessageSoundMutedRef.current) {
         playMessageSound();
       }
     });
     const unsubSettingsUpdated = wsClient.on('room_settings_updated', data => {
-      void 0 && console.log('Room settings updated:', data);
+      noop('Room settings updated:', data);
       if (data.autoDelete !== undefined) setAutoDelete(data.autoDelete);
     });
     const unsubMicStatus = wsClient.on('mic_status_update', data => {
-      void 0 && console.log('Mic status updated:', data);
+      noop('Mic status updated:', data);
       const { participantId, micMuted } = data;
       setParticipants(prev => prev.map(p => p.socketId === participantId ? { ...p, micMuted } : p));
     });
     const unsubKicked = wsClient.on('kicked', data => {
-      void 0 && console.log('Kicked from room:', data);
+      noop('Kicked from room:', data);
       alert(data.reason || 'You have been removed from the room.');
       navigate('/dashboard');
     });
     const unsubTranscriptionStarted = wsClient.on('transcription_started', data => {
-      void 0 && console.log('Transcription started:', data);
+      noop('Transcription started:', data);
       setIsTranscriptionActive(true);
       setShowConsentBanner(true);
     });
     const unsubTranscriptionStopped = () => {
-      void 0 && console.log('Transcription stopped');
+      noop('Transcription stopped');
       setIsTranscriptionActive(false);
     };
     const unsubTranscriptionStoppedObj = wsClient.on('transcription_stopped', unsubTranscriptionStopped);

@@ -7,7 +7,6 @@ import {
   type VoiceNegotiationState,
 } from '../lib/voiceNegotiationDiag';
 
-const noop = (..._args: unknown[]): void => {};
 
 const STUN_CONFIG: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
@@ -190,7 +189,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   const createPeerConnection = useCallback((peerId: string): RTCPeerConnection => {
     const existing = pcsRef.current.get(peerId);
     if (existing) {
-      noop(`[WEBRTC_GUARD] Replacing existing peer connection for ${peerId}`);
+      console.warn(`[WEBRTC_GUARD] Replacing existing peer connection for ${peerId}`);
       existing.close();
     }
 
@@ -201,7 +200,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       try {
         pc.createDataChannel('omnisync-voice-broadcast');
       } catch (err) {
-        noop('[WebRTC] Failed to create data channel:', err);
+        console.warn('[WebRTC] Failed to create data channel:', err);
       }
     }
 
@@ -217,12 +216,12 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       const track = e.track;
       const stream = e.streams?.[0] ?? new MediaStream([track]);
 
-      noop(`[WebRTC] Received track: id=${track.id}, kind=${track.kind}, streamId=${stream.id}, from=${peerId}`);
+      console.log(`[WebRTC] Received track: id=${track.id}, kind=${track.kind}, streamId=${stream.id}, from=${peerId}`);
 
       if (isHost) {
         // Host receiving track from a viewer — this is a viewer's microphone
         if (track.kind === 'audio') {
-          noop(`[WebRTC] Host received viewer mic track from ${peerId}`);
+          console.log(`[WebRTC] Host received viewer mic track from ${peerId}`);
           viewerMicTracksRef.current.set(peerId, { track, stream });
 
           // Host local playback — hear the viewer
@@ -233,7 +232,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           });
 
           track.onended = () => {
-            noop(`[WebRTC] Viewer mic track ended for ${peerId}`);
+            console.log(`[WebRTC] Viewer mic track ended for ${peerId}`);
             viewerMicTracksRef.current.delete(peerId);
             setRemoteMicStreams((prev) => {
               const next = new Map(prev);
@@ -258,11 +257,11 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
         } else if (track.kind === 'audio') {
           const hasVideo = stream.getVideoTracks().length > 0;
           if (hasVideo) {
-            noop(`[WebRTC] Set remote screen audio stream: ${stream.id}`);
+            console.log(`[WebRTC] Set remote screen audio stream: ${stream.id}`);
             setRemoteStream(stream);
           } else {
             // Microphone audio (host's own mic or relayed viewer mic)
-            noop(`[WebRTC] Set remote mic stream: ${stream.id}`);
+            console.log(`[WebRTC] Set remote mic stream: ${stream.id}`);
             setRemoteMicStreams((prev) => {
               const next = new Map(prev);
               next.set(stream.id, stream);
@@ -278,11 +277,11 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
             };
 
             track.onmute = () => {
-              noop(`[WebRTC] Remote mic track muted: ${stream.id}`);
+              console.log(`[WebRTC] Remote mic track muted: ${stream.id}`);
             };
 
             track.onunmute = () => {
-              noop(`[WebRTC] Remote mic track unmuted: ${stream.id}`);
+              console.log(`[WebRTC] Remote mic track unmuted: ${stream.id}`);
             };
           }
         }
@@ -291,7 +290,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
     pc.oniceconnectionstatechange = () => {
       const state = pc.iceConnectionState;
-      noop(`[WebRTC] ICE state for peer ${peerId}:`, state);
+      console.log(`[WebRTC] ICE state for peer ${peerId}:`, state);
       if (state === 'failed' || state === 'closed') {
         pcsRef.current.delete(peerId);
         if (isHost) {
@@ -342,16 +341,16 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     // 1. Remove senders that are no longer active
     senders.forEach((sender) => {
       if (sender.track && sender.track.readyState === 'ended') {
-        noop(`[WEBRTC_GUARD] Sender track ended: id=${sender.track.id}, kind=${sender.track.kind}`);
+        console.warn(`[WEBRTC_GUARD] Sender track ended: id=${sender.track.id}, kind=${sender.track.kind}`);
       }
       if (sender.track) {
         const isActive = activeTracks.some((t) => t.track.id === sender.track?.id);
         if (!isActive) {
-          noop(`[WebRTC] Removing inactive track: id=${sender.track.id}, kind=${sender.track.kind}`);
+          console.log(`[WebRTC] Removing inactive track: id=${sender.track.id}, kind=${sender.track.kind}`);
           try {
             pc.removeTrack(sender);
           } catch (err) {
-            noop('[WebRTC] Error removing track:', err);
+            console.warn('[WebRTC] Error removing track:', err);
           }
         }
       }
@@ -361,11 +360,11 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     activeTracks.forEach(({ track, stream }) => {
       const alreadyAdded = senders.some((sender) => sender.track?.id === track.id);
       if (!alreadyAdded) {
-        noop(`[WebRTC] Adding active track: id=${track.id}, kind=${track.kind}, streamId=${stream.id}`);
+        console.log(`[WebRTC] Adding active track: id=${track.id}, kind=${track.kind}, streamId=${stream.id}`);
         try {
           pc.addTrack(track, stream);
         } catch (err) {
-          noop('[WebRTC] Error adding track:', err);
+          console.warn('[WebRTC] Error adding track:', err);
         }
       }
     });
@@ -383,7 +382,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       );
 
       if (recvSlots.length > 1) {
-        noop(`[WEBRTC_GUARD] Unexpected: ${recvSlots.length} recvonly audio slots for viewer mic (expected ≤1)`);
+        console.warn(`[WEBRTC_GUARD] Unexpected: ${recvSlots.length} recvonly audio slots for viewer mic (expected ≤1)`);
       }
       const hasRecvSlot = recvSlots.length > 0;
       if (!hasRecvSlot) {
@@ -391,11 +390,11 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           pc.addTransceiver('audio', { direction: 'recvonly' });
           const afterCount = pc.getTransceivers().length;
           if (afterCount > 10) {
-            noop(`[WEBRTC_GUARD] Audio transceiver count=${afterCount} exceeds 10. Unexpected growth detected.`);
+            console.warn(`[WEBRTC_GUARD] Audio transceiver count=${afterCount} exceeds 10. Unexpected growth detected.`);
           }
-          noop(`[WebRTC] Added recvonly audio transceiver for viewer mic slot`);
+          console.log(`[WebRTC] Added recvonly audio transceiver for viewer mic slot`);
         } catch (err) {
-          noop('[WebRTC] Error adding recvonly transceiver:', err);
+          console.warn('[WebRTC] Error adding recvonly transceiver:', err);
         }
       }
     }
@@ -408,7 +407,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       pc = createPeerConnection(viewerId);
     }
     if (pc.connectionState === 'closed') {
-      noop(`[WEBRTC_GUARD] Cannot negotiate: connection to ${viewerId} is closed`);
+      console.warn(`[WEBRTC_GUARD] Cannot negotiate: connection to ${viewerId} is closed`);
       pcsRef.current.delete(viewerId);
       return;
     }
@@ -419,7 +418,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     await pc.setLocalDescription(offer);
 
     wsClient.send('webrtc_offer', { targetId: viewerId, offer: pc.localDescription });
-    noop(`[WebRTC] Sent offer to viewer ${viewerId}`);
+    console.log(`[WebRTC] Sent offer to viewer ${viewerId}`);
   }, [createPeerConnection, syncTracks]);
 
   // Stable ref for sendOfferToViewer (used in ontrack callback which can't depend on it)
@@ -444,7 +443,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   const syncAllViewers = useCallback(async () => {
     if (!isHost) return;
     const currentViewers = viewerIds.filter((id) => id && id !== currentSocketId);
-    noop(`[WebRTC] Syncing tracks for ${currentViewers.length} viewer(s)`);
+    console.log(`[WebRTC] Syncing tracks for ${currentViewers.length} viewer(s)`);
     for (const viewerId of currentViewers) {
       try {
         await sendOfferToViewer(viewerId);
@@ -535,7 +534,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     const activeIds = new Set(viewerIds);
     pcsRef.current.forEach((pc, id) => {
       if (!activeIds.has(id)) {
-        noop(`[WebRTC] Viewer ${id} left. Closing peer connection.`);
+        console.log(`[WebRTC] Viewer ${id} left. Closing peer connection.`);
         pc.close();
         pcsRef.current.delete(id);
         // Clean up their relayed mic track
@@ -551,11 +550,11 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
   // ─── Viewer: request host offer so mic attaches before createAnswer ─────────
   const requestViewerMicPublish = useCallback(() => {
     if (!hostSocketId) {
-      noop('[WebRTC] Cannot publish mic: host socket ID unknown');
+      console.warn('[WebRTC] Cannot publish mic: host socket ID unknown');
       return;
     }
     wsClient.send('audio_publish_request', { targetId: hostSocketId });
-    noop('[WebRTC] Sent audio_publish_request to host');
+    console.log('[WebRTC] Sent audio_publish_request to host');
     voiceNegotiationLog('audio_publish_request_sent', voiceNegotiationStartedAtRef.current);
   }, [hostSocketId]);
 
@@ -567,7 +566,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       if (!micMuted) {
         if (!micStreamRef.current) {
           try {
-            noop('[WebRTC] Requesting microphone stream...');
+            console.log('[WebRTC] Requesting microphone stream...');
             const micStreamObj = await navigator.mediaDevices.getUserMedia({ audio: true });
             micStreamRef.current = micStreamObj;
             micStreamObj.getAudioTracks().forEach((t) => (t.enabled = true));
@@ -607,7 +606,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
           }
         }
         wsClient.send('mic_status_update', { micMuted: false });
-        noop('[WebRTC] Mic enabled, sent mic_status_update (false)');
+        console.log('[WebRTC] Mic enabled, sent mic_status_update (false)');
       } else {
         cancelVoiceNegotiation();
         if (micStreamRef.current) {
@@ -615,7 +614,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
             track.enabled = false;
           });
           wsClient.send('mic_status_update', { micMuted: true });
-          noop('[WebRTC] Disabled mic tracks and sent mic_status_update (true)');
+          console.log('[WebRTC] Disabled mic tracks and sent mic_status_update (true)');
         }
       }
     };
@@ -640,12 +639,12 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     }
 
     if (!micSlot) {
-      noop('[WebRTC] No audio transceiver available for viewer mic');
+      console.warn('[WebRTC] No audio transceiver available for viewer mic');
       return;
     }
 
     if (micSlot.sender.track?.id === micTrack.id) {
-      noop('[WebRTC] Viewer mic already on correct transceiver');
+      console.log('[WebRTC] Viewer mic already on correct transceiver');
       return;
     }
 
@@ -655,7 +654,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     try {
       await micSlot.sender.replaceTrack(micTrack);
     } catch (err) {
-      noop('[WebRTC] Failed to replaceTrack on mic slot transceiver:', err);
+      console.warn('[WebRTC] Failed to replaceTrack on mic slot transceiver:', err);
     }
   }
 
@@ -671,12 +670,12 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       if (isHost) {
         // Host should not normally receive offers in this architecture,
         // but handle gracefully if it happens
-        noop(`[WebRTC] Host received unexpected offer from ${senderId}, ignoring`);
+        console.warn(`[WebRTC] Host received unexpected offer from ${senderId}, ignoring`);
         return;
       }
 
       // Viewer: receives an offer from the host
-      noop(`[WebRTC] Viewer received offer from host ${senderId}`);
+      console.log(`[WebRTC] Viewer received offer from host ${senderId}`);
       voiceNegotiationLog('offer_received', voiceNegotiationStartedAtRef.current);
       let pc = pcsRef.current.get(senderId);
       if (!pc) {
@@ -710,11 +709,11 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
       const pc = pcsRef.current.get(senderId);
       if (!pc) {
-        noop(`[WebRTC] Received answer from unknown sender ${senderId}`);
+        console.warn(`[WebRTC] Received answer from unknown sender ${senderId}`);
         return;
       }
 
-      noop(`[WebRTC] Host applying answer from viewer ${senderId}`);
+      console.log(`[WebRTC] Host applying answer from viewer ${senderId}`);
       await pc.setRemoteDescription(new RTCSessionDescription(answer));
       voiceNegotiationLog('answer_received', voiceNegotiationStartedAtRef.current);
 
@@ -740,7 +739,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       try {
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (err) {
-        noop(`[WebRTC] Failed to add ICE candidate from ${senderId}:`, err);
+        console.warn(`[WebRTC] Failed to add ICE candidate from ${senderId}:`, err);
       }
     });
 
@@ -758,7 +757,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       const { participantId } = data;
       if (!participantId) return;
 
-      noop(`[WebRTC] Host received audio_publish_request from ${participantId}`);
+      console.log(`[WebRTC] Host received audio_publish_request from ${participantId}`);
       try {
         await sendOfferToViewer(participantId);
       } catch (err) {
@@ -789,7 +788,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     const mediaActive = !!displayStreamRef.current || !!micStreamRef.current || viewerMicTracksRef.current.size > 0;
     if (!mediaActive) return;
 
-    noop(`[WebRTC] Late joiner(s) detected, sending offers to: ${unconnected.join(', ')}`);
+    console.log(`[WebRTC] Late joiner(s) detected, sending offers to: ${unconnected.join(', ')}`);
     unconnected.forEach((viewerId) => {
       sendOfferToViewer(viewerId).catch((err) =>
         console.error(`[WebRTC] Failed to send offer to late-joiner ${viewerId}:`, err)

@@ -1,3 +1,5 @@
+const noop = (..._args: unknown[]): void => {};
+
 type MessageHandler = (data: any) => void;
 
 export class WSClient {
@@ -8,11 +10,11 @@ export class WSClient {
     if (this.socket) {
       this.disconnect();
     }
-    void 0 && console.log(`Connecting to WebSocket at ${url}...`);
+    noop(`Connecting to WebSocket at ${url}...`);
     this.socket = new WebSocket(url);
 
     this.socket.onopen = () => {
-      void 0 && console.log("WebSocket connection established");
+      noop("WebSocket connection established");
       if (onOpen) onOpen();
     };
 
@@ -36,7 +38,7 @@ export class WSClient {
     };
 
     this.socket.onclose = () => {
-      void 0 && console.log("WebSocket connection closed");
+      noop("WebSocket connection closed");
     };
   }
 
@@ -61,7 +63,7 @@ export class WSClient {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ event, ...payload }));
     } else {
-      void 0 && console.warn("WebSocket is not connected/open");
+      noop("WebSocket is not connected/open");
     }
   }
 

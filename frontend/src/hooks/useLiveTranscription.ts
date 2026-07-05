@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+const noop = (..._args: unknown[]): void => {};
+
 export interface DiagEntry {
   name: string;
   ts: number;
@@ -33,7 +35,7 @@ export const useLiveTranscription = ({
       : 'N/A';
     const entry: DiagEntry = { name, ts: Date.now(), elapsed, extra };
     setDiagLogs((prev) => [...prev.slice(-199), entry]);
-    void 0 && console.log(
+    noop(
       `[TRANSCRIPTION DIAG] ${name} | ts=${Date.now()} | elapsed=${elapsed}${
         extra ? ` | ${extra}` : ''
       }`

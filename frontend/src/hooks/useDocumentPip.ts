@@ -1,6 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { documentPipService } from '../services/documentPipService';
 
+const noop = (..._args: unknown[]): void => {};
+
 interface UseDocumentPipOptions {
   /** The video ref containing the shared screen/video */
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -56,9 +58,9 @@ export function useDocumentPip({
     setIsPiPSupported(supported);
     
     if (!supported) {
-      void 0 && console.log('[DocPiP] Document Picture-in-Picture is not supported in this browser');
+      noop('[DocPiP] Document Picture-in-Picture is not supported in this browser');
     } else {
-      void 0 && console.log('[DocPiP] Document Picture-in-Picture is supported');
+      noop('[DocPiP] Document Picture-in-Picture is supported');
     }
   }, []);
 
@@ -66,24 +68,24 @@ export function useDocumentPip({
   const enterPiP = useCallback(async () => {
     const videoElement = videoRef.current;
     if (!isPiPSupported || !videoElement) {
-      void 0 && console.warn('[DocPiP] Cannot enter PiP: not supported or video element unavailable');
+      noop('[DocPiP] Cannot enter PiP: not supported or video element unavailable');
       return;
     }
 
     // Check if already in PiP
     if (documentPipService.isActive()) {
-      void 0 && console.log('[DocPiP] Already in Picture-in-Picture mode');
+      noop('[DocPiP] Already in Picture-in-Picture mode');
       return;
     }
 
     // Ensure video has valid src
     if (!videoElement.srcObject) {
-      void 0 && console.warn('[DocPiP] Cannot enter PiP: video element has no source');
+      noop('[DocPiP] Cannot enter PiP: video element has no source');
       return;
     }
 
     try {
-      void 0 && console.log('[DocPiP] Entering Document Picture-in-Picture mode');
+      noop('[DocPiP] Entering Document Picture-in-Picture mode');
       
       const success = await documentPipService.open({
         videoElement,
@@ -96,7 +98,7 @@ export function useDocumentPip({
           
           // If PiP was closed while tab is still hidden, mark as user-closed
           if (document.visibilityState === 'hidden') {
-            void 0 && console.log('[DocPiP] User manually closed PiP while tab hidden');
+            noop('[DocPiP] User manually closed PiP while tab hidden');
             userClosedPiPRef.current = true;
           }
           
@@ -121,7 +123,7 @@ export function useDocumentPip({
       return;
     }
 
-    void 0 && console.log('[DocPiP] Exiting Document Picture-in-Picture mode');
+    noop('[DocPiP] Exiting Document Picture-in-Picture mode');
     documentPipService.close();
     setIsPiPActive(false);
     onExitPiP?.();
@@ -130,7 +132,7 @@ export function useDocumentPip({
   // Auto-exit PiP when stream ends or user leaves room
   useEffect(() => {
     if (documentPipService.isActive() && (!isViewing || !isInRoom)) {
-      void 0 && console.log('[DocPiP] Stream ended or left room - exiting PiP');
+      noop('[DocPiP] Stream ended or left room - exiting PiP');
       exitPiP();
     }
   }, [isViewing, isInRoom, exitPiP]);
@@ -164,7 +166,7 @@ export function useDocumentPip({
 
     const checkVideoSource = () => {
       if (documentPipService.isActive() && !videoElement.srcObject) {
-        void 0 && console.log('[DocPiP] Video source removed - exiting PiP');
+        noop('[DocPiP] Video source removed - exiting PiP');
         exitPiP();
       }
     };
@@ -179,7 +181,7 @@ export function useDocumentPip({
   useEffect(() => {
     return () => {
       if (documentPipService.isActive()) {
-        void 0 && console.log('[DocPiP] Component unmounting - closing PiP');
+        noop('[DocPiP] Component unmounting - closing PiP');
         documentPipService.close();
       }
     };

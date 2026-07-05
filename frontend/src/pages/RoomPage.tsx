@@ -1758,6 +1758,11 @@ export const RoomPage: React.FC = () => {
     isInRoom: !!currentSocketId && !isHost,
     isViewing,
     onLeaveRoom: () => navigate('/dashboard'),
+    displayName,
+    hostName: participants.find(p => p.role === 'host')?.displayName || 'Host',
+    roomId: roomId || '',
+    isMuted,
+    onToggleMic: handleToggleMic,
   });
 
   // Message and transcript history

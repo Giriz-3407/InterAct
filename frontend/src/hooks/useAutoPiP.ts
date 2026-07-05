@@ -7,9 +7,24 @@ interface UseAutoPiPOptions {
   isInRoom: boolean;
   isViewing: boolean;
   onLeaveRoom?: () => void;
+  displayName?: string;
+  hostName?: string;
+  roomId?: string;
+  isMuted?: boolean;
+  onToggleMic?: () => void;
 }
 
-export function useAutoPiP({ videoRef, isInRoom, isViewing, onLeaveRoom }: UseAutoPiPOptions): void {
+export function useAutoPiP({ 
+  videoRef, 
+  isInRoom, 
+  isViewing, 
+  onLeaveRoom,
+  displayName = 'Viewer',
+  hostName = 'Host',
+  roomId = '',
+  isMuted = true,
+  onToggleMic = () => {},
+}: UseAutoPiPOptions): void {
   const persistentMicStreamRef = useRef<MediaStream | null>(null);
   const micAcquiredRef = useRef(false);
   const mediaSessionInitializedRef = useRef(false);
@@ -288,8 +303,8 @@ export function useAutoPiP({ videoRef, isInRoom, isViewing, onLeaveRoom }: UseAu
         if (dpiP) {
           try {
             const pipWindow = await dpiP.requestWindow({
-              width: 400,
-              height: 350,
+              width: 480,
+              height: 420,
             });
 
             const pipDocument = pipWindow.document;
@@ -304,12 +319,24 @@ export function useAutoPiP({ videoRef, isInRoom, isViewing, onLeaveRoom }: UseAu
             `;
             pipDocument.head.appendChild(styleEl);
 
+            // Track connection state
+            const wsConnected = window.navigator.onLine;
+
             const root = createRoot(pipDocument.body);
             root.render(
               createElement(DocumentPipWindow, {
                 stream,
                 pipWindow,
-                onLeave: () => onLeaveRoom?.(),
+                onLeave: () => {
+                  onLeaveRoom?.();
+                  pipWindow.close();
+                },
+                hostName,
+                displayName,
+                roomId,
+                isMuted,
+                onToggleMic,
+                connected: wsConnected,
               })
             );
 

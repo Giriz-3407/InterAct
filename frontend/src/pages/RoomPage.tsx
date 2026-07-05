@@ -1415,6 +1415,11 @@ export const RoomPage: React.FC = () => {
     micStream,
   } = useWebRTC({ isHost, currentSocketId, viewerIds, micMuted: isMuted, hostSocketId, srOnly: srOnlyMode });
 
+  const handleToggleMic = useCallback(() => {
+    if (isMuted) beginVoiceNegotiation();
+    setIsMuted(p => !p);
+  }, [isMuted, beginVoiceNegotiation]);
+
   const [localError, setLocalError] = useState<string | null>(null);
   const [localAudioWarning, setLocalAudioWarning] = useState<string | null>(null);
   const [localMicWarning, setLocalMicWarning] = useState<string | null>(null);
@@ -1961,11 +1966,6 @@ export const RoomPage: React.FC = () => {
     setShowCopied(true);
     setTimeout(() => setShowCopied(false), 2500);
   }, [roomId]);
-
-  const handleToggleMic = useCallback(() => {
-    if (isMuted) beginVoiceNegotiation();
-    setIsMuted(p => !p);
-  }, [isMuted, beginVoiceNegotiation]);
 
   const handleTogglePeople = useCallback(() => {
     setIsPeopleOpen(p => !p);

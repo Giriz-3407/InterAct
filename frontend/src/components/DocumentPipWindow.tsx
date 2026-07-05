@@ -27,7 +27,6 @@ export function DocumentPipWindow({
   onLeave, 
   hostName = 'Host', 
   displayName, 
-  roomId, 
   isMuted, 
   onToggleMic,
   connected 

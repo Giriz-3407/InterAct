@@ -1757,6 +1757,7 @@ export const RoomPage: React.FC = () => {
     videoRef: remoteVideoRef,
     isInRoom: !!currentSocketId && !isHost,
     isViewing,
+    onLeaveRoom: () => navigate('/dashboard'),
   });
 
   // Message and transcript history

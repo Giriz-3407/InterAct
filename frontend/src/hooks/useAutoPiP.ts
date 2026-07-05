@@ -1,12 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
+import { DocumentPipWindow } from '../components/DocumentPipWindow';
 
 interface UseAutoPiPOptions {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   isInRoom: boolean;
   isViewing: boolean;
+  onLeaveRoom?: () => void;
 }
 
-export function useAutoPiP({ videoRef, isInRoom, isViewing }: UseAutoPiPOptions): void {
+export function useAutoPiP({ videoRef, isInRoom, isViewing, onLeaveRoom }: UseAutoPiPOptions): void {
   const persistentMicStreamRef = useRef<MediaStream | null>(null);
   const micAcquiredRef = useRef(false);
   const mediaSessionInitializedRef = useRef(false);
@@ -269,12 +272,54 @@ export function useAutoPiP({ videoRef, isInRoom, isViewing }: UseAutoPiPOptions)
 
     // Try to set enterpictureinpicture handler (standalone L845-857)
     try {
-      navigator.mediaSession.setActionHandler('enterpictureinpicture' as unknown as MediaSessionAction, () => {
+      navigator.mediaSession.setActionHandler('enterpictureinpicture' as unknown as MediaSessionAction, async () => {
         handlerInvokedRef.current = true;
         console.log('[AutoPiP] 🎉 Media Session action: ENTERPICTUREINPICTURE invoked!');
-        videoElement.requestPictureInPicture().catch(err => {
-          console.log(`[AutoPiP] ❌ PiP request failed: ${err.message}`);
-        });
+
+        const stream = videoElement.srcObject as MediaStream | null;
+        if (!stream) {
+          videoElement.requestPictureInPicture().catch(err => {
+            console.log(`[AutoPiP] ❌ PiP request failed: ${err.message}`);
+          });
+          return;
+        }
+
+        const dpiP = (window as any).documentPictureInPicture as { requestWindow: (opts: { width: number; height: number }) => Promise<Window> } | undefined;
+        if (dpiP) {
+          try {
+            const pipWindow = await dpiP.requestWindow({
+              width: 400,
+              height: 350,
+            });
+
+            const pipDocument = pipWindow.document;
+            const styleEl = pipDocument.createElement('style');
+            styleEl.textContent = 'body { margin: 0; background: #1a1a2e; }';
+            pipDocument.head.appendChild(styleEl);
+
+            const root = createRoot(pipDocument.body);
+            root.render(
+              createElement(DocumentPipWindow, {
+                stream,
+                pipWindow,
+                onLeave: () => onLeaveRoom?.(),
+              })
+            );
+
+            pipWindow.addEventListener('pagehide', () => {
+              root.unmount();
+            });
+          } catch (e) {
+            console.log('[AutoPiP] ❌ Document PiP failed, falling back to video PiP:', e);
+            videoElement.requestPictureInPicture().catch(err => {
+              console.log(`[AutoPiP] ❌ PiP request failed: ${err.message}`);
+            });
+          }
+        } else {
+          videoElement.requestPictureInPicture().catch(err => {
+            console.log(`[AutoPiP] ❌ PiP request failed: ${err.message}`);
+          });
+        }
       });
       console.log('[AutoPiP] ✅ enterpictureinpicture handler registered');
     } catch (error) {

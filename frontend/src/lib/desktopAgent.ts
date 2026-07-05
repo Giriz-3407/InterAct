@@ -181,7 +181,7 @@ class DesktopAgentClient {
     name: string,
   ): void {
     this._send({ event: 'cursor_move', participantId, x, y, color, name });
-    console.debug('[DesktopAgent] cursor_move forwarded', participantId, x, y);
+    void 0 && console.debug('[DesktopAgent] cursor_move forwarded', participantId, x, y);
   }
 
   sendCursorClick(
@@ -191,12 +191,12 @@ class DesktopAgentClient {
     color: string,
   ): void {
     this._send({ event: 'cursor_click', participantId, x, y, color });
-    console.log('[DesktopAgent] cursor_click forwarded', participantId, x, y);
+    void 0 && console.log('[DesktopAgent] cursor_click forwarded', participantId, x, y);
   }
 
   sendCursorRemove(participantId: string): void {
     this._send({ event: 'cursor_remove', participantId });
-    console.log('[DesktopAgent] cursor_remove forwarded', participantId);
+    void 0 && console.log('[DesktopAgent] cursor_remove forwarded', participantId);
   }
 
   sendAnnotationUpdate(
@@ -222,24 +222,24 @@ class DesktopAgentClient {
       color,
       name,
     });
-    console.debug('[DesktopAgent] annotation_update forwarded', participantId, annotationId);
+    void 0 && console.debug('[DesktopAgent] annotation_update forwarded', participantId, annotationId);
   }
 
   sendAnnotationClear(participantId: string): void {
     this._send({ event: 'annotation_clear', participantId });
-    console.log('[DesktopAgent] annotation_clear forwarded', participantId);
+    void 0 && console.log('[DesktopAgent] annotation_clear forwarded', participantId);
   }
 
   sendSpotlightUpdate(participantId: string, active: boolean): void {
     this._send({ event: 'spotlight_update', participantId, active });
-    console.log('[DesktopAgent] spotlight_update forwarded', participantId, active);
+    void 0 && console.log('[DesktopAgent] spotlight_update forwarded', participantId, active);
   }
 
   // ── Internal ──────────────────────────────────────────────────────────────
 
   private _setStatus(newStatus: ConnectionStatus): void {
     if (this.status !== newStatus) {
-      console.log(`[DesktopAgent] Status change: ${this.status} -> ${newStatus}`);
+      void 0 && console.log(`[DesktopAgent] Status change: ${this.status} -> ${newStatus}`);
       this.status = newStatus;
       this.statusCbs.forEach((cb) => cb(newStatus));
     }
@@ -259,18 +259,18 @@ class DesktopAgentClient {
 
     this._setStatus('connecting');
     const wsUrl = getAgentWsUrl();
-    console.log(`[DesktopAgent] Connecting to ${wsUrl}...`);
+    void 0 && console.log(`[DesktopAgent] Connecting to ${wsUrl}...`);
 
     try {
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        console.log('[DesktopAgent] WebSocket open. Waiting for agent_info handshake...');
+        void 0 && console.log('[DesktopAgent] WebSocket open. Waiting for agent_info handshake...');
         
         // Start handshake timeout timer
         this._clearHandshakeTimer();
         this.handshakeTimer = setTimeout(() => {
-          console.warn('[DesktopAgent] Handshake timed out. Reconnecting...');
+          void 0 && console.warn('[DesktopAgent] Handshake timed out. Reconnecting...');
           ws.close();
         }, this.handshakeTimeoutMs);
       };
@@ -301,7 +301,7 @@ class DesktopAgentClient {
             this._handleHandshake(msg);
           }
         } catch (err) {
-          console.warn('[DesktopAgent] Failed to parse message from agent:', err);
+          void 0 && console.warn('[DesktopAgent] Failed to parse message from agent:', err);
         }
       };
 
@@ -349,7 +349,7 @@ class DesktopAgentClient {
       agentPort: Number(payload.agent_port) || 8765,
     };
 
-    console.info(
+    void 0 && console.info(
       `[DesktopAgent] Handshake successful! Agent version: ${this.agentInfo.version}, Platform: ${this.agentInfo.platform}`
     );
 
@@ -366,7 +366,7 @@ class DesktopAgentClient {
     const jitterFactor = 1 + (Math.random() * (this.jitterPercent * 2) - this.jitterPercent);
     const delayWithJitter = Math.round(this.currentDelayMs * jitterFactor);
 
-    console.warn(
+    void 0 && console.warn(
       `[DesktopAgent] Reconnect scheduled in ${delayWithJitter}ms (base delay: ${this.currentDelayMs}ms)`
     );
 

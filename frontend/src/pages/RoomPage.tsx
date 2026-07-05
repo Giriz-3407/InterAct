@@ -1,4 +1,4 @@
-console.log("CURSOR_BUILD_MARKER_20260615 — SOURCE: C:\\Users\\Girish\\Desktop\\InterAct\\frontend");
+void 0 && console.log("CURSOR_BUILD_MARKER_20260615 — SOURCE: C:\\Users\\Girish\\Desktop\\InterAct\\frontend");
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar.FC';
@@ -9,6 +9,8 @@ import { apiClient } from '../lib/axios';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { useLiveTranscription } from '../hooks/useLiveTranscription';
 import { useCursorPresence } from '../hooks/useCursorPresence';
+import { useDocumentPip } from '../hooks/useDocumentPip';
+import { useAutoPiP } from '../hooks/useAutoPiP';
 import { isMobileDevice } from '../lib/mobile';
 import { AgentStatusIndicator } from '../components/AgentStatusIndicator';
 import { DiagnosticsPanel } from '../components/DiagnosticsPanel';
@@ -210,6 +212,9 @@ interface MoreMenuProps {
   isViewing: boolean;
   isPresentationMode?: boolean;
   onTogglePresentationMode?: () => void;
+  isPiPSupported?: boolean;
+  isPiPActive?: boolean;
+  onEnterPiP?: () => void;
 }
 
 const MoreMenu: React.FC<MoreMenuProps> = ({
@@ -219,6 +224,9 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
   isViewing,
   isPresentationMode = false,
   onTogglePresentationMode,
+  isPiPSupported = false,
+  isPiPActive = false,
+  onEnterPiP,
 }) => (
   <>
     <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); (onBackdropClick ?? onClose)(); }} />
@@ -249,6 +257,16 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
           >
             <span className="text-zinc-500"><Maximize2 size={14} /></span>
             {isPresentationMode ? 'Exit Presentation Mode' : 'Enter Presentation Mode'}
+          </button>
+        )}
+        {isViewing && isPiPSupported && !isPiPActive && onEnterPiP && (
+          <button
+            onClick={() => { onEnterPiP(); onClose(); }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
+            title="Enter Picture-in-Picture mode"
+          >
+            <span className="text-zinc-500"><Tv size={14} /></span>
+            Picture-in-Picture
           </button>
         )}
         {isHost && (
@@ -326,6 +344,9 @@ interface CollabDockProps {
   onToggleTranscript: () => void;
   isStacked?: boolean;
   isCollapsed?: boolean;
+  isPiPSupported?: boolean;
+  isPiPActive?: boolean;
+  onEnterPiP?: () => void;
   onToggleCollapse?: () => void;
   onMouseEnter?: () => void;
   onClick?: (e: React.MouseEvent) => void;
@@ -345,6 +366,9 @@ const CollabDock: React.FC<CollabDockProps> = ({
   onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript,
   isStacked = false,
   isCollapsed = false,
+  isPiPSupported = false,
+  isPiPActive = false,
+  onEnterPiP,
   onToggleCollapse,
   onMouseEnter,
   onClick,
@@ -403,6 +427,9 @@ const CollabDock: React.FC<CollabDockProps> = ({
             isViewing={isViewing}
             isPresentationMode={isPresentationMode}
             onTogglePresentationMode={onTogglePresentationMode}
+            isPiPSupported={isPiPSupported}
+            isPiPActive={isPiPActive}
+            onEnterPiP={onEnterPiP}
           />
         )}
 
@@ -1611,7 +1638,7 @@ export const RoomPage: React.FC = () => {
             }
           })
           .catch(err => {
-            console.warn('[RoomPage] Failed to enter fullscreen:', err);
+            void 0 && console.warn('[RoomPage] Failed to enter fullscreen:', err);
           });
       }
     } else {
@@ -1620,7 +1647,7 @@ export const RoomPage: React.FC = () => {
           window.screen.orientation.unlock();
         }
         document.exitFullscreen().catch(err => {
-          console.warn('[RoomPage] Failed to exit fullscreen:', err);
+          void 0 && console.warn('[RoomPage] Failed to exit fullscreen:', err);
         });
       }
     }
@@ -1715,7 +1742,8 @@ export const RoomPage: React.FC = () => {
 
   // Refs
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null); // DIAG: kept for ref stability, element JSX disabled
+  void remoteAudioRef; // DIAG: suppress unused warning when audio element is disabled
   const remoteMicAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
 
   const attachRemoteMicStream = useCallback((el: HTMLAudioElement, stream: MediaStream) => {
@@ -1725,31 +1753,64 @@ export const RoomPage: React.FC = () => {
     el.muted = false;
     el.volume = 1.0;
     void el.play().catch(err => {
-      console.warn(`[WebRTC] Audio play failed for stream ${stream.id}:`, err);
+      void 0 && console.warn(`[WebRTC] Audio play failed for stream ${stream.id}:`, err);
     });
   }, []);
 
   // Attach remote stream
   useEffect(() => {
-    if (remoteStream) {
-      console.log('[RoomPage] Attaching remote stream. Tracks:', remoteStream.getTracks().map(t => t.kind));
-      if (remoteVideoRef.current) { remoteVideoRef.current.srcObject = remoteStream; remoteVideoRef.current.muted = true; }
-      if (remoteAudioRef.current) { remoteAudioRef.current.srcObject = remoteStream; remoteAudioRef.current.muted = viewerMuted; remoteAudioRef.current.volume = viewerVolume; }
-      const handleTrackAdded = () => {
-        console.log('[RoomPage] Track added. Tracks:', remoteStream.getTracks().map(t => t.kind));
-        if (remoteVideoRef.current) { remoteVideoRef.current.srcObject = remoteStream; remoteVideoRef.current.muted = true; }
-        if (remoteAudioRef.current) { remoteAudioRef.current.srcObject = remoteStream; remoteAudioRef.current.muted = viewerMuted; remoteAudioRef.current.volume = viewerVolume; }
-      };
-      remoteStream.addEventListener('addtrack', handleTrackAdded);
-      remoteStream.addEventListener('removetrack', handleTrackAdded);
-      return () => {
-        remoteStream.removeEventListener('addtrack', handleTrackAdded);
-        remoteStream.removeEventListener('removetrack', handleTrackAdded);
-      };
-    } else {
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-      if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
-    }
+    const attach = (source: string) => {
+      if (!remoteStream) return;
+      void 0 && console.log('[RoomPage] Attaching remote stream. Tracks:', remoteStream.getTracks().map(t => t.kind));
+      if (remoteVideoRef.current) {
+        if (remoteVideoRef.current.srcObject !== remoteStream) {
+          const oldId = remoteVideoRef.current.srcObject instanceof MediaStream ? remoteVideoRef.current.srcObject.id : 'null';
+          console.log(`[VideoLifecycle] srcObject assigned  Caller: ${source}  Old stream id: ${oldId}  New stream id: ${remoteStream.id}  Timestamp: ${Date.now()}  Element: video`);
+          remoteVideoRef.current.srcObject = remoteStream;
+          remoteVideoRef.current.muted = false; // DIAG: match standalone — video handles both video+audio
+          remoteVideoRef.current.playsInline = true;
+          // DIAG: play() removed from attach() — lifecycle experiment
+          // Playback is started inside initMediaSession() via the loadedmetadata → tryInitMediaSession() chain,
+          // matching the standalone order: srcObject → register handlers → play() → playbackState.
+        } else {
+          console.log(`[VideoLifecycle] Skipping redundant srcObject assignment (same MediaStream)  Element: video  Caller: ${source}`);
+        }
+      }
+      /* DIAG: audio element disabled — video handles both video+audio
+      if (remoteAudioRef.current) {
+        if (remoteAudioRef.current.srcObject !== remoteStream) {
+          const oldId = remoteAudioRef.current.srcObject instanceof MediaStream ? remoteAudioRef.current.srcObject.id : 'null';
+          console.log(`[VideoLifecycle] srcObject assigned  Caller: ${source}  Old stream id: ${oldId}  New stream id: ${remoteStream.id}  Timestamp: ${Date.now()}  Element: audio`);
+          remoteAudioRef.current.srcObject = remoteStream;
+          remoteAudioRef.current.muted = viewerMuted;
+          remoteAudioRef.current.volume = viewerVolume;
+        } else {
+          console.log(`[VideoLifecycle] Skipping redundant srcObject assignment (same MediaStream)  Element: audio  Caller: ${source}`);
+        }
+      }
+      */
+    };
+    attach('immediate');
+    // Set a timeout to attach again in case the first attempt fails
+    const timeoutId = setTimeout(() => attach('timeout(200ms)'), 200);
+    
+    return () => {
+      if (remoteStream) {
+        if (remoteVideoRef.current) {
+          const oldId = remoteVideoRef.current.srcObject instanceof MediaStream ? remoteVideoRef.current.srcObject.id : 'null';
+          console.log(`[VideoLifecycle] srcObject assigned  Caller: cleanup  Old stream id: ${oldId}  New stream id: null  Timestamp: ${Date.now()}  Element: video`);
+          remoteVideoRef.current.srcObject = null;
+        }
+        /* DIAG: audio element disabled
+        if (remoteAudioRef.current) {
+          const oldId = remoteAudioRef.current.srcObject instanceof MediaStream ? remoteAudioRef.current.srcObject.id : 'null';
+          console.log(`[VideoLifecycle] srcObject assigned  Caller: cleanup  Old stream id: ${oldId}  New stream id: null  Timestamp: ${Date.now()}  Element: audio`);
+          remoteAudioRef.current.srcObject = null;
+        }
+        */
+      }
+      clearTimeout(timeoutId);
+    };
   }, [remoteStream, viewerMuted, viewerVolume]);
 
   // Attach remote mic streams
@@ -1764,6 +1825,27 @@ export const RoomPage: React.FC = () => {
       }
     });
   }, [remoteMicStreams, isHost, attachRemoteMicStream]);
+
+  // Document Picture-in-Picture functionality
+  const { isPiPActive, isPiPSupported, enterPiP } = useDocumentPip({
+    videoRef: remoteVideoRef,
+    isViewing,
+    isInRoom: !!roomId,
+    onEnterPiP: () => {
+      void 0 && console.log('[RoomPage] Entered Document Picture-in-Picture mode');
+    },
+    onExitPiP: () => {
+      void 0 && console.log('[RoomPage] Exited Document Picture-in-Picture mode');
+    },
+  });
+
+  // Automatic Picture-in-Picture (Chrome-native, Google Meet-style)
+  // Acquires persistent mic on room join + Media Session on video arrival
+  useAutoPiP({
+    videoRef: remoteVideoRef,
+    isInRoom: !!currentSocketId && !isHost,
+    isViewing,
+  });
 
   // Message and transcript history
   useEffect(() => {
@@ -1803,7 +1885,7 @@ export const RoomPage: React.FC = () => {
       wsClient.send('join_room', { roomCode: roomId, displayName, clientId });
     });
     const unsubJoined = wsClient.on('room_joined', data => {
-      console.log('Joined room:', data);
+      void 0 && console.log('Joined room:', data);
       setCurrentSocketId(data.socketId);
       setParticipants(data.participants);
       if (data.autoDelete !== undefined) setAutoDelete(data.autoDelete);
@@ -1820,46 +1902,46 @@ export const RoomPage: React.FC = () => {
       playSelfJoinSound();
     });
     const unsubParticipantJoined = wsClient.on('participant_joined', data => {
-      console.log('Participant joined:', data.participant);
+      void 0 && console.log('Participant joined:', data.participant);
       setParticipants(prev => { if (prev.some(p => p.socketId === data.participant.socketId)) return prev; return [...prev, data.participant]; });
       playParticipantJoinSound();
     });
     const unsubParticipantLeft = wsClient.on('participant_left', data => {
-      console.log('Participant left:', data.participantId);
+      void 0 && console.log('Participant left:', data.participantId);
       setParticipants(prev => prev.filter(p => p.socketId !== data.participantId));
     });
     const unsubUpdated = wsClient.on('participants_updated', data => {
-      console.log('Participants updated:', data.participants);
+      void 0 && console.log('Participants updated:', data.participants);
       setParticipants(data.participants);
     });
     const unsubChatMessage = wsClient.on('chat_message', data => {
-      console.log('Received chat message:', data);
+      void 0 && console.log('Received chat message:', data);
       setMessages(prev => [...prev, { sender: data.sender, message: data.message, timestamp: data.timestamp, type: data.type }]);
       if (data.sender !== displayName && !isMessageSoundMutedRef.current) {
         playMessageSound();
       }
     });
     const unsubSettingsUpdated = wsClient.on('room_settings_updated', data => {
-      console.log('Room settings updated:', data);
+      void 0 && console.log('Room settings updated:', data);
       if (data.autoDelete !== undefined) setAutoDelete(data.autoDelete);
     });
     const unsubMicStatus = wsClient.on('mic_status_update', data => {
-      console.log('Mic status updated:', data);
+      void 0 && console.log('Mic status updated:', data);
       const { participantId, micMuted } = data;
       setParticipants(prev => prev.map(p => p.socketId === participantId ? { ...p, micMuted } : p));
     });
     const unsubKicked = wsClient.on('kicked', data => {
-      console.log('Kicked from room:', data);
+      void 0 && console.log('Kicked from room:', data);
       alert(data.reason || 'You have been removed from the room.');
       navigate('/dashboard');
     });
     const unsubTranscriptionStarted = wsClient.on('transcription_started', data => {
-      console.log('Transcription started:', data);
+      void 0 && console.log('Transcription started:', data);
       setIsTranscriptionActive(true);
       setShowConsentBanner(true);
     });
     const unsubTranscriptionStopped = () => {
-      console.log('Transcription stopped');
+      void 0 && console.log('Transcription stopped');
       setIsTranscriptionActive(false);
     };
     const unsubTranscriptionStoppedObj = wsClient.on('transcription_stopped', unsubTranscriptionStopped);
@@ -2139,6 +2221,12 @@ export const RoomPage: React.FC = () => {
                     Spotlight Active
                   </div>
                 )}
+                {isPiPActive && (
+                  <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-200 px-3 py-1.5 rounded-full text-[10px] font-semibold flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                    Picture-in-Picture
+                  </div>
+                )}
                 {showLaserPointerNotice && (
                   <div className="bg-[#09090b]/80 border border-white/[0.05] text-zinc-400 px-3 py-1.5 rounded-full text-[10px] font-inter flex items-center gap-1.5 backdrop-blur shadow-sm select-none">
                     Laser pointer available only when sharing an entire screen
@@ -2158,11 +2246,20 @@ export const RoomPage: React.FC = () => {
                   }
                 }}
               >
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay playsInline muted
-                  className="w-full h-full object-contain"
-                />
+<video
+                    ref={(el) => {
+                      if (el) {
+                        console.log(`[VideoLifecycle] Video element MOUNTED  Timestamp: ${Date.now()}`);
+                      } else {
+                        console.log(`[VideoLifecycle] Video element UNMOUNTED  Timestamp: ${Date.now()}`);
+                      }
+                      remoteVideoRef.current = el;
+                    }}
+                    autoPlay
+                    playsInline
+                    controls={false}
+                    className="w-full h-full object-contain"
+                  />
               </div>
             )}
 
@@ -2243,6 +2340,9 @@ export const RoomPage: React.FC = () => {
                 onToggleTranscript={handleToggleTranscript}
                 isMobile={isMobile}
                 participantCount={participants.length}
+                isPiPSupported={isPiPSupported}
+                isPiPActive={isPiPActive}
+                onEnterPiP={enterPiP}
               />
             )}
 
@@ -2332,7 +2432,10 @@ export const RoomPage: React.FC = () => {
       <CopyToast visible={showCopied} message={copyMessage} />
 
       {/* Hidden audio elements */}
+      {/* DIAG: disabled — video handles both video+audio */}
+      {/*
       <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+      */}
       {Array.from(remoteMicStreams.entries()).map(([streamId, stream]) => (
         <audio
           key={streamId}

@@ -8,11 +8,11 @@ export class WSClient {
     if (this.socket) {
       this.disconnect();
     }
-    console.log(`Connecting to WebSocket at ${url}...`);
+    void 0 && console.log(`Connecting to WebSocket at ${url}...`);
     this.socket = new WebSocket(url);
 
     this.socket.onopen = () => {
-      console.log("WebSocket connection established");
+      void 0 && console.log("WebSocket connection established");
       if (onOpen) onOpen();
     };
 
@@ -36,7 +36,7 @@ export class WSClient {
     };
 
     this.socket.onclose = () => {
-      console.log("WebSocket connection closed");
+      void 0 && console.log("WebSocket connection closed");
     };
   }
 
@@ -61,7 +61,7 @@ export class WSClient {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ event, ...payload }));
     } else {
-      console.warn("WebSocket is not connected/open");
+      void 0 && console.warn("WebSocket is not connected/open");
     }
   }
 

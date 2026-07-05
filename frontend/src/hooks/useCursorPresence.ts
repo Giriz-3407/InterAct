@@ -97,12 +97,12 @@ export function useCursorPresence({
 }: UseCursorPresenceOptions): UseCursorPresenceReturn {
   // [CursorPresence] mount log
   useEffect(() => {
-    console.log('[Runtime] useCursorPresence mounted — isScreenVisible:', isScreenVisible);
+    void 0 && console.log('[Runtime] useCursorPresence mounted — isScreenVisible:', isScreenVisible);
   }, []);
 
   // [Runtime] Log whenever isScreenVisible changes so we can see if the viewer ever activates
   useEffect(() => {
-    console.log('[Runtime] isScreenVisible changed ->', isScreenVisible);
+    void 0 && console.log('[Runtime] isScreenVisible changed ->', isScreenVisible);
   }, [isScreenVisible]);
 
   // Mutable ref so inbound WS callbacks (set up once with [] deps) always
@@ -367,7 +367,7 @@ export function useCursorPresence({
       if (e.code === 'AltLeft' && !e.repeat) {
         e.preventDefault(); // Prevent menu focus
         altHeld.current = true;
-        console.log('[Annotation] ALT down');
+        void 0 && console.log('[Annotation] ALT down');
 
         if (isHostRef.current) {
           const now = Date.now();
@@ -376,7 +376,7 @@ export function useCursorPresence({
           if (diff > 50 && diff < 350) {
             spotlightEnabled.current = !spotlightEnabled.current;
             setSpotlightActive(spotlightEnabled.current);
-            console.log('[Spotlight] Toggled:', spotlightEnabled.current);
+            void 0 && console.log('[Spotlight] Toggled:', spotlightEnabled.current);
 
             // Reset time to prevent triple-taps
             lastAltPressTime.current = 0;
@@ -395,10 +395,10 @@ export function useCursorPresence({
       }
       if (e.code === 'ShiftLeft') {
         shiftHeld.current = true;
-        console.log('[Annotation] SHIFT down');
+        void 0 && console.log('[Annotation] SHIFT down');
       }
       if (e.code === 'Escape') {
-        console.log('[Runtime] ESC pressed — clearing annotations');
+        void 0 && console.log('[Runtime] ESC pressed — clearing annotations');
         wsClient.send('annotation_clear', {});
         if (isHostRef.current) {
           desktopAgent.sendAnnotationClear(localParticipantId || '');
@@ -415,7 +415,7 @@ export function useCursorPresence({
           // Toggle Laser Mode
           laserModeEnabled.current = !laserModeEnabled.current;
           setLaserModeActive(laserModeEnabled.current);
-          console.log('[Runtime] Laser Mode toggled:', laserModeEnabled.current);
+          void 0 && console.log('[Runtime] Laser Mode toggled:', laserModeEnabled.current);
 
           // Reset stored time to prevent triple-tap double-toggle (cooldown)
           lastCtrlPressTime.current = 0;
@@ -439,7 +439,7 @@ export function useCursorPresence({
         // Only track hold if persistent laser mode is OFF
         if (!laserModeEnabled.current) {
           ctrlHeld.current = true;
-          console.log('[Runtime] CTRL down');
+          void 0 && console.log('[Runtime] CTRL down');
         }
       }
     };
@@ -551,7 +551,7 @@ export function useCursorPresence({
           endX: point.x,
           endY: point.y,
         });
-        console.log('[Annotation] update sent', annotId);
+        void 0 && console.log('[Annotation] update sent', annotId);
 
         if (isHostRef.current) {
           const startDesk = toDesktopCoords(startPoint.x, startPoint.y);
@@ -581,7 +581,7 @@ export function useCursorPresence({
       if (!point) return;
 
       if (isLaserActive) {
-        console.log('[Runtime] sending cursor_move', point.x.toFixed(3), point.y.toFixed(3));
+        void 0 && console.log('[Runtime] sending cursor_move', point.x.toFixed(3), point.y.toFixed(3));
         sendMove(point.x, point.y);
       }
 
@@ -626,7 +626,7 @@ export function useCursorPresence({
         const annotationId = `annot-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         currentAnnotationId.current = annotationId;
         currentAnnotationType.current = isAlt ? 'rect' : 'arrow';
-        console.log('[Annotation] drag start');
+        void 0 && console.log('[Annotation] drag start');
 
         // Send initial update
         wsClient.send('annotation_update', {
@@ -811,7 +811,7 @@ export function useCursorPresence({
   useEffect(() => {
     // ── cursor_move ─────────────────────────────────────────────────────────
     const unsubMove = wsClient.on('cursor_move', (data) => {
-      console.log('[Runtime] host received cursor_move', data);
+      void 0 && console.log('[Runtime] host received cursor_move', data);
       const { participantId, displayName, x, y } = data as RemoteCursor;
       if (!participantId || x == null || y == null) return;
       if (participantId === localParticipantId) return; // Filter out host's own echo
@@ -857,7 +857,7 @@ export function useCursorPresence({
 
     // ── cursor_hide ──────────────────────────────────────────────────────────
     const unsubHide = wsClient.on('cursor_hide', (data) => {
-      console.log('[Runtime] host received cursor_hide', data);
+      void 0 && console.log('[Runtime] host received cursor_hide', data);
       const { participantId } = data as { participantId: string };
       if (!participantId) return;
       if (participantId === localParticipantId) return;
@@ -883,7 +883,7 @@ export function useCursorPresence({
       };
       if (!participantId || !annotationId || !type) return;
       if (participantId === localParticipantId) return;
-      console.log('[Annotation] host received', annotationId);
+      void 0 && console.log('[Annotation] host received', annotationId);
 
       if (isHostRef.current && laserPointerEnabledRef.current) {
         const name = getParticipantName(participantId, displayName);
@@ -938,7 +938,7 @@ export function useCursorPresence({
     };
   }, [getParticipantColor, getParticipantName]);
 
-  console.log('[Runtime-Audit] videoBounds:', videoBounds, 'videoDimensions:', videoDimensions, 'containerSize:', containerSize);
+  void 0 && console.log('[Runtime-Audit] videoBounds:', videoBounds, 'videoDimensions:', videoDimensions, 'containerSize:', containerSize);
 
   return { viewportRef, videoBounds, laserModeActive, spotlightActive };
 }

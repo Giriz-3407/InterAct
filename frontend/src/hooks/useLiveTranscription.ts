@@ -33,7 +33,7 @@ export const useLiveTranscription = ({
       : 'N/A';
     const entry: DiagEntry = { name, ts: Date.now(), elapsed, extra };
     setDiagLogs((prev) => [...prev.slice(-199), entry]);
-    console.log(
+    void 0 && console.log(
       `[TRANSCRIPTION DIAG] ${name} | ts=${Date.now()} | elapsed=${elapsed}${
         extra ? ` | ${extra}` : ''
       }`

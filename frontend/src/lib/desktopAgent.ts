@@ -1,18 +1,3 @@
-/**
- * desktopAgent.ts — InterAct Phase 4 / RC1
- *
- * Browser-side WebSocket client that forwards cursor events received from
- * the InterAct backend to the local desktop agent overlay.
- *
- * Requirements Met:
- *  - Configurable port: resolved via import.meta.env.VITE_AGENT_PORT (fallback 8765)
- *  - Exponential backoff: base 500ms, multiplier 2x, max 30s, jitter ±10%
- *  - Agent handshake: immediately parses 'agent_info' event on connection open
- *  - Protocol version validation: validates client BROWSER_PROTOCOL_VERSION against server protocol_version
- *  - Connection health: exposes status callbacks and getters with states ('connecting', 'connected', 'disconnected', 'incompatible')
- *  - Console log levels: structured console warnings and errors for diagnostics
- */
-
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'incompatible';
 
 export interface AgentInfo {
@@ -32,8 +17,44 @@ type StatusCallback = (status: ConnectionStatus) => void;
 import { isMobileDevice } from './mobile';
 
 // ---------------------------------------------------------------------------
-// Configurable Host-only agent URL resolution
+// Port Discovery and Agent URL resolution
 // ---------------------------------------------------------------------------
+
+async function discoverAgentPort(): Promise<number> {
+  const candidatePorts = [8765, 8766, 8767, 8768, 8769, 8770];
+  const timeoutMs = 200;
+
+  for (const port of candidatePorts) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      const response = await fetch(`http://127.0.0.1:${port}/status`, {
+        method: 'GET',
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.status === 'ok') {
+          console.log(
+            `[DesktopAgent] Discovered agent on port ${port} via /status endpoint`
+          );
+          return port;
+        }
+      }
+    } catch (err) {
+      continue;
+    }
+  }
+
+  console.log('[DesktopAgent] No agent found on candidate ports, using default 8765');
+  return 8765;
+}
+
 function getAgentWsUrl(): string {
   const port = (import.meta.env?.VITE_AGENT_PORT) || '8765';
   return `ws://127.0.0.1:${port}`;
@@ -83,6 +104,11 @@ class DesktopAgentClient {
   private shouldConnect = false;
   private status: ConnectionStatus = 'disconnected';
   private agentInfo: AgentInfo | null = null;
+  private _discoveredPort: number | null = null;
+
+  public get discoveredPort(): number | null {
+    return this._discoveredPort;
+  }
 
   // Reconnect Backoff properties
   private baseDelayMs = 500;
@@ -258,61 +284,76 @@ class DesktopAgentClient {
     if (!this.shouldConnect) return;
 
     this._setStatus('connecting');
-    const wsUrl = getAgentWsUrl();
-    console.log(`[DesktopAgent] Connecting to ${wsUrl}...`);
+    let wsUrlPromise: Promise<string>;
 
-    try {
-      const ws = new WebSocket(wsUrl);
+    if (import.meta.env?.VITE_AGENT_PORT) {
+      wsUrlPromise = Promise.resolve(getAgentWsUrl());
+      console.log('[DesktopAgent] Using VITE_AGENT_PORT from build-time config');
+    } else {
+      wsUrlPromise = (async () => {
+        console.log('[DesktopAgent] Discovering agent port via /status endpoint...');
+        const discoveredPort = await discoverAgentPort();
+        this._discoveredPort = discoveredPort;
+        return `ws://127.0.0.1:${discoveredPort}`;
+      })();
+    }
 
-      ws.onopen = () => {
-        console.log('[DesktopAgent] WebSocket open. Waiting for agent_info handshake...');
-        
-        // Start handshake timeout timer
-        this._clearHandshakeTimer();
-        this.handshakeTimer = setTimeout(() => {
-          console.warn('[DesktopAgent] Handshake timed out. Reconnecting...');
-          ws.close();
-        }, this.handshakeTimeoutMs);
-      };
+    wsUrlPromise.then((wsUrl) => {
+      console.log(`[DesktopAgent] Connecting to ${wsUrl}...`);
 
-      ws.onclose = () => {
-        this.socket = null;
-        this.agentInfo = null;
-        this._clearHandshakeTimer();
+      try {
+        const ws = new WebSocket(wsUrl);
 
+        ws.onopen = () => {
+          console.log('[DesktopAgent] WebSocket open. Waiting for agent_info handshake...');
+          
+          // Start handshake timeout timer
+          this._clearHandshakeTimer();
+          this.handshakeTimer = setTimeout(() => {
+            console.warn('[DesktopAgent] Handshake timed out. Reconnecting...');
+            ws.close();
+          }, this.handshakeTimeoutMs);
+        };
+
+        ws.onclose = () => {
+          this.socket = null;
+          this.agentInfo = null;
+          this._clearHandshakeTimer();
+
+          if (this.shouldConnect) {
+            this._setStatus('disconnected');
+            this.disconnectedCbs.forEach((cb) => cb());
+            this._scheduleReconnect();
+          } else if (this.status !== 'incompatible') {
+            this._setStatus('disconnected');
+          }
+        };
+
+        ws.onerror = () => {
+          // onerror is followed by onclose, no reconnect scheduling here.
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg && msg.event === 'agent_info') {
+              this._clearHandshakeTimer();
+              this._handleHandshake(msg);
+            }
+          } catch (err) {
+            console.warn('[DesktopAgent] Failed to parse message from agent:', err);
+          }
+        };
+
+        this.socket = ws;
+      } catch (err) {
+        console.error('[DesktopAgent] Socket construction failed:', err);
         if (this.shouldConnect) {
           this._setStatus('disconnected');
-          this.disconnectedCbs.forEach((cb) => cb());
           this._scheduleReconnect();
-        } else if (this.status !== 'incompatible') {
-          this._setStatus('disconnected');
         }
-      };
-
-      ws.onerror = () => {
-        // onerror is followed by onclose, no reconnect scheduling here.
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          if (msg && msg.event === 'agent_info') {
-            this._clearHandshakeTimer();
-            this._handleHandshake(msg);
-          }
-        } catch (err) {
-          console.warn('[DesktopAgent] Failed to parse message from agent:', err);
-        }
-      };
-
-      this.socket = ws;
-    } catch (err) {
-      console.error('[DesktopAgent] Socket construction failed:', err);
-      if (this.shouldConnect) {
-        this._setStatus('disconnected');
-        this._scheduleReconnect();
       }
-    }
+    });
   }
 
   private _handleHandshake(payload: any): void {

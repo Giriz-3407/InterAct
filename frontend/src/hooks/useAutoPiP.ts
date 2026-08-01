@@ -34,6 +34,8 @@ export function useAutoPiP({
   const pipEnterCountRef = useRef(0);
   const handlerInvokedRef = useRef(false);
   const mediaSessionVideoRef = useRef<HTMLVideoElement | null>(null);
+  const pipRootRef = useRef<ReturnType<typeof createRoot> | null>(null);
+  const pipWindowRef = useRef<Window | null>(null);
 
   isViewingRef.current = isViewing;
 
@@ -132,6 +134,34 @@ export function useAutoPiP({
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
+
+  // ─── Re-render PiP root when isMuted changes (mic icon sync) ────────
+  useEffect(() => {
+    const root = pipRootRef.current;
+    const win = pipWindowRef.current;
+    if (!root || !win || win.closed) return;
+
+    const stream = videoRef.current?.srcObject as MediaStream | null;
+    if (!stream) return;
+
+    console.log(`[AutoPiP] Re-rendering PiP root with isMuted=${isMuted}`);
+    root.render(
+      createElement(DocumentPipWindow, {
+        stream,
+        pipWindow: win,
+        onLeave: () => {
+          onLeaveRoom?.();
+          win.close();
+        },
+        hostName,
+        displayName,
+        roomId,
+        isMuted,
+        onToggleMic,
+        connected: window.navigator.onLine,
+      })
+    );
+  }, [isMuted]);
 
   // ─── Cleanup on unmount ──────────────────────────────────────────────
   useEffect(() => {
@@ -323,6 +353,8 @@ export function useAutoPiP({
             const wsConnected = window.navigator.onLine;
 
             const root = createRoot(pipDocument.body);
+            pipRootRef.current = root;
+            pipWindowRef.current = pipWindow;
             root.render(
               createElement(DocumentPipWindow, {
                 stream,
@@ -341,6 +373,8 @@ export function useAutoPiP({
             );
 
             pipWindow.addEventListener('pagehide', () => {
+              pipRootRef.current = null;
+              pipWindowRef.current = null;
               root.unmount();
             });
           } catch (e) {

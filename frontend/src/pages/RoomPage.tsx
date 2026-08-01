@@ -1,5 +1,5 @@
 console.log("CURSOR_BUILD_MARKER_20260615 — SOURCE: C:\\Users\\Girish\\Desktop\\InterAct\\frontend");
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Avatar } from '../components/Avatar.FC';
 import { ParticipantPanel } from '../components/ParticipantPanel';
@@ -356,6 +356,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
   onTogglePresentationMode,
 }) => {
   const effectiveCollapsed = isMobile ? false : isCollapsed;
+  const dockZ = showMoreMenu ? 'z-50' : 'z-30';
   let itemIndex = 0;
   const getItemDelayStyle = () => {
     const delay = effectiveCollapsed 
@@ -374,10 +375,10 @@ const CollabDock: React.FC<CollabDockProps> = ({
       className={
         `${
           isStacked 
-            ? "relative z-30 flex items-end justify-center mb-1" 
+            ? `relative ${dockZ} flex items-end justify-center mb-1` 
             : isViewing
-              ? "absolute bottom-4 left-4 right-4 z-30 flex items-end justify-center pointer-events-auto"
-              : "absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-end justify-center pointer-events-auto"
+              ? `absolute bottom-4 left-4 right-4 ${dockZ} flex items-end justify-center pointer-events-auto`
+              : `absolute bottom-4 left-1/2 -translate-x-1/2 ${dockZ} flex items-end justify-center pointer-events-auto`
         } transition-all duration-300 ${
           isVisible 
             ? "opacity-100 translate-y-0" 
@@ -644,7 +645,16 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
     } catch { return isoString; }
   };
 
+  const tabs = ['chat', 'transcript', 'ai', ...(isHost ? ['host'] : [])] as ('chat' | 'transcript' | 'ai' | 'host')[];
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [tabPill, setTabPill] = useState<{ left: number; width: number } | null>(null);
 
+  useLayoutEffect(() => {
+    const el = tabRefs.current[activeTab];
+    if (el) {
+      setTabPill({ left: el.offsetLeft, width: el.offsetWidth });
+    }
+  }, [activeTab, isHost, isOpen]);
 
   return (
     <>
@@ -653,20 +663,27 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         <div className="fixed inset-0 bg-black/50 z-35 md:hidden" onClick={onClose} />
       )}
 
-      <aside className={`flex flex-col bg-[#111113] border-l border-zinc-800/40 shadow-2xl transition-all duration-300 ease-in-out shrink-0 z-40 fixed top-0 right-0 bottom-0 w-80 max-w-[85vw] md:top-[72px] md:right-3 md:bottom-3 md:h-[calc(100dvh-5.5rem)] md:w-[350px] md:border md:rounded-2xl ${
-        isOpen ? 'translate-x-0' : 'translate-x-full'
+      <aside className={`flex flex-col bg-[#111113] border border-zinc-800/40 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 z-40 fixed top-5 right-3 bottom-6 w-72 max-w-[85vw] rounded-2xl overflow-hidden md:top-20 md:right-6 md:bottom-6 md:w-[330px] ${
+        isOpen ? 'translate-x-0' : 'translate-x-[120%]'
       }`}>
         {/* Tab header */}
         <div className="h-14 border-b border-zinc-800/30 flex items-center justify-between px-3 shrink-0 bg-white/[0.01]">
-          <div className="flex-1 mr-3 flex items-center gap-1 bg-white/5 p-0.5 rounded-full border border-zinc-800/40">
-            {(['chat', 'transcript', 'ai', ...(isHost ? ['host'] : [])] as ('chat' | 'transcript' | 'ai' | 'host')[]).map(tab => (
+          <div className="flex-1 mr-3 flex items-center gap-1 bg-white/5 p-0.5 rounded-full border border-zinc-800/40 relative">
+            {tabPill && (
+              <div
+                className="absolute top-0.5 bottom-0.5 rounded-full bg-white/10 shadow-[0_1px_3px_rgba(0,0,0,0.2)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-none"
+                style={{ left: tabPill.left, width: tabPill.width }}
+              />
+            )}
+            {tabs.map(tab => (
               <button
                 key={tab}
+                ref={el => { tabRefs.current[tab] = el; }}
                 onClick={() => onTabChange(tab)}
-                className={`flex-1 h-8 rounded-full transition-all cursor-pointer flex items-center justify-center relative active:scale-95 ${
+                className={`flex-1 h-8 rounded-full transition-colors cursor-pointer flex items-center justify-center relative active:scale-95 ${
                   activeTab === tab
-                    ? 'bg-indigo-650/80 text-white shadow-[0_1px_3px_rgba(0,0,0,0.2)]'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                    ? 'text-white'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
                 title={tab === 'ai' ? 'AI Insights' : tab === 'transcript' ? 'Live Log' : tab === 'host' ? 'Host Controls' : 'Chat'}
               >
@@ -682,15 +699,13 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
               </button>
             ))}
           </div>
-          {activeTab === 'chat' && (
-            <button
-              onClick={onToggleMessageSoundMute}
-              className="w-8 h-8 mr-1 rounded-full bg-white/5 hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center justify-center shrink-0 active:scale-95 text-zinc-400"
-              title={isMessageSoundMuted ? "Unmute chat sounds" : "Mute chat sounds"}
-            >
-              {isMessageSoundMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-            </button>
-          )}
+          <button
+            onClick={onToggleMessageSoundMute}
+            className="w-8 h-8 mr-1 rounded-full bg-white/5 hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center justify-center shrink-0 active:scale-95 text-zinc-400"
+            title={isMessageSoundMuted ? "Unmute chat sounds" : "Mute chat sounds"}
+          >
+            {isMessageSoundMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          </button>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 hover:text-white transition-all cursor-pointer flex items-center justify-center shrink-0 active:scale-95 text-zinc-400"
@@ -794,7 +809,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
                       ? 'bg-white/[0.01] border border-zinc-800/30 text-zinc-650 cursor-not-allowed'
                       : isTranscriptionActive
                         ? 'bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/15'
-                        : 'bg-indigo-650/80 text-white hover:bg-indigo-600'
+                        : 'bg-indigo-600/80 text-white hover:bg-indigo-600'
                   }`}
                 >
                   <span>{isTranscriptionActive ? 'Stop transcription' : 'Start transcription'}</span>
@@ -921,9 +936,10 @@ interface CenterStateProps {
   onStartShare: () => void;
   onStopShare: () => void;
   isMobile: boolean;
+  hostStoppedSharing?: boolean;
 }
 
-const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isSharing, onStartShare, onStopShare, isMobile }) => {
+const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isSharing, onStartShare, onStopShare, isMobile, hostStoppedSharing }) => {
   if (isRequesting) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 p-8 text-center select-none">
@@ -959,7 +975,7 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
             You are sharing your screen
           </h3>
           <p className="text-sm text-zinc-400 font-inter leading-relaxed max-w-[240px] mx-auto">
-            Participants in this room can see your screen in real time.
+            Participants in this room can see your screen.
           </p>
         </div>
         <button
@@ -1001,12 +1017,14 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
       </div>
       <div>
         <h3 className="text-lg font-bold font-geist text-white tracking-tight mb-2 bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">
-          {isHost ? 'Ready to share your screen' : 'Waiting for host'}
+          {isHost ? 'Ready to share your screen' : hostStoppedSharing ? 'Host stopped sharing' : 'Waiting for host'}
         </h3>
         <p className="text-sm text-zinc-400 font-inter leading-relaxed max-w-[260px] mx-auto">
           {isHost
             ? 'Share your screen to start broadcasting to all participants in this room.'
-            : 'The host will begin sharing their screen shortly. You will see it appear here.'}
+            : hostStoppedSharing
+              ? 'The host has ended the screen share. You will see a new stream when they share again.'
+              : 'The host will begin sharing their screen shortly. You will see it appear here.'}
         </p>
       </div>
       {isHost && (
@@ -1126,7 +1144,7 @@ export const FloatingChat: React.FC<FloatingChatProps> = ({
           e.stopPropagation();
           onRelease();
         }}
-        className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none'}`}
+        className={`fixed top-5 right-3 bottom-6 z-40 w-72 max-w-[85vw] bg-black/60 backdrop-blur-xl border border-zinc-800/40 rounded-2xl overflow-hidden shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)] flex flex-col transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-[120%] pointer-events-none'}`}
         style={{
           paddingTop: 'env(safe-area-inset-top, 0px)',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -1254,7 +1272,7 @@ export const FloatingParticipants: React.FC<FloatingParticipantsProps> = ({
         e.stopPropagation();
         onRelease();
       }}
-      className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none'}`}
+      className={`fixed top-0 right-0 bottom-0 z-40 w-80 max-w-[85vw] bg-black/60 backdrop-blur-xl border-l border-zinc-800/40 shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-[120%] pointer-events-none'}`}
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -1370,9 +1388,12 @@ export const RoomPage: React.FC = () => {
   const [activeCaptions, setActiveCaptions] = useState<CaptionItem[]>([]);
   const [roomTranscripts, setRoomTranscripts] = useState<{ id: string; username: string; text: string; timestamp: string; user_id: string }[]>([]);
   const captionTimeoutRef = useRef<any>(null);
+  const [showResumeSharingPrompt, setShowResumeSharingPrompt] = useState(false);
+  const SESSION_HOST_SHARING_KEY = 'host_was_sharing';
 
   const currentUserObj = participants.find(p => p.socketId === currentSocketId);
   const isHost = currentUserObj ? currentUserObj.role === 'host' : false;
+  const hostName = participants.find(p => p.role === 'host')?.displayName || 'Host';
 
   // Prevent accidental tab closure with collaboration-specific message
   useEffect(() => {
@@ -1479,6 +1500,32 @@ export const RoomPage: React.FC = () => {
   const isSharing = sharingState === 'sharing';
   const isViewing = sharingState === 'viewing';
   const isRequesting = sharingState === 'requesting';
+  const [hostStoppedSharing, setHostStoppedSharing] = useState(false);
+  const wasViewingRef = useRef(false);
+
+  // Track viewer state transitions for showing "host stopped sharing" message
+  useEffect(() => {
+    if (isViewing) {
+      wasViewingRef.current = true;
+      setHostStoppedSharing(false);
+    } else if (wasViewingRef.current && !isHost) {
+      setHostStoppedSharing(true);
+      const timer = setTimeout(() => setHostStoppedSharing(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isViewing, isHost]);
+
+  // Save host sharing state to sessionStorage so it survives page reloads
+  useEffect(() => {
+    if (isHost) {
+      if (isSharing) {
+        sessionStorage.setItem(SESSION_HOST_SHARING_KEY, 'true');
+      } else {
+        sessionStorage.removeItem(SESSION_HOST_SHARING_KEY);
+      }
+    }
+  }, [isHost, isSharing]);
+
   const showLaserPointerNotice = isHost && isSharing && captureDisplaySurface !== 'monitor';
 
   // Mobile presentation experience definitions
@@ -1719,6 +1766,7 @@ export const RoomPage: React.FC = () => {
 
   // Refs
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null); // kept for ref stability, element JSX disabled
   void remoteAudioRef; // suppress unused warning when audio element is disabled
   const remoteMicAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
@@ -1743,6 +1791,18 @@ export const RoomPage: React.FC = () => {
       if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     }
   }, [remoteStream]);
+
+  // Attach local (loopback) stream so the host sees their own shared screen
+  useEffect(() => {
+    if (localStream) {
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = localStream;
+        localVideoRef.current.muted = true;
+      }
+    } else {
+      if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    }
+  }, [localStream]);
 
   // Attach remote mic streams
   useEffect(() => {
@@ -1816,6 +1876,17 @@ export const RoomPage: React.FC = () => {
         setIsTranscriptionActive(data.transcriptionActive);
         if (data.transcriptionActive) {
           setShowConsentBanner(true);
+        }
+      }
+      // Auto-resume screen sharing for host after page reload
+      const wasSharing = sessionStorage.getItem(SESSION_HOST_SHARING_KEY);
+      if (wasSharing === 'true') {
+        const amHost = data.participants?.some(
+          (p: any) => p.socketId === data.socketId && p.role === 'host'
+        );
+        if (amHost) {
+          sessionStorage.removeItem(SESSION_HOST_SHARING_KEY);
+          setShowResumeSharingPrompt(true);
         }
       }
       try {
@@ -1974,11 +2045,14 @@ export const RoomPage: React.FC = () => {
 
   const handleToggleChat = useCallback(() => {
     setIsChatOpen(p => {
-      if (!p) setActiveRightTab('chat');
-      return !p;
+      if (!p || activeRightTab !== 'chat') {
+        setActiveRightTab('chat');
+        return true;
+      }
+      return false;
     });
     if (window.innerWidth < 768) setIsPeopleOpen(false);
-  }, []);
+  }, [activeRightTab]);
 
   const handleToggleTranscript = useCallback(() => {
     setIsChatOpen(p => {
@@ -2010,6 +2084,44 @@ export const RoomPage: React.FC = () => {
   // ── MAIN ROOM LAYOUT ──
   return (
     <div className="min-h-[100dvh] bg-[#09090b] text-zinc-100 font-inter flex flex-col h-[100dvh] overflow-hidden relative">
+
+      {/* More menu dismissal backdrop — covers the full viewport so the menu closes on any outside click */}
+      {showMoreMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={(e) => { e.stopPropagation(); handleMoreBackdropClick(); }}
+        />
+      )}
+
+      {/* Resume Sharing Prompt */}
+      {showResumeSharingPrompt && !isPresentationMode && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-35 w-full max-w-md px-4 pointer-events-auto">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-indigo-950/45 backdrop-blur-md border border-indigo-500/20 shadow-lg text-xs text-[#c0c1ff] font-inter">
+            <div className="flex items-center gap-2">
+              <Monitor size={16} className="text-indigo-400 shrink-0" />
+              <span>
+                You were sharing your screen.{' '}
+                <button
+                  onClick={() => {
+                    setShowResumeSharingPrompt(false);
+                    handleShareToggle();
+                  }}
+                  className="font-bold underline hover:text-white transition-colors cursor-pointer"
+                >
+                  Resume sharing
+                </button>
+              </span>
+            </div>
+            <button
+              onClick={() => setShowResumeSharingPrompt(false)}
+              className="p-1 rounded hover:bg-indigo-500/10 text-[#c0c1ff] transition-colors cursor-pointer"
+              title="Dismiss"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Consent Banner */}
       {showConsentBanner && isTranscriptionActive && !isPresentationMode && (
@@ -2166,45 +2278,58 @@ export const RoomPage: React.FC = () => {
               </div>
             )}
 
-            {/* Empty / sharing state */}
-            {!isViewing && (
-              <div className="flex-1 flex items-center justify-center">
-                <CenterState
-                  isHost={isHost}
-                  isRequesting={isRequesting}
-                  isSharing={isSharing}
-                  onStartShare={handleShareToggle}
-                  onStopShare={handleShareToggle}
-                  isMobile={isMobile}
+            {/* Host loopback — the host sees their own shared screen back, with a gray overlay */}
+            {isHost && isSharing && localStream ? (
+              <div className="relative w-full h-full">
+                <video
+                  ref={localVideoRef}
+                  autoPlay playsInline muted
+                  className="w-full h-full object-contain"
                 />
+                <div className="absolute inset-0 bg-zinc-900/70 pointer-events-none" />
+                <div className="absolute inset-0 flex items-center justify-center p-8">
+                  <div className="relative flex items-center justify-center">
+                    <div className="absolute -inset-16 rounded-full bg-[radial-gradient(circle_at_center,rgba(20,20,24,0.98)_0%,rgba(20,20,24,0.7)_45%,rgba(20,20,24,0)_72%)] blur-2xl pointer-events-none" />
+                    <div className="relative">
+                      <CenterState
+                        isHost={isHost}
+                        isRequesting={isRequesting}
+                        isSharing={isSharing}
+                        onStartShare={handleShareToggle}
+                        onStopShare={handleShareToggle}
+                        isMobile={isMobile}
+                        hostStoppedSharing={hostStoppedSharing}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
+            ) : (
+              /* Empty / sharing state */
+              !isViewing && (
+                <div className="flex-1 flex items-center justify-center">
+                  <CenterState
+                    isHost={isHost}
+                    isRequesting={isRequesting}
+                    isSharing={isSharing}
+                    onStartShare={handleShareToggle}
+                    onStopShare={handleShareToggle}
+                    isMobile={isMobile}
+                    hostStoppedSharing={hostStoppedSharing}
+                  />
+                </div>
+              )
             )}
 
-            {/* Presenter pill */}
-            {isSharing && !isPresentationMode && (
-              <div className={`absolute top-15 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none transition-all duration-300 ${
-                isPresentationMode 
-                  ? (isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none') 
-                  : 'opacity-100 scale-100'
-              }`}>
-                <Avatar name={displayName} size="xs" color="bg-indigo-600/90" />
+            {/* Presenter pill — shown only to viewers, never to the host */}
+            {isViewing && !isMobileViewer && !isPresentationMode && (
+              <div className="absolute top-15 left-3 flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none transition-all duration-300 opacity-100 scale-100">
+                <Avatar name={hostName} size="xs" color="bg-indigo-600/90" />
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] font-semibold font-inter text-zinc-200 truncate">{displayName} is sharing</span>
+                  <span className="text-[10px] font-semibold font-inter text-zinc-200 truncate">{hostName} is sharing</span>
                   <span className="text-[9px] font-mono text-zinc-500">LIVE · Screen</span>
                 </div>
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse ml-1" />
-              </div>
-            )}
-
-            {/* Viewer status pill (hidden in mobile presentation mode) */}
-            {isViewing && !isMobileViewer && !isPresentationMode && (
-              <div className={`absolute top-15 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#09090b]/80 border border-white/[0.05] backdrop-blur z-20 shadow-sm select-none transition-all duration-300 ${
-                isPresentationMode 
-                  ? (isPresentationControlsVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none') 
-                  : 'opacity-100 scale-100'
-              }`}>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#c0c1ff] animate-pulse-slow" />
-                <span className="text-[10px] font-semibold font-inter text-zinc-200">Receiving live stream</span>
               </div>
             )}
 

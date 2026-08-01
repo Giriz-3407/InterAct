@@ -84,6 +84,7 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
   const pcsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
+  const isStoppingRef = useRef(false);
 
   // Host-side: tracks received from viewers' microphones, keyed by viewerId
   const viewerMicTracksRef = useRef<Map<string, { track: MediaStreamTrack; stream: MediaStream }>>(new Map());
@@ -254,6 +255,11 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
         if (track.kind === 'video') {
           setRemoteStream(stream);
           setSharingState('viewing');
+
+          track.onended = () => {
+            setRemoteStream(null);
+            setSharingState('idle');
+          };
         } else if (track.kind === 'audio') {
           const hasVideo = stream.getVideoTracks().length > 0;
           if (hasVideo) {
@@ -461,7 +467,13 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
   // ─── HOST: Stop sharing ────────────────────────────────────────────────────
   const stopSharing = useCallback(() => {
+    if (isStoppingRef.current) return;
+    isStoppingRef.current = true;
+
     if (displayStreamRef.current) {
+      const videoTrack = displayStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) videoTrack.onended = null;
+
       displayStreamRef.current.getTracks().forEach((track) => track.stop());
       displayStreamRef.current = null;
     }
@@ -472,6 +484,8 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
 
     // Sync tracks (will remove screen tracks and renegotiate)
     syncAllViewers();
+
+    isStoppingRef.current = false;
   }, [syncAllViewers]);
 
   // ─── HOST: Start screen sharing ────────────────────────────────────────────

@@ -67,24 +67,28 @@ const NavItem: React.FC<NavItemProps> = ({ item, expanded, onClick }) => (
     onClick={onClick}
     title={!expanded ? item.label : undefined}
     className={({ isActive }) =>
-      `group relative flex items-center gap-3 rounded-xl transition-all duration-200 ${
-        expanded ? 'px-3 py-2.5 mx-2' : 'w-10 h-10 justify-center mx-auto'
-      } ${
+      `group relative flex items-center h-10 px-2.5 mx-2 rounded-xl transition-colors duration-200 ${
         isActive && !item.soon
           ? 'bg-white/[0.04] border border-white/[0.05] text-[#c0c1ff] shadow-sm font-semibold'
           : 'text-zinc-400 hover:bg-white/[0.02] hover:text-zinc-200 border border-transparent'
       }`
     }
   >
-    <span className="flex-shrink-0 transition-colors group-hover:text-zinc-100">{item.icon}</span>
-    {expanded && (
-      <span className="text-xs font-medium flex-1">{item.label}</span>
-    )}
-    {expanded && item.soon && (
-      <span className="text-[9px] font-bold font-geist text-zinc-500 bg-white/[0.04] border border-white/[0.03] px-1.5 py-0.5 rounded-full select-none">
-        Soon
-      </span>
-    )}
+    <span className="w-6 h-6 flex items-center justify-center shrink-0 transition-colors group-hover:text-zinc-100">
+      {item.icon}
+    </span>
+    <div
+      className={`flex items-center justify-between flex-1 min-w-0 overflow-hidden transition-all duration-300 ease-out ${
+        expanded ? 'opacity-100 max-w-[160px] ml-3' : 'opacity-0 max-w-0 ml-0 pointer-events-none'
+      }`}
+    >
+      <span className="text-xs font-medium truncate font-geist whitespace-nowrap">{item.label}</span>
+      {item.soon && (
+        <span className="text-[9px] font-bold font-geist text-zinc-500 bg-white/[0.04] border border-white/[0.03] px-1.5 py-0.5 rounded-full select-none ml-2 shrink-0">
+          Soon
+        </span>
+      )}
+    </div>
   </NavLink>
 );
 
@@ -128,10 +132,16 @@ const DesktopSidebar: React.FC<SidebarProps> = ({ isExpanded, onToggle }) => {
       </div>
 
       {/* Nav links */}
-      <nav className={`flex-1 py-4 flex flex-col gap-1 ${isExpanded ? 'px-1' : 'px-0'}`}>
-        {isExpanded && (
-          <p className="text-[9px] font-bold font-geist text-zinc-600 uppercase tracking-widest px-4 mb-2 select-none">Navigation</p>
-        )}
+      <nav className="flex-1 py-4 flex flex-col gap-1">
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-out ${
+            isExpanded ? 'opacity-100 max-h-6 mb-2 px-4' : 'opacity-0 max-h-0 mb-0 px-4 pointer-events-none'
+          }`}
+        >
+          <p className="text-[9px] font-bold font-geist text-zinc-600 uppercase tracking-widest select-none whitespace-nowrap">
+            Navigation
+          </p>
+        </div>
         {NAV_ITEMS.map(item => (
           <NavItem key={item.label} item={item} expanded={isExpanded} />
         ))}

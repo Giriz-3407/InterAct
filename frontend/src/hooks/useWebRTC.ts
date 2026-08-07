@@ -255,11 +255,6 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
         if (track.kind === 'video') {
           setRemoteStream(stream);
           setSharingState('viewing');
-
-          track.onended = () => {
-            setRemoteStream(null);
-            setSharingState('idle');
-          };
         } else if (track.kind === 'audio') {
           const hasVideo = stream.getVideoTracks().length > 0;
           if (hasVideo) {

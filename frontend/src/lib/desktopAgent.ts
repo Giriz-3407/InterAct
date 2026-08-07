@@ -22,37 +22,38 @@ import { isMobileDevice } from './mobile';
 
 async function discoverAgentPort(): Promise<number> {
   const candidatePorts = [8765, 8766, 8767, 8768, 8769, 8770];
-  const timeoutMs = 200;
+  const timeoutMs = 150;
 
-  for (const port of candidatePorts) {
+  const checkPort = async (port: number): Promise<number> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
       const response = await fetch(`http://127.0.0.1:${port}/status`, {
         method: 'GET',
         signal: controller.signal,
         cache: 'no-store',
       });
-
       clearTimeout(timeoutId);
-
       if (response.ok) {
         const data = await response.json();
         if (data && data.status === 'ok') {
-          console.log(
-            `[DesktopAgent] Discovered agent on port ${port} via /status endpoint`
-          );
           return port;
         }
       }
-    } catch (err) {
-      continue;
+    } catch {
+      clearTimeout(timeoutId);
     }
-  }
+    throw new Error(`Port ${port} unavailable`);
+  };
 
-  console.log('[DesktopAgent] No agent found on candidate ports, using default 8765');
-  return 8765;
+  try {
+    const foundPort = await Promise.any(candidatePorts.map(checkPort));
+    console.log(`[DesktopAgent] Discovered agent on port ${foundPort} via /status endpoint`);
+    return foundPort;
+  } catch {
+    console.log('[DesktopAgent] No agent found on candidate ports, using default 8765');
+    return 8765;
+  }
 }
 
 function getAgentWsUrl(): string {

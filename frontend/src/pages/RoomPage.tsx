@@ -957,10 +957,16 @@ const CenterState: React.FC<CenterStateProps> = ({ isHost, isRequesting, isShari
       <div className="flex flex-col items-center justify-center gap-6 p-8 text-center select-none">
         <div className="relative w-16 h-16 rounded-2xl bg-red-500/[0.04] border border-red-500/10 flex items-center justify-center">
           <div className="absolute inset-0 bg-red-500/5 blur-xl rounded-full scale-75 animate-pulse" />
-          <div className="flex items-center gap-1">
-            {[0, 100, 200].map(d => (
-              <div key={d} className="w-1 bg-red-400/90 rounded-full" style={{
-                height: '20px', animation: `waveform 0.8s ease-in-out sum_{d}ms infinite`,
+          <div className="flex items-end gap-1">
+            {[
+              { dur: 1.4, delay: 0 },
+              { dur: 1.9, delay: 230 },
+              { dur: 1.2, delay: 90 },
+              { dur: 2.2, delay: 340 },
+            ].map((b, i) => (
+              <div key={i} className="w-1 bg-red-400/90 rounded-full" style={{
+                height: `${16 + (i * 2) % 8}px`,
+                animation: `waveform ${b.dur}s ease-in-out ${b.delay}ms infinite`,
                 transformOrigin: 'bottom',
               }} />
             ))}
@@ -1767,6 +1773,24 @@ export const RoomPage: React.FC = () => {
   // Refs
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
+
+  const setRemoteVideoRef = useCallback((node: HTMLVideoElement | null) => {
+    (remoteVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = node;
+    if (node && remoteStream) {
+      console.log('[RoomPage] Callback ref: attaching remote stream');
+      node.srcObject = remoteStream;
+      node.muted = false;
+    }
+  }, [remoteStream]);
+
+  const setLocalVideoRef = useCallback((node: HTMLVideoElement | null) => {
+    (localVideoRef as React.MutableRefObject<HTMLVideoElement | null>).current = node;
+    if (node && localStream) {
+      node.srcObject = localStream;
+      node.muted = true;
+    }
+  }, [localStream]);
+
   const remoteAudioRef = useRef<HTMLAudioElement>(null); // kept for ref stability, element JSX disabled
   void remoteAudioRef; // suppress unused warning when audio element is disabled
   const remoteMicAudioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
@@ -2271,7 +2295,7 @@ export const RoomPage: React.FC = () => {
                 }}
               >
                 <video
-                  ref={remoteVideoRef}
+                  ref={setRemoteVideoRef}
                   autoPlay playsInline
                   className="w-full h-full object-contain"
                 />
@@ -2282,7 +2306,7 @@ export const RoomPage: React.FC = () => {
             {isHost && isSharing && localStream ? (
               <div className="relative w-full h-full">
                 <video
-                  ref={localVideoRef}
+                  ref={setLocalVideoRef}
                   autoPlay playsInline muted
                   className="w-full h-full object-contain"
                 />

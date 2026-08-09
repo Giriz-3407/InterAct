@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../constants/routes';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -8,6 +8,7 @@ import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
 export const SignupPage: React.FC = () => {
   const { register, authError, setAuthError } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,7 +43,13 @@ export const SignupPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await register(fullName.trim(), email.trim(), password, confirmPassword, rememberMe);
-      navigate(ROUTES.DASHBOARD);
+      const fromState = (location.state as { from?: Location })?.from;
+      const targetUrl = fromState
+        ? `${fromState.pathname}${fromState.search || ''}`
+        : sessionStorage.getItem('redirect_after_login');
+
+      sessionStorage.removeItem('redirect_after_login');
+      navigate(targetUrl || ROUTES.DASHBOARD, { replace: true });
     } catch (err: any) {
       console.error('Signup error:', err);
     } finally {
@@ -193,7 +200,7 @@ export const SignupPage: React.FC = () => {
         {/* Footer */}
         <p className="text-center mt-6 text-xs text-zinc-500 font-inter">
           Already have an account?{' '}
-          <Link to={ROUTES.LOGIN} className="font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
+          <Link to={ROUTES.LOGIN} state={location.state} className="font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
             Sign In
           </Link>
         </p>

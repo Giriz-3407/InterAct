@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../constants/routes';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -8,6 +8,7 @@ import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
 export const LoginPage: React.FC = () => {
   const { login, authError, setAuthError } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +30,13 @@ export const LoginPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await login(email.trim(), password, rememberMe);
-      navigate(ROUTES.DASHBOARD);
+      const fromState = (location.state as { from?: Location })?.from;
+      const targetUrl = fromState
+        ? `${fromState.pathname}${fromState.search || ''}`
+        : sessionStorage.getItem('redirect_after_login');
+
+      sessionStorage.removeItem('redirect_after_login');
+      navigate(targetUrl || ROUTES.DASHBOARD, { replace: true });
     } catch (err: any) {
       // Error is set in AuthContext and shown via authError
       console.error('Login error:', err);
@@ -152,7 +159,7 @@ export const LoginPage: React.FC = () => {
         {/* Footer */}
         <p className="text-center mt-6 text-xs text-zinc-500 font-inter">
           Don't have an account?{' '}
-          <Link to={ROUTES.SIGNUP} className="font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
+          <Link to={ROUTES.SIGNUP} state={location.state} className="font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
             Create an account
           </Link>
         </p>

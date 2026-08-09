@@ -66,3 +66,24 @@ async def create_user(full_name: str, email: str, password_plain: str) -> dict:
     result = await db["users"].insert_one(user_doc)
     user_doc["_id"] = result.inserted_id
     return user_doc
+
+async def update_user_profile(user_id: str, full_name: str = None, email: str = None) -> dict:
+    """Update user's full name and/or email."""
+    db = get_database()
+    update_fields = {}
+    if full_name is not None and full_name.strip():
+        update_fields["fullName"] = full_name.strip()
+    if email is not None and email.strip():
+        update_fields["email"] = email.strip().lower()
+    
+    if update_fields:
+        await db["users"].update_one({"_id": ObjectId(user_id)}, {"$set": update_fields})
+    return await get_user_by_id(user_id)
+
+async def change_user_password(user_id: str, new_password_plain: str) -> bool:
+    """Update user's password hash."""
+    db = get_database()
+    hashed = hash_password(new_password_plain)
+    result = await db["users"].update_one({"_id": ObjectId(user_id)}, {"$set": {"passwordHash": hashed}})
+    return result.modified_count > 0
+

@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
+from typing import List, Optional
 from app.rooms.manager import room_manager
+from app.api.auth import get_current_user_optional
 
 router = APIRouter(prefix="/api/rooms", tags=["Rooms"])
 
 from app.database.mongodb import get_database
-from typing import List
 
 class CreateRoomResponse(BaseModel):
     roomCode: str
@@ -23,12 +24,13 @@ class MessageResponse(BaseModel):
     type: str = "user"
 
 @router.post("", response_model=CreateRoomResponse, status_code=status.HTTP_201_CREATED)
-async def create_room():
+async def create_room(current_user: Optional[dict] = Depends(get_current_user_optional)):
     """
     Create a new temporary room and return its unique 6-character code.
     """
     try:
-        room = await room_manager.create_room()
+        owner_user_id = str(current_user["_id"]) if current_user and "_id" in current_user else None
+        room = await room_manager.create_room(owner_user_id=owner_user_id)
         return CreateRoomResponse(roomCode=room["roomCode"])
     except Exception as e:
         raise HTTPException(

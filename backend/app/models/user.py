@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, BeforeValidator
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Optional
 
 # Custom type for parsing MongoDB ObjectId into string
 PyObjectId = Annotated[str, BeforeValidator(str)]
@@ -14,6 +14,14 @@ class UserRegisterRequest(BaseModel):
 class UserLoginRequest(BaseModel):
     email: str = Field(...)
     password: str
+
+class UserUpdateRequest(BaseModel):
+    fullName: Optional[str] = Field(None, min_length=1, max_length=100)
+    email: Optional[str] = Field(None)
+
+class ChangePasswordRequest(BaseModel):
+    currentPassword: str = Field(...)
+    newPassword: str = Field(..., min_length=6)
 
 class UserResponse(BaseModel):
     id: PyObjectId = Field(alias="_id")
@@ -30,3 +38,4 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+

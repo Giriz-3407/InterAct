@@ -30,7 +30,7 @@ class RoomManager:
             if code not in self._rooms:
                 return code
 
-    async def create_room(self) -> dict:
+    async def create_room(self, owner_user_id: Optional[str] = None) -> dict:
         """
         Create a new room in memory and return its details.
         """
@@ -41,6 +41,7 @@ class RoomManager:
                 "session_id": f"sess_{code.lower()}_{int(time.time())}",
                 "owner_client_id": None,
                 "owner_name": None,
+                "owner_user_id": owner_user_id,
                 "participants": [],
                 "createdAt": time.time(),
                 "active": True,
@@ -302,6 +303,7 @@ class RoomManager:
                 "durationString": duration_str,
                 "participantsCount": len(room.get("client_names", {})),
                 "hostName": room.get("owner_name") or "Unknown",
+                "owner_user_id": room.get("owner_user_id"),
                 "status": "completed",
                 "createdAt": datetime.utcnow()
             }

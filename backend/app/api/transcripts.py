@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, BeforeValidator
 from datetime import datetime
 from typing import List, Optional, Annotated, Dict, Any
 from app.database.mongodb import get_database
+from app.api.auth import get_current_user
 
 router = APIRouter(prefix="/api/transcripts", tags=["Transcripts"])
 
@@ -45,15 +46,17 @@ class SessionResponse(BaseModel):
     participantsCount: int
     hostName: str
     status: str
+    owner_user_id: Optional[str] = None
 
 @router.get("/sessions", response_model=List[SessionResponse])
-async def get_all_sessions():
+async def get_all_sessions(current_user: dict = Depends(get_current_user)):
     """
-    Get all sessions from the database, sorted by createdAt descending.
+    Get sessions belonging to the authenticated user, sorted by createdAt descending.
     """
     try:
         db = get_database()
-        cursor = db["sessions"].find({}).sort("createdAt", -1)
+        user_id = str(current_user["_id"])
+        cursor = db["sessions"].find({"owner_user_id": user_id}).sort("createdAt", -1)
         sessions = []
         async for doc in cursor:
             sessions.append(SessionResponse(
@@ -63,7 +66,8 @@ async def get_all_sessions():
                 durationString=doc["durationString"],
                 participantsCount=doc["participantsCount"],
                 hostName=doc["hostName"],
-                status=doc["status"]
+                status=doc["status"],
+                owner_user_id=doc.get("owner_user_id")
             ))
         return sessions
     except Exception as e:

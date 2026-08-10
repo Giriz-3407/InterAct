@@ -400,9 +400,8 @@ class ConnectionManager:
                 await self._send_error(socket_id, "Room not found")
                 return
             
-            # Authorize: Only the owner (when online) can toggle room settings
-            owner_participant = next((p for p in room["participants"] if p["clientId"] == room["owner_client_id"]), None)
-            if not owner_participant or owner_participant["socketId"] != socket_id:
+            # Authorize: Only the current host can toggle room settings
+            if room.get("hostId") != socket_id:
                 await self._send_error(socket_id, "Unauthorized: Only the host can toggle room settings")
                 return
             

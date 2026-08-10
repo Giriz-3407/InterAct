@@ -12,6 +12,31 @@ const STUN_CONFIG: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 };
 
+/** Parse direction attributes ('sendrecv' | 'sendonly' | 'recvonly' | 'inactive') for each m-line in an SDP offer. */
+function parseOfferDirections(sdp: string): Map<number, 'sendrecv' | 'sendonly' | 'recvonly' | 'inactive'> {
+  const directions = new Map<number, 'sendrecv' | 'sendonly' | 'recvonly' | 'inactive'>();
+  const sections = sdp.split(/(?=m=)/);
+
+  let mIndex = 0;
+  for (const section of sections) {
+    if (!section.startsWith('m=')) continue;
+
+    let dir: 'sendrecv' | 'sendonly' | 'recvonly' | 'inactive' = 'sendrecv';
+    const lines = section.split('\r\n');
+    for (const line of lines) {
+      if (line === 'a=sendrecv') dir = 'sendrecv';
+      else if (line === 'a=sendonly') dir = 'sendonly';
+      else if (line === 'a=recvonly') dir = 'recvonly';
+      else if (line === 'a=inactive') dir = 'inactive';
+    }
+
+    directions.set(mIndex, dir);
+    mIndex++;
+  }
+
+  return directions;
+}
+
 /** All audio m-lines on a PC, in negotiation order. */
 function getAudioTransceivers(pc: RTCPeerConnection): RTCRtpTransceiver[] {
   return pc.getTransceivers().filter((t) => {
@@ -24,8 +49,15 @@ function getAudioTransceivers(pc: RTCPeerConnection): RTCRtpTransceiver[] {
   });
 }
 
-/** Host always appends the viewer upload slot as the last audio transceiver in syncTracks. */
+/** Viewer selects the audio transceiver to attach its microphone to. */
 function selectViewerMicPublishSlot(pc: RTCPeerConnection): RTCRtpTransceiver | undefined {
+  const transceivers = pc.getTransceivers();
+  const emptyAudioSlot = transceivers.find((t) => {
+    const isAudio = t.receiver.track?.kind === 'audio' || t.sender.track?.kind === 'audio';
+    return isAudio && !t.sender.track;
+  });
+  if (emptyAudioSlot) return emptyAudioSlot;
+
   const audioTransceivers = getAudioTransceivers(pc);
   return audioTransceivers[audioTransceivers.length - 1];
 }
@@ -641,11 +673,8 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
     const micTrack = micStreamObj.getAudioTracks()[0];
     if (!micTrack) return;
 
-    const micSlot = selectViewerMicPublishSlot(pc);
-
-    if (micSlot) {
-      micSlot.direction = 'sendonly';
-    }
+    const existingSlot = pc.getTransceivers().find((t) => t.sender.track?.id === micTrack.id);
+    const micSlot = existingSlot ?? selectViewerMicPublishSlot(pc);
 
     if (!micSlot) {
       console.warn('[WebRTC] No audio transceiver available for viewer mic');
@@ -699,6 +728,30 @@ export function useWebRTC({ isHost, currentSocketId, viewerIds, micMuted, hostSo
       if (publishingMic) {
         await attachViewerMicToPC(pc, micStreamRef.current!);
       }
+
+      // Explicitly update all transceiver directions based on Host's SDP offer and local mic state
+      const offerDirs = parseOfferDirections(offer.sdp || '');
+      const micTrackId = micStreamRef.current?.getAudioTracks()[0]?.id;
+
+      pc.getTransceivers().forEach((t, index) => {
+        const offeredDir = offerDirs.get(index) ?? 'sendrecv';
+        const hostIsSending = offeredDir === 'sendrecv' || offeredDir === 'sendonly';
+
+        if (t.receiver.track?.kind === 'video') {
+          t.direction = hostIsSending ? 'recvonly' : 'inactive';
+        } else if (t.receiver.track?.kind === 'audio' || t.sender.track?.kind === 'audio') {
+          const isViewerMicSlot = publishingMic && !!micTrackId && t.sender.track?.id === micTrackId;
+          if (hostIsSending && isViewerMicSlot) {
+            t.direction = 'sendrecv';
+          } else if (hostIsSending && !isViewerMicSlot) {
+            t.direction = 'recvonly';
+          } else if (!hostIsSending && isViewerMicSlot) {
+            t.direction = 'sendonly';
+          } else {
+            t.direction = 'inactive';
+          }
+        }
+      });
 
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);

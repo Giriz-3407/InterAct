@@ -199,6 +199,38 @@ class ConnectionManager:
         elif event == "leave_room":
             await self.disconnect(socket_id)
 
+        elif event == "end_room":
+            room_code = self.socket_room_map.get(socket_id)
+            if not room_code:
+                await self._send_error(socket_id, "Not associated with a room")
+                return
+
+            room = await room_manager.get_room(room_code)
+            if not room:
+                await self._send_error(socket_id, "Room not found or inactive")
+                return
+
+            # Authoritative host authorization check
+            if room.get("hostId") != socket_id:
+                await self._send_error(socket_id, "Unauthorized: Only the host can end the room for everyone")
+                return
+
+            # Broadcast termination to all active participants in room BEFORE deleting state
+            await self.broadcast_to_room(
+                room_code,
+                {
+                    "event": "room_ended"
+                }
+            )
+
+            # Finalize room state and session database record
+            success, _, err_msg = await room_manager.end_room(room_code, socket_id)
+            if not success:
+                logger.error(f"Failed to end room {room_code}: {err_msg}")
+            else:
+                logger.info(f"Room {room_code} successfully ended by host {socket_id}")
+
+
         elif event == "chat_message":
             message_text = data.get("message", "").strip()
             if not message_text:

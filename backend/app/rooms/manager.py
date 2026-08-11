@@ -244,6 +244,27 @@ class RoomManager:
             
             return room
 
+    async def end_room(self, room_code: str, host_socket_id: str) -> tuple[bool, Optional[dict], str]:
+        """
+        Terminate a room for everyone. Only the authoritative host can end the room.
+        Finalizes session state and deletes room from active rooms.
+        """
+        async with self._lock:
+            code = room_code.upper()
+            if code not in self._rooms:
+                return False, None, "Room not found or inactive"
+            
+            room = self._rooms[code]
+            if room.get("hostId") != host_socket_id:
+                return False, None, "Unauthorized: Only the host can end the room for everyone"
+            
+            room["active"] = False
+            logger.info(f"Ending room {code} for everyone requested by host {host_socket_id}.")
+            await self.save_room_session(room)
+            del self._rooms[code]
+            return True, room, "Success"
+
+
     async def start_cleanup_loop(self):
         """
         Periodic background task that runs indefinitely to clean up rooms that

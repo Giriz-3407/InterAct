@@ -171,7 +171,8 @@ class ConnectionManager:
                     "autoDelete": room.get("auto_delete_when_empty", True),
                     "ownerClientId": room.get("owner_client_id"),
                     "ownerName": room.get("owner_name"),
-                    "transcriptionActive": room.get("transcription_active", False)
+                    "transcriptionActive": room.get("transcription_active", False),
+                    "hostScreenMetadata": room.get("host_screen_metadata")
                 }
                 await ws.send_text(json.dumps(join_confirmation))
 
@@ -416,6 +417,9 @@ class ConnectionManager:
             # Host signals that screen sharing has ended — broadcast to room
             room_code = self.socket_room_map.get(socket_id)
             if room_code:
+                room = await room_manager.get_room(room_code)
+                if room:
+                    room.pop("host_screen_metadata", None)
                 await self.broadcast_to_room(
                     room_code,
                     {"event": "host_stop_share", "hostId": socket_id}
@@ -621,6 +625,105 @@ class ConnectionManager:
                 print(f"[Annotation] backend relay: {event}", flush=True)
                 if tasks:
                     await asyncio.gather(*tasks)
+
+        elif event == "remote_action":
+            # --- Authoritative Remote Control Action Relay (Viewer ➔ Host) ---
+            room_code = self.socket_room_map.get(socket_id)
+            if not room_code:
+                await self._send_error(socket_id, "Not associated with a room")
+                return
+
+            room = await room_manager.get_room(room_code)
+            if not room:
+                await self._send_error(socket_id, "Room not found")
+                return
+
+            host_socket_id = room.get("hostId")
+            if not host_socket_id:
+                await self._send_error(socket_id, "Host not found in room")
+                return
+
+            # Security check: Do not allow host to send remote action to self
+            if socket_id == host_socket_id:
+                return
+
+            host_ws = self.active_connections.get(host_socket_id)
+            if not host_ws:
+                await self._send_error(socket_id, "Host connection unavailable")
+                return
+
+            action = data.get("action")
+            if not isinstance(action, dict) or action.get("type") != "tap":
+                await self._send_error(socket_id, "Invalid remote action payload: only tap is supported")
+                return
+
+            relay_payload = {
+                "event": "remote_action",
+                "senderId": socket_id,
+                "senderName": self.socket_name_map.get(socket_id, "Viewer"),
+                "action": action
+            }
+            await self._safe_send(host_ws, json.dumps(relay_payload), host_socket_id)
+            logger.info(f"Relayed remote_action 'tap' from viewer {socket_id} to host {host_socket_id} in room {room_code}")
+
+        elif event == "host_screen_metadata":
+            # --- Authoritative Host Screen Dimensions Broadcast ---
+            room_code = self.socket_room_map.get(socket_id)
+            if not room_code:
+                await self._send_error(socket_id, "Not associated with a room")
+                return
+
+            room = await room_manager.get_room(room_code)
+            if not room:
+                await self._send_error(socket_id, "Room not found")
+                return
+
+            # Authoritative check: Only host can set screen metadata
+            if room.get("hostId") != socket_id:
+                await self._send_error(socket_id, "Unauthorized: Only host can send screen metadata")
+                return
+
+            width = data.get("width")
+            height = data.get("height")
+            orientation = data.get("orientation", "portrait")
+
+            if not width or not height:
+                await self._send_error(socket_id, "Missing width or height in host_screen_metadata")
+                return
+
+            meta = {
+                "width": int(width),
+                "height": int(height),
+                "orientation": str(orientation)
+            }
+            room["host_screen_metadata"] = meta
+
+            # Broadcast metadata to room participants
+            await self.broadcast_to_room(
+                room_code,
+                {
+                    "event": "host_screen_metadata",
+                    "hostId": socket_id,
+                    "width": meta["width"],
+                    "height": meta["height"],
+                    "orientation": meta["orientation"]
+                }
+            )
+            logger.info(f"Host {socket_id} broadcasted host_screen_metadata ({meta['width']}x{meta['height']}, {meta['orientation']}) in room {room_code}")
+
+        elif event == "request_host_metadata":
+            room_code = self.socket_room_map.get(socket_id)
+            if room_code:
+                room = await room_manager.get_room(room_code)
+                if room:
+                    host_socket_id = room.get("hostId")
+                    if host_socket_id:
+                        host_ws = self.active_connections.get(host_socket_id)
+                        if host_ws:
+                            await self._safe_send(host_ws, json.dumps({
+                                "event": "request_host_metadata",
+                                "requesterId": socket_id
+                            }), host_socket_id)
 
         else:
             logger.warning(f"Unhandled WebSocket event '{event}' from socket {socket_id}")

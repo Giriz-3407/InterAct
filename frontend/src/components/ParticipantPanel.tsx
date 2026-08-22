@@ -1,7 +1,7 @@
 import React from 'react';
 import { Avatar } from './Avatar.FC';
 import { Badge } from './Badge';
-import { Mic, MicOff, Users, ChevronRight, X } from 'lucide-react';
+import { Mic, MicOff, Users, ChevronRight, X, Settings } from 'lucide-react';
 
 interface Participant {
   socketId: string;
@@ -17,6 +17,8 @@ interface ParticipantPanelProps {
   currentUserId?: string;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  isHost?: boolean;
+  onOpenHostPanel?: () => void;
 }
 
 const PANEL_EASE = 'ease-[cubic-bezier(0.16,1,0.3,1)]';
@@ -28,6 +30,8 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
   currentUserId,
   isExpanded,
   onToggleExpand,
+  isHost = false,
+  onOpenHostPanel,
 }) => {
   const panelWidth =
     'w-[min(100vw,20rem)] max-w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right))] md:max-w-none';
@@ -151,6 +155,28 @@ export const ParticipantPanel: React.FC<ParticipantPanelProps> = ({
           );
         })}
       </div>
+
+      {/* Host Controls Button at bottom of Participants Panel (Desktop only) */}
+      {isHost && onOpenHostPanel && (
+        <div className={`hidden md:flex w-full shrink-0 border-t border-white/[0.04] pt-2.5 mt-auto items-center ${isExpanded ? 'justify-stretch' : 'justify-center'}`}>
+          <button
+            onClick={onOpenHostPanel}
+            className={`flex items-center gap-2.5 text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer active:scale-95 ${
+              isExpanded
+                ? 'w-full px-2 py-1.5 justify-start'
+                : 'w-full py-1.5 justify-center'
+            }`}
+            title="Host Controls"
+          >
+            <Settings size={18} className="shrink-0 text-zinc-400" />
+            {isExpanded && (
+              <span className="text-xs font-medium font-geist tracking-wide truncate">
+                Host Controls
+              </span>
+            )}
+          </button>
+        </div>
+      )}
     </aside>
   </>
   );

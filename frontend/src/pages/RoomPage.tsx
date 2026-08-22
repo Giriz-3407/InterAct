@@ -24,7 +24,6 @@ import {
   Share2,
   MessageSquare,
   Users,
-  MoreHorizontal,
   LogOut,
   Volume2,
   VolumeX,
@@ -36,7 +35,6 @@ import {
   Send,
   Settings,
   Monitor,
-  Trash2,
   Menu,
   Copy
 } from 'lucide-react';
@@ -64,7 +62,6 @@ const IconScreen = () => <Tv size={18} />;
 const IconScreenStop = () => <Tv size={18} className="text-red-400" />;
 const IconChat = () => <MessageSquare size={18} />;
 const IconPeople = () => <Users size={18} />;
-const IconMore = () => <MoreHorizontal size={18} />;
 const IconLeave = () => <LogOut size={18} />;
 const IconVolumeUp = () => <Volume2 size={18} />;
 const IconVolumeOff = () => <VolumeX size={18} />;
@@ -97,14 +94,14 @@ const DockBtn: React.FC<DockBtnProps> = ({ onClick, title, icon, active, danger,
     title={title}
     className={`room-dock-btn transition-all active:scale-95 relative ${active ? 'active' : ''} ${danger ? 'danger' : ''} ${className}`}
   >
-    <span className="flex items-center justify-center">
+    <span className="relative flex items-center justify-center">
       {icon}
+      {badge !== undefined && badge > 0 && (
+        <span className={`absolute top-[-9px] -right-3 min-w-4 h-4 px-1 flex items-center justify-center rounded-full text-[9px] font-bold leading-none text-center select-none shadow-[0_1px_2px_rgba(0,0,0,0.3)] ${badgeClassName || 'bg-zinc-800 border border-zinc-700/50 text-zinc-400'}`}>
+          <span className="inline-block leading-none translate-y-[0.5px]">{badge}</span>
+        </span>
+      )}
     </span>
-    {badge !== undefined && badge > 0 && (
-      <span className={`absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white leading-none shadow-[0_1px_2px_rgba(0,0,0,0.2)] ${badgeClassName || 'bg-indigo-500'}`}>
-        {badge}
-      </span>
-    )}
   </button>
 );
 
@@ -121,10 +118,11 @@ interface RoomTopBarProps {
   onShare: () => void;
   onCopyCode?: () => void;
   isStacked?: boolean;
+  onOpenHostPanel?: () => void;
 }
 
 const RoomTopBar: React.FC<RoomTopBarProps> = ({
-  roomId, participantCount, isSharing, isViewing, isHost, onShare, onCopyCode, isStacked = false,
+  roomId, participantCount, isSharing, isViewing, isHost, onShare, onCopyCode, isStacked = false, onOpenHostPanel,
 }) => (
   <div className={isStacked ? "relative w-full z-30 pointer-events-none flex items-center justify-between select-none p-1" : "absolute top-3 left-3 right-3 z-30 pointer-events-none flex items-center justify-between select-none"}>
     {/* Left group */}
@@ -164,6 +162,15 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
     </div>
 
     {/* Right group */}
+    {isHost && onOpenHostPanel && (
+      <button
+        onClick={onOpenHostPanel}
+        className="sm:hidden pointer-events-auto w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-white transition-colors cursor-pointer active:scale-95 shrink-0"
+        title="Host Controls"
+      >
+        <Settings size={18} />
+      </button>
+    )}
     <div className="hidden sm:flex pointer-events-auto items-center gap-2 px-3 h-11 rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl">
       {isHost && <AgentStatusIndicator />}
       {isHost && <div className="w-px h-4 bg-zinc-800/40 flex-shrink-0" />}
@@ -175,7 +182,6 @@ const RoomTopBar: React.FC<RoomTopBarProps> = ({
         <Share2 size={13} />
         <span>Share</span>
       </button>
-
     </div>
   </div>
 );
@@ -214,8 +220,8 @@ interface MoreMenuProps {
 }
 
 const MoreMenu: React.FC<MoreMenuProps> = ({
-  isHost, autoDelete, isTranscriptOpen, isTranscriptionActive, isTranscriptionSupported,
-  onOpenHostPanel, onShareRoom, onToggleAutoDelete, onToggleTranscript, onClose, onBackdropClick,
+  isHost: _isHost, autoDelete: _autoDelete, isTranscriptOpen, isTranscriptionActive, isTranscriptionSupported,
+  onOpenHostPanel: _onOpenHostPanel, onShareRoom: _onShareRoom, onToggleAutoDelete: _onToggleAutoDelete, onToggleTranscript, onClose, onBackdropClick,
   isMobile,
   isViewing,
   isPresentationMode = false,
@@ -225,24 +231,6 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
     <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); (onBackdropClick ?? onClose)(); }} />
     <div className="absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 z-50 w-56 bg-[#111113] border border-[#1e1e21] rounded-xl shadow-2xl overflow-hidden animate-fade-in">
       <div className="py-1.5">
-        {isHost && (
-          <button
-            onClick={() => { onOpenHostPanel(); onClose(); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
-          >
-            <span className="text-zinc-500"><Settings size={14} /></span>
-            Host Controls
-          </button>
-        )}
-        {!isMobile && (
-          <button
-            onClick={() => { onShareRoom(); onClose(); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
-          >
-            <span className="text-zinc-500"><Share2 size={14} /></span>
-            Copy Room Link
-          </button>
-        )}
         {isViewing && onTogglePresentationMode && (
           <button
             onClick={() => { onTogglePresentationMode(); onClose(); }}
@@ -250,22 +238,6 @@ const MoreMenu: React.FC<MoreMenuProps> = ({
           >
             <span className="text-zinc-500"><Maximize2 size={14} /></span>
             {isPresentationMode ? 'Exit Presentation Mode' : 'Enter Presentation Mode'}
-          </button>
-        )}
-        {isHost && (
-          <button
-            onClick={() => { onToggleAutoDelete(); onClose(); }}
-            className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-sm text-zinc-300 hover:bg-[#1a1a1d] hover:text-white transition-colors cursor-pointer text-left font-geist font-medium"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-zinc-500">
-                <Trash2 size={14} />
-              </span>
-              auto-delete room
-            </div>
-            <div className={`w-8 h-4 rounded-full transition-colors ${autoDelete ? 'bg-[#c0c1ff]' : 'bg-[#27272a]'}`}>
-              <div className={`w-3 h-3 rounded-full bg-white shadow-sm mt-0.5 transition-transform ${autoDelete ? 'translate-x-4' : 'translate-x-0.5'}`} />
-            </div>
           </button>
         )}
         {isMobile && (
@@ -510,25 +482,23 @@ const CollabDock: React.FC<CollabDockProps> = ({
               }`}
             >
             {/* Live Log */}
-            {!isMobile && (
-              <div 
-                className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
-                style={getItemDelayStyle()}
-              >
-                <DockBtn
-                  onClick={onToggleTranscript}
-                  title={
-                    !isTranscriptionSupported 
-                      ? 'Speech transcription is not supported in this browser' 
-                      : `Live Transcript Log${isTranscriptionActive ? ' (Active)' : ' (Off)'}`
-                  }
-                  icon={<IconTranscript />}
-                  label="Live Log"
-                  active={isTranscriptOpen}
-                  className={`hidden sm:flex ${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''} ${isTranscriptionActive ? 'text-indigo-400 font-bold' : ''}`}
-                />
-              </div>
-            )}
+            <div 
+              className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
+              style={getItemDelayStyle()}
+            >
+              <DockBtn
+                onClick={onToggleTranscript}
+                title={
+                  !isTranscriptionSupported 
+                    ? 'Speech transcription is not supported in this browser' 
+                    : `Live Transcript Log${isTranscriptionActive ? ' (Active)' : ' (Off)'}`
+                }
+                icon={<IconTranscript />}
+                label="Live Log"
+                active={isTranscriptOpen}
+                className={`${!isTranscriptionSupported ? 'opacity-40 cursor-not-allowed' : ''} ${isTranscriptionActive ? 'text-indigo-400 font-bold' : ''}`}
+              />
+            </div>
 
             {/* Chat */}
             <div 
@@ -541,6 +511,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
                 icon={<IconChat />}
                 label="Chat"
                 badge={messageCount}
+                badgeClassName={isChatOpen ? "bg-indigo-500 text-white" : "bg-zinc-800 border border-zinc-700/50 text-zinc-400"}
                 active={isChatOpen}
               />
             </div>
@@ -557,21 +528,7 @@ const CollabDock: React.FC<CollabDockProps> = ({
                 label="People"
                 active={isPeopleOpen}
                 badge={isMobile ? participantCount : undefined}
-                badgeClassName={isMobile ? "bg-zinc-800 border border-zinc-700/50 text-zinc-400" : undefined}
-              />
-            </div>
-
-            {/* More */}
-            <div 
-              className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
-              style={getItemDelayStyle()}
-            >
-              <DockBtn
-                onClick={onToggleMoreMenu}
-                title="More options"
-                icon={<IconMore />}
-                label="More"
-                active={showMoreMenu}
+                badgeClassName={isPeopleOpen ? "bg-indigo-500 text-white" : "bg-zinc-800 border border-zinc-700/50 text-zinc-400"}
               />
             </div>
           </div>
@@ -663,7 +620,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         <div className="fixed inset-0 bg-black/50 z-35 md:hidden" onClick={onClose} />
       )}
 
-      <aside className={`flex flex-col bg-[#111113] border border-zinc-800/40 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 z-40 fixed top-5 right-3 bottom-6 w-72 max-w-[85vw] rounded-2xl overflow-hidden md:top-20 md:right-6 md:bottom-6 md:w-[330px] ${
+      <aside className={`flex flex-col bg-[#111113] border border-zinc-800/40 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 z-40 fixed top-5 left-3 right-3 bottom-6 rounded-2xl overflow-hidden md:top-20 md:right-6 md:bottom-6 md:left-auto md:w-[330px] ${
         isOpen ? 'translate-x-0' : 'translate-x-[120%]'
       }`}>
         {/* Tab header */}
@@ -2097,11 +2054,16 @@ export const RoomPage: React.FC = () => {
     }
   }, [isTranscriptionActive]);
 
-  const handleOpenRightDrawer = useCallback((tab: 'chat' | 'ai' | 'host') => {
-    setActiveRightTab(tab);
-    setIsChatOpen(true);
+  const handleOpenRightDrawer = useCallback((tab: 'chat' | 'transcript' | 'ai' | 'host') => {
+    setIsChatOpen(prev => {
+      if (!prev || activeRightTab !== tab) {
+        setActiveRightTab(tab);
+        return true;
+      }
+      return false;
+    });
     if (window.innerWidth < 768) setIsPeopleOpen(false);
-  }, []);
+  }, [activeRightTab]);
 
 
 
@@ -2230,6 +2192,8 @@ export const RoomPage: React.FC = () => {
               currentUserId={currentSocketId}
               isExpanded={isPeopleOpen}
               onToggleExpand={handleTogglePeople}
+              isHost={isHost}
+              onOpenHostPanel={() => handleOpenRightDrawer('host')}
             />
           </>
         )}
@@ -2257,6 +2221,7 @@ export const RoomPage: React.FC = () => {
                 isHost={isHost}
                 onShare={handleShareRoom}
                 onCopyCode={handleCopyRoomCode}
+                onOpenHostPanel={() => handleOpenRightDrawer('host')}
               />
             )}
 

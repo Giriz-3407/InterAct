@@ -604,8 +604,52 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
 
   const tabs = ['chat', 'transcript', 'ai', ...(isHost ? ['host'] : [])] as ('chat' | 'transcript' | 'ai' | 'host')[];
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const wasAtBottomRef = useRef(true);
+  const justSentByMeRef = useRef(false);
   const [tabPill, setTabPill] = useState<{ left: number; width: number } | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
+
+  const checkIsAtBottom = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return wasAtBottomRef.current;
+    const threshold = 50;
+    if (el.scrollHeight <= el.clientHeight + threshold) {
+      return true;
+    }
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    return distanceFromBottom <= threshold;
+  }, []);
+
+  const handleMessagesScroll = useCallback(() => {
+    wasAtBottomRef.current = checkIsAtBottom();
+  }, [checkIsAtBottom]);
+
+  // Lock document body scroll on mobile when drawer is open
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.innerWidth >= 768) return;
+    if (!isOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // Non-passive touchmove listener guarantees mobile browsers (Safari/Chrome) cannot scroll background from corners/edges
+    const preventBackgroundTouch = (e: TouchEvent) => {
+      if (messagesContainerRef.current && messagesContainerRef.current.contains(e.target as Node)) {
+        return;
+      }
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('touchmove', preventBackgroundTouch, { passive: false });
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.removeEventListener('touchmove', preventBackgroundTouch);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
@@ -619,7 +663,9 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         return;
       }
 
-      const inset = window.innerHeight - (vv.height + vv.offsetTop);
+      wasAtBottomRef.current = checkIsAtBottom();
+
+      const inset = window.innerHeight - vv.height;
       const newInset = inset > 100 ? Math.max(0, Math.round(inset)) : 0;
       setKeyboardInset(prev => (prev !== newInset ? newInset : prev));
     };
@@ -636,7 +682,28 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
       vv.removeEventListener('scroll', handleViewportChange);
       window.removeEventListener('resize', handleViewportChange);
     };
-  }, []);
+  }, [checkIsAtBottom]);
+
+  // Restore bottom scroll position when keyboard/viewport height changes (only if previously at bottom)
+  useLayoutEffect(() => {
+    if (wasAtBottomRef.current && messagesContainerRef.current) {
+      requestAnimationFrame(() => {
+        if (wasAtBottomRef.current && messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      });
+    }
+  }, [keyboardInset]);
+
+  // Internal messages container auto-scroll (always for user's own message, conditionally for incoming)
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      if (justSentByMeRef.current || wasAtBottomRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+      justSentByMeRef.current = false;
+    }
+  }, [messages]);
 
   const mobileBottomStyle = useMemo(() => {
     if (keyboardInset > 0 && typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -654,19 +721,24 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Full-screen backdrop / interaction blocker for inert background */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-35 md:hidden" onClick={onClose} />
+        <div
+          className="fixed inset-0 bg-black/50 z-[60] touch-none select-none md:hidden"
+          onClick={onClose}
+          onTouchStart={e => e.stopPropagation()}
+          onTouchMove={e => e.preventDefault()}
+        />
       )}
 
       <aside
         style={mobileBottomStyle}
-        className={`flex flex-col bg-[#111113] border border-zinc-800/40 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 z-40 fixed top-5 left-3 right-3 bottom-6 rounded-2xl overflow-hidden md:top-20 md:right-6 md:bottom-6 md:left-auto md:w-[330px] ${
+        className={`flex flex-col bg-[#111113] border border-zinc-800/40 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 z-[70] fixed top-5 left-3 right-3 bottom-6 rounded-2xl overflow-hidden md:top-20 md:right-6 md:bottom-6 md:left-auto md:w-[330px] ${
           isOpen ? 'translate-x-0' : 'translate-x-[120%]'
         }`}
       >
         {/* Tab header */}
-        <div className="h-14 border-b border-zinc-800/30 flex items-center justify-between px-3 shrink-0 bg-white/[0.01]">
+        <div className="h-14 border-b border-zinc-800/30 flex items-center justify-between px-3 shrink-0 bg-white/[0.01] touch-none">
           <div className="flex-1 mr-3 flex items-center gap-1 bg-white/5 p-0.5 rounded-full border border-zinc-800/40 relative">
             {tabPill && (
               <div
@@ -716,14 +788,14 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         {/* Chat panel */}
         {activeTab === 'chat' && (
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 custom-scrollbar min-h-0">
+            <div ref={messagesContainerRef} onScroll={handleMessagesScroll} className="flex-1 overflow-y-auto overscroll-contain p-4 flex flex-col gap-3 custom-scrollbar min-h-0">
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3 select-none">
                   <div className="w-10 h-10 rounded-full bg-white/5 border border-zinc-800/40 flex items-center justify-center text-zinc-500">
                     <MessageSquare size={20} className="text-zinc-500" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold font-geist text-zinc-300 mb-1">No messages yet</p>
+                    <p className="text-sm font-bold font-geist text-zinc-[#d4d4d8] mb-1">No messages yet</p>
                     <p className="text-xs text-zinc-500 font-inter leading-normal max-w-[200px] mx-auto">
                       Everyone in this room can see your messages here.
                     </p>
@@ -760,8 +832,11 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
               <div ref={chatEndRef} />
             </div>
             <form
-              onSubmit={onSendMessage}
-              className="p-3.5 border-t border-zinc-800/30 flex gap-2 shrink-0 bg-transparent"
+              onSubmit={(e) => {
+                justSentByMeRef.current = true;
+                onSendMessage(e);
+              }}
+              className="p-3.5 border-t border-zinc-800/30 flex gap-2 shrink-0 bg-transparent touch-none"
             >
               <input
                 type="text"
@@ -2025,8 +2100,7 @@ export const RoomPage: React.FC = () => {
     };
   }, [roomId, displayName]);
 
-  // Auto scroll chat
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  // Auto scroll chat is handled internally inside RightDrawer via messagesContainerRef.scrollTop
 
   // Handlers
 

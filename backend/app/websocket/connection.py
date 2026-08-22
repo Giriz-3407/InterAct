@@ -627,10 +627,7 @@ class ConnectionManager:
                     await asyncio.gather(*tasks)
 
         elif event == "remote_action":
-            # --- Authoritative Remote Control Action Relay (Viewer → Host) ---
-            # The backend is a transparent relay. It validates the action structure
-            # and forwards the payload unchanged to the authoritative host.
-            # The host is the only client that executes gestures locally.
+            # --- Authoritative Remote Control Action Relay (Viewer ➔ Host) ---
             room_code = self.socket_room_map.get(socket_id)
             if not room_code:
                 await self._send_error(socket_id, "Not associated with a room")
@@ -656,21 +653,8 @@ class ConnectionManager:
                 return
 
             action = data.get("action")
-            if not isinstance(action, dict):
-                await self._send_error(socket_id, "Invalid remote action payload: 'action' must be an object")
-                return
-
-            action_type = action.get("type")
-            supported_types = {
-                "tap", "double_tap", "triple_tap", "long_press",
-                "swipe", "drag", "scroll", "pinch", "zoom", "two_finger_swipe"
-            }
-            if not isinstance(action_type, str) or action_type not in supported_types:
-                await self._send_error(
-                    socket_id,
-                    f"Invalid remote action type: '{action_type}'. "
-                    f"Supported types: {', '.join(sorted(supported_types))}"
-                )
+            if not isinstance(action, dict) or action.get("type") != "tap":
+                await self._send_error(socket_id, "Invalid remote action payload: only tap is supported")
                 return
 
             relay_payload = {
@@ -680,10 +664,7 @@ class ConnectionManager:
                 "action": action
             }
             await self._safe_send(host_ws, json.dumps(relay_payload), host_socket_id)
-            logger.info(
-                f"Relayed remote_action '{action_type}' from viewer {socket_id} "
-                f"to host {host_socket_id} in room {room_code}"
-            )
+            logger.info(f"Relayed remote_action 'tap' from viewer {socket_id} to host {host_socket_id} in room {room_code}")
 
         elif event == "host_screen_metadata":
             # --- Authoritative Host Screen Dimensions Broadcast ---

@@ -605,6 +605,45 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
   const tabs = ['chat', 'transcript', 'ai', ...(isHost ? ['host'] : [])] as ('chat' | 'transcript' | 'ai' | 'host')[];
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [tabPill, setTabPill] = useState<{ left: number; width: number } | null>(null);
+  const [keyboardInset, setKeyboardInset] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+
+    const handleViewportChange = () => {
+      const vv = window.visualViewport;
+      if (!vv) return;
+
+      if (window.innerWidth >= 768) {
+        setKeyboardInset(0);
+        return;
+      }
+
+      const inset = window.innerHeight - (vv.height + vv.offsetTop);
+      const newInset = inset > 100 ? Math.max(0, Math.round(inset)) : 0;
+      setKeyboardInset(prev => (prev !== newInset ? newInset : prev));
+    };
+
+    const vv = window.visualViewport;
+    vv.addEventListener('resize', handleViewportChange);
+    vv.addEventListener('scroll', handleViewportChange);
+    window.addEventListener('resize', handleViewportChange);
+
+    handleViewportChange();
+
+    return () => {
+      vv.removeEventListener('resize', handleViewportChange);
+      vv.removeEventListener('scroll', handleViewportChange);
+      window.removeEventListener('resize', handleViewportChange);
+    };
+  }, []);
+
+  const mobileBottomStyle = useMemo(() => {
+    if (keyboardInset > 0 && typeof window !== 'undefined' && window.innerWidth < 768) {
+      return { bottom: `${keyboardInset + 12}px` };
+    }
+    return undefined;
+  }, [keyboardInset]);
 
   useLayoutEffect(() => {
     const el = tabRefs.current[activeTab];
@@ -620,9 +659,12 @@ const RightDrawer: React.FC<RightDrawerProps> = ({
         <div className="fixed inset-0 bg-black/50 z-35 md:hidden" onClick={onClose} />
       )}
 
-      <aside className={`flex flex-col bg-[#111113] border border-zinc-800/40 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 z-40 fixed top-5 left-3 right-3 bottom-6 rounded-2xl overflow-hidden md:top-20 md:right-6 md:bottom-6 md:left-auto md:w-[330px] ${
-        isOpen ? 'translate-x-0' : 'translate-x-[120%]'
-      }`}>
+      <aside
+        style={mobileBottomStyle}
+        className={`flex flex-col bg-[#111113] border border-zinc-800/40 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.8)] transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] shrink-0 z-40 fixed top-5 left-3 right-3 bottom-6 rounded-2xl overflow-hidden md:top-20 md:right-6 md:bottom-6 md:left-auto md:w-[330px] ${
+          isOpen ? 'translate-x-0' : 'translate-x-[120%]'
+        }`}
+      >
         {/* Tab header */}
         <div className="h-14 border-b border-zinc-800/30 flex items-center justify-between px-3 shrink-0 bg-white/[0.01]">
           <div className="flex-1 mr-3 flex items-center gap-1 bg-white/5 p-0.5 rounded-full border border-zinc-800/40 relative">

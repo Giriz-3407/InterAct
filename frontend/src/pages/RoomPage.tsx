@@ -24,7 +24,7 @@ import {
   Share2,
   MessageSquare,
   Users,
-  LogOut,
+  PhoneOff,
   Volume2,
   VolumeX,
   Maximize2,
@@ -62,7 +62,7 @@ const IconScreen = () => <Tv size={18} />;
 const IconScreenStop = () => <Tv size={18} className="text-red-400" />;
 const IconChat = () => <MessageSquare size={18} />;
 const IconPeople = () => <Users size={18} />;
-const IconLeave = () => <LogOut size={18} />;
+const IconLeave = () => <PhoneOff size={18} />;
 const IconVolumeUp = () => <Volume2 size={18} />;
 const IconVolumeOff = () => <VolumeX size={18} />;
 const IconShare = () => <Share2 size={13} />;
@@ -534,14 +534,8 @@ const CollabDock: React.FC<CollabDockProps> = ({
           </div>
           </div>
 
-          {/* Right Parent Pill: Leave Room (hidden on mobile) */}
-          <div className="flex items-center justify-start pointer-events-auto">
-            <div 
-              className={`dock-pill-container flex items-center whitespace-nowrap rounded-full bg-black/60 backdrop-blur-xl border border-zinc-800/40 shadow-2xl shrink-0 h-[56px] px-[7px] gap-2.5 ${
-                isViewing && effectiveCollapsed ? 'collapsed' : ''
-              }`}
-            >
-            {/* Leave */}
+          {/* Right Action: Leave Room (hidden on mobile) */}
+          <div className="flex items-center justify-start pointer-events-auto ml-3 sm:ml-3.5">
             <div 
               className={`dock-item-anim ${isViewing && effectiveCollapsed ? 'collapsed' : 'expanded'}`}
               style={getItemDelayStyle()}
@@ -550,11 +544,9 @@ const CollabDock: React.FC<CollabDockProps> = ({
                 onClick={onLeave}
                 title="Leave room"
                 icon={<IconLeave />}
-                label="Leave"
-                danger
+                className="leave-btn shadow-2xl"
               />
             </div>
-          </div>
           </div>
         </div>
       </div>

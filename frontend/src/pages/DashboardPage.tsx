@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
 import { JoinRoomModal } from '../components/JoinRoomModal';
-import { MOCK_ROOMS, MOCK_PAST_SESSIONS } from '../data/mockData';
 import { apiClient } from '../lib/axios';
 import type { PastSession } from '../types';
 import interactLogo from '../assets/branding/interact-icon-dark-mode.svg';
@@ -125,13 +124,15 @@ const LiveRoomCard: React.FC<LiveRoomCardProps> = ({ name, hostName, participant
 /* ─────────────────────────────────────────────────────────────
    ACTIVITY FEED ITEM
    ───────────────────────────────────────────────────────────── */
-const feedItems = [
-  { icon: '▶', color: '#c0c1ff', bg: 'rgba(192, 193, 255, 0.08)', user: 'Girish K', action: 'started screen sharing', room: 'Design Review', time: '2m ago' },
-  { icon: '+', color: '#10b981', bg: 'rgba(16, 185, 129, 0.08)', user: 'Sarah Johnson', action: 'joined', room: 'Weekly Tech Sync', time: '5m ago' },
-  { icon: '✦', color: '#c0c1ff', bg: 'rgba(192, 193, 255, 0.08)', user: 'AI', action: 'generated session summary', room: 'API Review', time: '12m ago' },
-  { icon: '⊕', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.08)', user: 'Alex Smith', action: 'created room', room: 'Sprint Planning', time: '24m ago' },
-  { icon: '✓', color: '#a1a1aa', bg: 'rgba(255, 255, 255, 0.05)', user: 'Marco Rossi', action: 'ended session', room: 'Client Demo', time: '1h ago' },
-];
+interface ActivityFeedItemProps {
+  icon: string;
+  color: string;
+  bg: string;
+  user: string;
+  action: string;
+  room: string;
+  time: string;
+}
 
 const getActivityIcon = (iconStr: string) => {
   switch (iconStr) {
@@ -144,7 +145,7 @@ const getActivityIcon = (iconStr: string) => {
   }
 };
 
-const ActivityFeedItem: React.FC<typeof feedItems[0]> = ({ icon, color, bg, user, action, room, time }) => (
+const ActivityFeedItem: React.FC<ActivityFeedItemProps> = ({ icon, color, bg, user, action, room, time }) => (
   <div className="flex items-start gap-3 py-3 px-1 border-b border-white/[0.02] last:border-b-0 hover:bg-white/[0.01] transition-all rounded-lg select-none">
     <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: bg, color }}>
       {getActivityIcon(icon)}
@@ -316,7 +317,9 @@ export const DashboardPage: React.FC = () => {
   const [jumpBackRooms, setJumpBackRooms] = useState<{ roomCode: string; active: boolean; participantCount: number }[]>([]);
   const [pastSessions, setPastSessions] = useState<PastSession[]>([]);
 
-  const totalActiveRooms = MOCK_ROOMS.length;
+  const activeRooms = jumpBackRooms.filter((r) => r.active);
+  const totalActiveRooms = activeRooms.length;
+  const liveCollaboratorsCount = activeRooms.reduce((acc, r) => acc + (r.participantCount || 0), 0);
 
   useEffect(() => {
     apiClient
@@ -326,7 +329,7 @@ export const DashboardPage: React.FC = () => {
       })
       .catch((err) => {
         console.error('Failed to fetch dashboard sessions', err);
-        setPastSessions(MOCK_PAST_SESSIONS);
+        setPastSessions([]);
       });
   }, []);
 
@@ -468,7 +471,7 @@ export const DashboardPage: React.FC = () => {
                 <div className="w-px h-6 bg-white/[0.04] hidden sm:block" />
                 <div className="flex items-center gap-2.5">
                   <span className="text-3xl font-bold font-geist text-white leading-none">
-                    {MOCK_ROOMS.reduce((a, r) => a + r.participants.length, 0)}
+                    {liveCollaboratorsCount}
                   </span>
                   <span className="text-xs text-zinc-500 font-inter leading-tight">Live<br/>collaborators</span>
                 </div>
@@ -479,30 +482,30 @@ export const DashboardPage: React.FC = () => {
           {/* ── STAT CARDS (Merged Surface) ── */}
           <section className="order-3 sm:order-2 db-card grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.03] overflow-hidden">
             <StatCard
-              label="Rooms created today"
-              value="6"
-              sub="+2 vs yesterday"
+              label="Sessions recorded"
+              value={pastSessions.length}
+              sub={pastSessions.length > 0 ? 'Total' : 'No sessions'}
               accent="#c0c1ff"
               icon={<Plus size={16} />}
             />
             <StatCard
-              label="Collaboration time"
-              value="4h 12m"
-              sub="Today"
+              label="Collaboration sessions"
+              value={pastSessions.length}
+              sub="Recorded"
               accent="#10b981"
               icon={<Clock size={16} />}
             />
             <StatCard
               label="Active participants"
-              value={MOCK_ROOMS.reduce((a, r) => a + r.participants.length, 0)}
+              value={liveCollaboratorsCount}
               sub="Right now"
               accent="#8b5cf6"
               icon={<Users size={16} />}
             />
             <StatCard
               label="AI summaries"
-              value="3"
-              sub="This week"
+              value={pastSessions.length}
+              sub="Generated"
               accent="#f59e0b"
               icon={<Sparkles size={16} />}
             />
@@ -564,11 +567,11 @@ export const DashboardPage: React.FC = () => {
             <div className="lg:col-span-2 flex flex-col gap-5 sm:gap-7">
 
               {/* Live rooms */}
-              {MOCK_ROOMS.length > 0 && (
+              {activeRooms.length > 0 && (
                 <section>
                   <div className="flex items-center justify-between mb-3.5 select-none">
                     <h2 className="text-xs font-bold font-geist text-zinc-500 uppercase tracking-widest">
-                      Active Rooms ({MOCK_ROOMS.length})
+                      Active Rooms ({activeRooms.length})
                     </h2>
                     <span className="status-pill-live text-[8px] py-0.5 px-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -576,14 +579,14 @@ export const DashboardPage: React.FC = () => {
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    {MOCK_ROOMS.map(room => (
+                    {activeRooms.map(room => (
                       <LiveRoomCard
-                        key={room.id}
-                        name={room.name}
-                        hostName={room.hostName}
-                        participantCount={room.participants.length}
-                        duration={room.id === 'ABC-123' ? '45 min' : '12 min'}
-                        onJoin={() => navigate(`/room/${room.id}`)}
+                        key={room.roomCode}
+                        name={`Room ${room.roomCode}`}
+                        hostName="Active Session"
+                        participantCount={room.participantCount || 1}
+                        duration="Live"
+                        onJoin={() => handleJumpBackIn(room.roomCode)}
                       />
                     ))}
                   </div>
@@ -606,7 +609,7 @@ export const DashboardPage: React.FC = () => {
                       />
                     ))}
                   </div>
-                ) : (
+                ) : pastSessions.length > 0 ? (
                   /* Recent rooms from DB grouped in unified list card */
                   <div className="flex flex-col border border-white/[0.03] bg-[#0c0c0e] rounded-2xl divide-y divide-white/[0.02] shadow-panel overflow-hidden">
                     {pastSessions.slice(0, 3).map(session => (
@@ -630,6 +633,11 @@ export const DashboardPage: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                ) : (
+                  <div className="p-8 border border-white/[0.03] bg-[#0c0c0e] rounded-2xl text-center select-none shadow-panel">
+                    <p className="text-sm font-semibold font-geist text-zinc-400 mb-1">No Recent Rooms</p>
+                    <p className="text-xs text-zinc-500 font-inter">Create or join a room to start collaborating.</p>
+                  </div>
                 )}
               </section>
             </div>
@@ -644,16 +652,25 @@ export const DashboardPage: React.FC = () => {
                       <Activity size={14} className="text-[#c0c1ff]" />
                       <h2 className="text-xs font-bold font-geist text-zinc-400 uppercase tracking-widest">Live Activity Feed</h2>
                     </div>
-                    <span className="status-pill-live text-[8px] py-0.5 px-2">
-                      <span className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
-                      Live
-                    </span>
                   </div>
-                  <div className="space-y-0.5">
-                    {feedItems.map((item, i) => (
-                      <ActivityFeedItem key={i} {...item} />
-                    ))}
-                  </div>
+                  {pastSessions.length > 0 ? (
+                    <div className="space-y-0.5">
+                      {pastSessions.slice(0, 5).map((session, i) => (
+                        <ActivityFeedItem
+                          key={session.id || i}
+                          icon="✓"
+                          color="#a1a1aa"
+                          bg="rgba(255, 255, 255, 0.05)"
+                          user={session.hostName || 'User'}
+                          action="completed session"
+                          room={session.roomName}
+                          time={session.durationString || session.dateString || 'Recently'}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-zinc-500 py-3 font-inter text-center">No recent activity</p>
+                  )}
                 </div>
 
                 <div className="h-px bg-white/[0.03]" />
@@ -667,30 +684,25 @@ export const DashboardPage: React.FC = () => {
 
                   {/* Insight cards */}
                   <div className="space-y-3.5">
-                    <div className="bg-black/35 border border-white/[0.03] rounded-xl p-3.5 hover:border-white/[0.06] transition-all select-none shadow-panel">
-                      <p className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-wider mb-2">Latest Summary</p>
-                      <p className="text-xs text-zinc-300 leading-relaxed font-inter">
-                        Design Review focused on token system alignment. 2 action items assigned to Alex and Girish.
-                      </p>
-                      <div className="mt-3 pt-2.5 border-t border-white/[0.02] flex items-center gap-1.5">
-                        <Check size={11} className="text-emerald-400" />
-                        <span className="text-[10px] text-zinc-500 font-geist">2 items resolved</span>
+                    {pastSessions.length > 0 ? (
+                      <div className="bg-black/35 border border-white/[0.03] rounded-xl p-3.5 hover:border-white/[0.06] transition-all select-none shadow-panel">
+                        <p className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-wider mb-2">Latest Session Summary</p>
+                        <p className="text-xs text-zinc-300 leading-relaxed font-inter">
+                          {pastSessions[0].roomName} hosted by {pastSessions[0].hostName} ({pastSessions[0].participantsCount} participants).
+                        </p>
+                        <div className="mt-3 pt-2.5 border-t border-white/[0.02] flex items-center gap-1.5">
+                          <Check size={11} className="text-emerald-400" />
+                          <span className="text-[10px] text-zinc-500 font-geist">Transcript recorded</span>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="bg-black/35 border border-white/[0.03] rounded-xl p-3.5 hover:border-white/[0.06] transition-all select-none shadow-panel">
-                      <p className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-wider mb-2">Collaboration Trend</p>
-                      {/* Mini bar chart */}
-                      <div className="flex items-end gap-1.5 h-10 mt-3 px-1">
-                        {[40, 65, 50, 80, 70, 90, 75].map((h, i) => (
-                          <div key={i} className="flex-1 rounded-t-sm transition-all duration-300 hover:opacity-80 cursor-pointer" style={{
-                            height: `${h}%`,
-                            background: i === 5 ? '#c0c1ff' : 'rgba(192, 193, 255, 0.15)',
-                          }} />
-                        ))}
+                    ) : (
+                      <div className="bg-black/35 border border-white/[0.03] rounded-xl p-3.5 select-none shadow-panel">
+                        <p className="text-[10px] font-bold font-geist text-zinc-500 uppercase tracking-wider mb-1">AI Workspace</p>
+                        <p className="text-xs text-zinc-500 leading-relaxed font-inter">
+                          No session summaries generated yet.
+                        </p>
                       </div>
-                      <p className="text-[10px] text-zinc-500 font-geist mt-2.5">Peak: Friday 2PM · 90 min avg</p>
-                    </div>
+                    )}
 
                     {/* Quick actions */}
                     <div className="flex flex-col gap-2 pt-2">

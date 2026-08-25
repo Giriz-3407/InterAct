@@ -496,6 +496,17 @@ body {
   color: #ffffff;
 }
 
+.room-dock-btn.leave-btn {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.room-dock-btn.leave-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
 /* Waveform animation for broadcasting state */
 @keyframes waveform {
   0%, 100% { transform: scaleY(0.3); }

@@ -3,7 +3,6 @@ import { AppLayout } from '../layouts/AppLayout';
 import { TopBar } from '../components/TopBar';
 import { StatCard } from '../components/StatCard';
 import { SessionCard } from '../components/SessionCard';
-import { MOCK_PAST_SESSIONS } from '../data/mockData';
 import { TranscriptPanel } from '../components/TranscriptPanel';
 import type { PastSession } from '../types';
 import { apiClient } from '../lib/axios';
@@ -26,8 +25,7 @@ export const HistoryPage: React.FC = () => {
       })
       .catch((err) => {
         console.error('Failed to fetch sessions', err);
-        // Fallback to mock data if API fails
-        setSessions(MOCK_PAST_SESSIONS);
+        setSessions([]);
         setLoading(false);
       });
   }, []);

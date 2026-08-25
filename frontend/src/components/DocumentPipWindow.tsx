@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Mic, MicOff, MessageSquare, LogOut, ArrowLeftToLine, Send, X } from 'lucide-react';
+import { Mic, MicOff, MessageSquare, PhoneOff, ArrowLeftToLine, Send, X } from 'lucide-react';
 import { wsClient } from '../lib/websocket';
 
 interface MessageItem {
@@ -599,7 +599,7 @@ export function DocumentPipWindow({
           title="Leave room"
           danger
         >
-          <LogOut size={16} />
+          <PhoneOff size={16} />
         </DockButton>
       </div>
     </div>

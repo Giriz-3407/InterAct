@@ -15,21 +15,38 @@ app = FastAPI(
 # CORS middleware configuration
 import json
 
-cors_origins_raw = os.getenv("CORS_ORIGINS", "*")
-if cors_origins_raw == "*":
+cors_origins_raw = os.getenv("CORS_ORIGINS", "*").strip()
+if cors_origins_raw == "*" or not cors_origins_raw:
     cors_origins = ["*"]
-else:
+elif cors_origins_raw.startswith("["):
     try:
         cors_origins = json.loads(cors_origins_raw)
         if not isinstance(cors_origins, list):
             cors_origins = [str(cors_origins)]
     except Exception as e:
-        logger.error(f"Failed to parse CORS_ORIGINS as JSON array: {e}. Falling back to '*'")
-        cors_origins = ["*"]
+        logger.error(f"Failed to parse CORS_ORIGINS as JSON array: {e}. Falling back to comma-separated split.")
+        cors_origins = [o.strip() for o in cors_origins_raw.strip("[]").split(",") if o.strip()]
+else:
+    cors_origins = [o.strip() for o in cors_origins_raw.split(",") if o.strip()]
+
+# If explicit origins are set, ensure frontend and local origins are included
+if "*" not in cors_origins:
+    defaults = [
+        "https://inter-act-three.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000"
+    ]
+    for d in defaults:
+        if d not in cors_origins:
+            cors_origins.append(d)
+
+logger.info(f"Configured CORS origins: {cors_origins}")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,7 +68,10 @@ app.include_router(auth_router)
 @app.on_event("startup")
 async def startup_event():
     logger.info("Initializing InterAct backend modules...")
-    await connect_to_mongo()
+    try:
+        await connect_to_mongo()
+    except Exception as e:
+        logger.error(f"MongoDB startup error: {e}")
     import asyncio
     from app.rooms.manager import room_manager
     asyncio.create_task(room_manager.start_cleanup_loop())
@@ -196,6 +216,22 @@ async def websocket_audio_endpoint(websocket: WebSocket, roomCode: str, socketId
             pass
 
 
+@app.get("/")
+async def root_endpoint():
+    from app.database.mongodb import database
+    return {
+        "status": "ok",
+        "app": "interact",
+        "version": "1.0.0",
+        "database": "connected" if database is not None else "disconnected"
+    }
+
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "app": "interact", "version": "1.0.0"}
+    from app.database.mongodb import database
+    return {
+        "status": "ok",
+        "app": "interact",
+        "version": "1.0.0",
+        "database": "connected" if database is not None else "disconnected"
+    }

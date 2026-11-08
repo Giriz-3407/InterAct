@@ -51,8 +51,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (err: any) {
         console.error('Session restoration failed:', err);
         // Handle backend unavailable differently from auth/invalid token errors
-        if (err.message && err.message.includes('unavailable')) {
-          setAuthError('Unable to connect to the authentication server. Please check your connection.');
+        if (err.message && (err.message.includes('unavailable') || err.message.includes('timed out') || err.message.includes('Database connection'))) {
+          setAuthError('Unable to connect to the authentication server. Please check backend status or reload.');
           // Don't log out immediately so the user doesn't lose credentials when offline
         } else {
           // Token expired or invalid

@@ -12,14 +12,19 @@ logger = logging.getLogger("interact.database")
 client: AsyncIOMotorClient = None
 database = None
 
+from fastapi import HTTPException, status
+
 def get_database():
     """
     Returns the shared database instance.
-    Raises RuntimeError if the database connection has not been initialized.
+    Raises HTTPException 503 if the database connection has not been initialized.
     """
     global database
     if database is None:
-        raise RuntimeError("MongoDB Database has not been initialized. Call connect_to_mongo() first.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is unavailable. Please verify MONGODB_URI and MongoDB Atlas Network Access."
+        )
     return database
 
 async def connect_to_mongo():
@@ -31,10 +36,18 @@ async def connect_to_mongo():
     mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     database_name = os.getenv("DATABASE_NAME", "interact")
     
-    logger.info(f"Connecting to MongoDB Atlas at {mongodb_uri.split('@')[-1]}...") # Safe logging: hides auth credentials
+    safe_host = mongodb_uri.split('@')[-1] if '@' in mongodb_uri else mongodb_uri
+    logger.info(f"Connecting to MongoDB at {safe_host}...")
     try:
-        client = AsyncIOMotorClient(mongodb_uri)
+        client = AsyncIOMotorClient(
+            mongodb_uri,
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000
+        )
         database = client[database_name]
+        # Ping to verify authentication and connection
+        await client.admin.command('ping')
+
         # Create indexes
         await database["messages"].create_index([("roomCode", 1), ("timestamp", 1)])
         await database["transcripts"].create_index([("session_id", 1), ("timestamp", 1)])
@@ -45,8 +58,8 @@ async def connect_to_mongo():
         # Seed mock transcripts & sessions for development
         await seed_mock_transcripts(database)
     except Exception as e:
-        logger.error(f"Failed to connect to MongoDB: {e}")
-        raise e
+        logger.error(f"MongoDB connection failed: {e}. Server will continue running, but database operations will return 503 until a valid MONGODB_URI is provided.")
+        database = None
 
 async def close_mongo_connection():
     """
